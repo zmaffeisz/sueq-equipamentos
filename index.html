@@ -1969,6 +1969,7 @@
         <table id="ct-table" class="resizable-table">
           <thead>
             <tr>
+              <th style="width:22px"></th>
               <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
               <th style="width:170px">Ações</th>
               <th style="width:90px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('tipo_instrumento')" style="cursor:pointer;user-select:none">Tipo <span id="sort-ct-tipo_instrumento"></span></span><span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
@@ -6456,38 +6457,12 @@ async function abrirModalAF(itemId, execId){
   _afRecalcLimite();
   document.getElementById('modal-af').classList.add('active');
 }
-// Transição automática do status do contrato de aquisição:
-// Transições: "Aguardando emissão da AF" vira VIGENTE na 1ª AF, e VIGENTE vira CONCLUIDO quando todos os itens forem 100% recebidos.
-async function _ctMarcarVigente(contratoId){
-  if(!contratoId) return;
-  const {data:ct}=await sb.from('contratos').select('id,status').eq('id',contratoId).maybeSingle();
-  if(ct && ct.status==='Aguardando emissão da AF'){
-    await sb.from('contratos').update({status:'VIGENTE'}).eq('id',contratoId);
-    if(typeof loadContratos==='function') loadContratos().catch(e=>console.error('reload contratos:',e));
-  }
-}
-async function _ctVerificarConclusao(contratoId){
-  if(!contratoId) return;
-  const {data:ct}=await sb.from('contratos').select('id,status').eq('id',contratoId).maybeSingle();
-  if(!ct || ct.status!=='VIGENTE') return; // só transiciona automaticamente a partir de VIGENTE
-  const {data:itensCt}=await sb.from('itens').select('id,qtde').eq('contrato_id',contratoId).eq('origem','aquisicao');
-  if(!itensCt || !itensCt.length) return;
-  const itemIds=itensCt.map(i=>i.id);
-  const {data:entregas}=await sb.from('itens_entregas').select('item_id,qtde_recebida,status').in('item_id',itemIds);
-  const recPorItem={};
-  (entregas||[]).forEach(r=>{
-    if((r.status||'')==='cancelada') return;
-    recPorItem[r.item_id]=(recPorItem[r.item_id]||0)+(Number(r.qtde_recebida)||0);
-  });
-  const tudoRecebido=itensCt.every(it=>{
-    const qtde=Number(it.qtde)||0;
-    if(qtde<=0) return true;
-    return (Number(recPorItem[it.id])||0)>=qtde;
-  });
-  if(tudoRecebido){
-    await sb.from('contratos').update({status:'CONCLUIDO'}).eq('id',contratoId);
-    if(typeof loadContratos==='function') loadContratos().catch(e=>console.error('reload contratos:',e));
-  }
+// Transição automática do status do contrato de aquisição ("Aguardando emissão da AF" -> VIGENTE
+// -> CONCLUIDO) é feita pelo trigger trg_itens_entregas_sync_contrato_status no banco (fonte única
+// da verdade — ver supabase/migrations/20260703_trigger_status_contrato_aquisicao.sql). Aqui só
+// recarregamos a aba de Contratos pra refletir o status já atualizado pelo trigger.
+function _ctRecarregarAposEntrega(){
+  if(typeof loadContratos==='function') loadContratos().catch(e=>console.error('reload contratos:',e));
 }
 async function salvarAF(){
   if(bloquearSeVisualiz('itens')) return;
@@ -6584,7 +6559,7 @@ async function salvarAF(){
   setTimeout(()=>{ loadItensEntregas().catch(e=>console.error('bg entregas:',e)); },2000);
   loadConfirmacoes().catch(e=>console.error('bg conf:',e));
   loadItens().catch(e=>console.error('bg itens:',e));
-  if(itC.contrato_id) _ctMarcarVigente(itC.contrato_id).catch(e=>console.error('status contrato:',e));
+  if(itC.contrato_id) _ctRecarregarAposEntrega();
 }
 
 // ═══ Fase 11: vincular empenho ao item (Controle de Entregas/Prazos) ═══
@@ -7785,7 +7760,7 @@ async function salvarRecebimento(){
     await loadConfirmacoes();
     await loadItens();
     if(row.emenda_item_id) loadData();
-    if(row.contrato_id) _ctVerificarConclusao(row.contrato_id).catch(e=>console.error('status contrato:',e));
+    if(row.contrato_id) _ctRecarregarAposEntrega();
   }catch(e){
     _recSetMsg('Erro: '+e.message,'err');
   }finally{
@@ -11995,6 +11970,8 @@ let _ctAtual = null;
 let ctSortCol = null;
 let ctSortAsc = true;
 let contratosSelecionados = new Set();
+let ctExpandido = {};
+let ctItensPorContrato = {};
 
 async function loadContratos(){
   document.getElementById("contratos-loading").style.display="block";
@@ -12023,6 +12000,7 @@ async function loadContratos(){
     return da-db;
   });
   contratosCarregado=true;
+  ctItensPorContrato={}; // força reconsulta dos itens expandidos, dados podem ter mudado
   popularFiltrosContratos();
   filtrarContratos();
   document.getElementById("contratos-loading").style.display="none";
@@ -12933,7 +12911,7 @@ function renderTabelaContratos(){
   const selectAll=document.getElementById('ct-select-all');
   if(selectAll){selectAll.disabled=!podeManter;selectAll.checked=false;}
   atualizarBotaoManterStatus();
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="17" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="18" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){
@@ -12965,7 +12943,9 @@ function renderTabelaContratos(){
     const btnEmailCt=podeEditar('contratos')
       ?`<button onclick="abrirEmailContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};background:${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};color:${temVinculacao?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap" title="Configurar e-mail e prefixo de chamado">🔗 Vinculações</button>`
       :"";
+    const expandido=!!ctExpandido[r.id];
     return `<tr>
+      <td style="text-align:center;cursor:pointer;color:var(--text3);user-select:none" onclick="ctToggleExpand('${r.id}')" title="Ver itens do contrato">${expandido?'▼':'▶'}</td>
       <td style="text-align:center"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} ${podeManter?'':'disabled'} onchange="selecionarContrato('${r.id}',this.checked)" style="accent-color:var(--blue)"></td>
       <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap"><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button>${btnEmailCt}</div></td>
       <td><span class="badge" style="background:${r.tipo_instrumento==='ATA'?'var(--blue-bg)':'var(--surface2)'};color:${r.tipo_instrumento==='ATA'?'var(--blue-text)':'var(--text2)'}">${r.tipo_instrumento||'CONTRATO'}</span></td>
@@ -12983,8 +12963,55 @@ function renderTabelaContratos(){
       <td style="text-align:right;white-space:nowrap">${vt}</td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.atualizado_em||r.data_atualizacao||"—"}</td>
       <td>${_isAdmin()?`<button onclick="abrirEditarContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">✏️ Editar</button>`:'—'}</td>
-    </tr>`;
+    </tr>${expandido?_ctLinhaItensHtml(r.id):''}`;
   }).join("");
+}
+
+// Linhas expansíveis: clicar no ▶ mostra os itens de aquisição do contrato inline (mesmo padrão de Licitações/cpToggle)
+function _ctLinhaItensHtml(contratoId){
+  const itens=ctItensPorContrato[contratoId];
+  if(itens===undefined){
+    return `<tr><td colspan="18" style="padding:10px 16px;color:var(--text3);background:var(--surface2)"><span class="spinner"></span> Carregando itens...</td></tr>`;
+  }
+  if(!itens.length){
+    return `<tr><td colspan="18" style="padding:10px 16px;color:var(--text3);background:var(--surface2)">Nenhum item de aquisição vinculado a este contrato.</td></tr>`;
+  }
+  const linhas=itens.map(i=>{
+    const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
+    const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+    const qtde=Number(i.qtde)||0;
+    const saldo=qtde-recebido;
+    const temAF=entregas.some(e=>e.af_numero);
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:6px 10px 6px 40px">${_sanEsc(i.descricao||'—')}</td>
+      <td style="padding:6px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td>
+      <td style="padding:6px 10px;text-align:right">${qtde}</td>
+      <td style="padding:6px 10px;text-align:right">${recebido}</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:600;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td>
+      <td style="padding:6px 10px">${temAF?'✅ emitida':'<span style="color:var(--amber-text)">⚠ sem AF</span>'}</td>
+    </tr>`;
+  }).join('');
+  return `<tr><td colspan="18" style="padding:0;background:var(--surface2)">
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="color:var(--text2);text-align:left">
+        <th style="padding:6px 10px 6px 40px">Item</th><th style="padding:6px 10px">Marca/Modelo</th>
+        <th style="padding:6px 10px;text-align:right">Qtde</th><th style="padding:6px 10px;text-align:right">Recebido</th>
+        <th style="padding:6px 10px;text-align:right">Saldo</th><th style="padding:6px 10px">AF</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </td></tr>`;
+}
+async function ctToggleExpand(id){
+  ctExpandido[id]=!ctExpandido[id];
+  if(ctExpandido[id] && !ctItensPorContrato[id]){
+    renderTabelaContratos();
+    const {data,error}=await sb.from('itens')
+      .select('id,descricao,qtde,marca,modelo,itens_entregas(id,af_numero,qtde_recebida,status)')
+      .eq('contrato_id',id).eq('origem','aquisicao').order('created_at');
+    ctItensPorContrato[id]=error?[]:(data||[]);
+  }
+  renderTabelaContratos();
 }
 
 function atualizarBotaoManterStatus(){
