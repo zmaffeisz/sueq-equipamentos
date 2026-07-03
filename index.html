@@ -51,6 +51,7 @@
     <div class="sidebar-section">
       <div class="sidebar-section-label">Itens</div>
       <div class="sidebar-item" id="sidebar-itens" style="display:none" onclick="showTab('itens')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Controle de Entregas</span></div>
+      <div class="sidebar-item" id="sidebar-empenhos" style="display:none" onclick="showTab('empenhos')"><span class="sidebar-icon">💵</span><span class="sidebar-label">Empenhos</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Contratos</div>
@@ -83,11 +84,7 @@
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Supabase...</div>
   <div id="main" style="display:none">
     <div>
-      <div style="margin-bottom:1rem;display:flex;gap:8px;align-items:center">
-        <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa: item, CPL, empenho, NF, patrimônio, unidade, parlamentar..." oninput="applyFilters()" style="flex:1;min-width:0;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
-        <button class="clear-btn" onclick="clearAllFilters()" style="white-space:nowrap">✕ Limpar</button>
-      </div>
-      <div style="margin:-.35rem 0 .85rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+      <div style="margin:0 0 .85rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
         <span style="font-size:12px;color:var(--text3);font-weight:600">Mostrar municipais antigas:</span>
         <button type="button" id="em-muni-2022" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2022,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2022" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2022</button>
         <button type="button" id="em-muni-2023" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2023,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2023" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2023</button>
@@ -120,6 +117,10 @@
         </div>
       </div>
       <div id="em-modo-bar" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center"></div>
+      <div style="margin-bottom:.85rem;display:flex;gap:8px;align-items:center">
+        <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa: item, CPL, empenho, NF, patrimônio, unidade, parlamentar..." oninput="applyFilters()" style="flex:1;min-width:0;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+        <button class="clear-btn" onclick="clearAllFilters()" style="white-space:nowrap">✕ Limpar</button>
+      </div>
       <div id="em-view-por-emenda" style="display:none"></div>
       <div class="table-wrap" id="em-view-planilha">
         <table>
@@ -1097,7 +1098,6 @@
       <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Itens de Atas</button>
       <button class="itens-subtab-btn" data-sub="entregas" onclick="itensShowSub('entregas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Controle de Entregas / Prazos</button>
       <button class="itens-subtab-btn" data-sub="confirmacao" onclick="itensShowSub('confirmacao')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Confirmação de Entrega na Unidade</button>
-      <button class="itens-subtab-btn" data-sub="empenhos" onclick="itensShowSub('empenhos')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Empenhos</button>
     </div>
 
     <div id="itens-sub-aquisicoes" class="itens-sub">
@@ -1165,16 +1165,23 @@
       </div>
       <div id="confirmacao-wrap" style="overflow-x:auto"></div>
     </div>
-    <div id="itens-sub-empenhos" class="itens-sub" style="display:none">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
-        <input type="text" id="emp-busca" placeholder="buscar número, despesa, contrato, emenda, fornecedor..." oninput="renderEmpenhos()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:280px">
-        <button id="emp-novo-btn" onclick="abrirModalEmpenho()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">+ Novo empenho</button>
-        <button onclick="loadEmpenhos()" title="Recarregar" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
-        <span id="emp-count" style="font-size:12px;color:var(--text3)"></span>
-      </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Cadastre os empenhos e vincule a itens de contratos. O <b>saldo</b> desconta conforme o valor vinculado aos itens.</div>
-      <div id="empenhos-wrap" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ EMPENHOS ══════════════════════ -->
+<div id="panel-empenhos" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">💵 Empenhos</div>
+      <button onclick="loadEmpenhos()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+      <input type="text" id="emp-busca" placeholder="buscar número, despesa, contrato, emenda, fornecedor..." oninput="renderEmpenhos()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:280px">
+      <button id="emp-novo-btn" onclick="abrirModalEmpenho()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">+ Novo empenho</button>
+      <span id="emp-count" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Cadastre os empenhos e vincule a itens de contratos. O <b>saldo</b> desconta conforme o valor vinculado aos itens.</div>
+    <div id="empenhos-wrap" style="overflow-x:auto"></div>
   </div>
 </div>
 
@@ -1240,7 +1247,7 @@
     </div>
     <input type="hidden" id="ve-item-id">
     <div id="ve-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Marque os empenhos pré-cadastrados e informe a quantidade/valor que cada um cobre deste item. Cadastre empenhos em <b>Itens → Empenhos</b>.</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Marque os empenhos pré-cadastrados e informe a quantidade/valor que cada um cobre deste item. Cadastre empenhos na aba <b>Empenhos</b>.</div>
     <div id="ve-lista" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;max-height:320px;overflow-y:auto;font-size:12px"></div>
     <div class="form-actions">
       <button class="btn-primary" id="ve-salvar" onclick="salvarVincularEmpenho()">Salvar vínculos</button>
@@ -2533,7 +2540,7 @@ window._tabPerms = [];
 window._activeTab = 'dashboard';
 const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
 const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
-const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
 function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
 function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
 function userCanView(tabKey){
@@ -2897,7 +2904,7 @@ function showTab(name){
   localStorage.setItem("ultima_aba", name);
   window._activeTab = name;
   document.body.classList.toggle('no-edit-tab', !userCanEdit(name==='saldo-emendas'?'dashboard':name));
-  const names=["dashboard","saldo-emendas","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","itens","atas","contratos","usuarios","planilhas"];
+  const names=["dashboard","saldo-emendas","consulta","chamados","chamados-novos","fiscalizacao","inventario-ac","itens","empenhos","atas","contratos","usuarios","planilhas"];
   document.querySelectorAll(".sidebar-item").forEach(t=>t.classList.toggle("active",t.id==="sidebar-"+name));
   fecharSidebar();
   document.querySelectorAll(".panel").forEach(p=>{if(!p.classList.contains("modal-overlay"))p.classList.remove("active")});
@@ -2908,6 +2915,7 @@ function showTab(name){
   if(name==="inventario-ac"&&!inventarioCarregado) loadInventario();
   if(name==="atas") loadAtas(); // sempre recarrega: ATAS é view derivada de contratos (reflete encerrar/prorrogar/editar feitos na aba Contratos)
   if(name==="itens"){ if(!itensCarregado) loadItens(); itensShowSub('entregas'); }
+  if(name==="empenhos"&&!empenhosCarregado) loadEmpenhos();
   if(name==="contratos"&&!contratosCarregado) loadContratos();
   if(name==="usuarios") carregarUsuarios();
   if(name==="planilhas") carregarPlanilhaAC();
@@ -5240,6 +5248,7 @@ const PERM_TABS = [
   {key:'contratos', label:'Contratos em execução'},
   {key:'licitacoes', label:'Licitações em andamento'},
   {key:'itens', label:'Controle de Entregas'},
+  {key:'empenhos', label:'Empenhos'},
   {key:'sancoes', label:'Sanções'},
   {key:'planilhas', label:'Planilhas'},
 ];
@@ -5842,7 +5851,6 @@ function itensShowSub(sub){
   if(sub==='atas' && !itensAtasCarregado && typeof loadItensAtas==='function'){ loadItensAtas(); }
   if(sub==='entregas' && !itensEntregasCarregado && typeof loadItensEntregas==='function'){ loadItensEntregas(); }
   if(sub==='confirmacao' && !confirmacoesCarregado && typeof loadConfirmacoes==='function'){ loadConfirmacoes(); }
-  if(sub==='empenhos' && !empenhosCarregado && typeof loadEmpenhos==='function'){ loadEmpenhos(); }
 }
 // Fase 4: subaba read-only "Itens de Atas" — mostra os itens origem='ata' e se já foram espelhados (ata_item_id)
 let itensAtasRows=[], itensAtasCarregado=false;
@@ -5905,7 +5913,7 @@ async function _recalcularSaldoEmpenho(eid){
   await sb.from('empenhos').update({saldo_empenho:(Number(e?.valor_empenhado)||0)-(Number(e?.valor_anulado)||0)-vinc}).eq('id',eid);
 }
 async function loadEmpenhos(){
-  if(!userCanView('itens')&&!_isAdmin()) return;
+  if(!userCanView('empenhos')&&!_isAdmin()) return;
   const wrap=document.getElementById('empenhos-wrap'); if(!wrap) return;
   wrap.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando empenhos...</div>';
   const {data,error}=await sb.from('empenhos')
@@ -5926,7 +5934,7 @@ function renderEmpenhos(){
   const q=(document.getElementById('emp-busca')?.value||'').toLowerCase();
   const rows=empenhosRows.filter(e=>{ if(!q) return true; const hay=[e.numero,e.ano,e.numero_despesa,e._contrato,e._emenda,e._fornecedor,e.fonte_descricao].filter(Boolean).join(' ').toLowerCase(); return hay.includes(q); });
   const cEl=document.getElementById('emp-count'); if(cEl) cEl.textContent=`${rows.length} empenho(s)`;
-  const podeEd=podeEditar('itens');
+  const podeEd=podeEditar('empenhos');
   if(!rows.length){ wrap.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:13px">Nenhum empenho cadastrado. Clique em <b>+ Novo empenho</b>.</div>'; return; }
   wrap.innerHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;background:var(--surface)">
     <thead><tr style="text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">
@@ -6032,7 +6040,7 @@ async function _empPopularSelects(){
   ]);
 }
 async function abrirModalEmpenho(id){
-  if(bloquearSeVisualiz('itens')) return;
+  if(bloquearSeVisualiz('empenhos')) return;
   await _empPopularSelects();
   document.getElementById('emp-msg').textContent='';
   const e=id?empenhosRows.find(r=>String(r.id)===String(id)):null;
@@ -6147,7 +6155,7 @@ function _empRecalcSaldo(){
   const sEl=document.getElementById('emp-resumo-saldo'); sEl.textContent=fmtFull(saldo); sEl.style.color=saldo<0?'var(--red)':(saldo===0?'var(--text3)':'var(--green)');
 }
 async function salvarEmpenho(){
-  if(bloquearSeVisualiz('itens')) return;
+  if(bloquearSeVisualiz('empenhos')) return;
   const msg=document.getElementById('emp-msg'); msg.className='fmsg';
   const numero=document.getElementById('emp-numero').value.trim();
   const valor=_empNum('emp-valor');
@@ -6220,7 +6228,7 @@ async function salvarEmpenho(){
   if(document.getElementById('itens-sub-entregas')?.style.display!=='none') loadItensEntregas();
 }
 async function excluirEmpenho(id){
-  if(bloquearSeVisualiz('itens')) return;
+  if(bloquearSeVisualiz('empenhos')) return;
   if(!await uiConfirm('Excluir este empenho e seus vínculos?')) return;
   await sb.from('empenho_itens').delete().eq('empenho_id',id);
   const {error}=await sb.from('empenhos').delete().eq('id',id);
@@ -6606,7 +6614,7 @@ async function abrirVincularEmpenho(itemId, execId){
   let qb=sb.from('empenhos').select('id,numero,ano,valor_empenhado,saldo_empenho,contrato_id').order('created_at',{ascending:false});
   const {data:emps}=await qb;
   _veEmpenhos=(emps||[]).filter(e=>!e.contrato_id || String(e.contrato_id)===String(it?.contrato_id));
-  if(!_veEmpenhos.length){ lista.innerHTML='<div style="color:var(--text3)">Nenhum empenho compatível. Cadastre em <b>Itens → Empenhos</b> (vinculando ao contrato deste item).</div>'; document.getElementById('modal-vincular-empenho').classList.add('active'); return; }
+  if(!_veEmpenhos.length){ lista.innerHTML='<div style="color:var(--text3)">Nenhum empenho compatível. Cadastre na aba <b>Empenhos</b> (vinculando ao contrato deste item).</div>'; document.getElementById('modal-vincular-empenho').classList.add('active'); return; }
   const inp='font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);box-sizing:border-box';
   lista.innerHTML=`<input type="text" id="ve-busca" placeholder="Pesquisar empenho..." oninput="_veFiltrarEmpenhos()" style="width:100%;margin-bottom:8px;font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
   <table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text2);text-align:left;font-size:11px">
@@ -9887,15 +9895,17 @@ function applyFilters(){
 
 // ═══ MODOS DE VISUALIZAÇÃO DAS EMENDAS ═══
 const EM_MODOS=[
-  ['planilha','📋 Planilha'],
   ['por-emenda','📂 Por emenda'],
+  ['planilha','📋 Planilha'],
   ['cards','🪪 Visão parlamentar'],
   ['status','🗂️ Por status'],
   ['parlamentar','👤 Por parlamentar']
 ];
 function _emLoadConfig(){
-  try{ const c=JSON.parse(localStorage.getItem('em_config')||'null'); if(c&&Array.isArray(c.disponiveis)&&c.disponiveis.length&&c.principal) return c; }catch(_){}
-  return {disponiveis:EM_MODOS.map(m=>m[0]), principal:'planilha'};
+  // "Por emenda" é sempre o modo principal ao carregar a página, independente
+  // de preferência salva anteriormente no localStorage.
+  try{ const c=JSON.parse(localStorage.getItem('em_config')||'null'); if(c&&Array.isArray(c.disponiveis)&&c.disponiveis.length) return {disponiveis:c.disponiveis, principal:'por-emenda'}; }catch(_){}
+  return {disponiveis:EM_MODOS.map(m=>m[0]), principal:'por-emenda'};
 }
 let _emConfig=_emLoadConfig();
 let _emModo=_emConfig.principal;
@@ -12710,6 +12720,11 @@ async function salvarNovoContrato(){
   if(novaEmpresa&&!prestador){showMsg("nc","Informe a razão social da nova empresa.","err");return;}
   if(!email){showMsg("nc","Informe o e-mail da empresa (*).","err");return;}
   if(!fiscais.length){showMsg("nc","Selecione ao menos um fiscal (*).","err");return;}
+  {
+    const _listaChk=document.getElementById('nc-itens-lista');
+    const _temItemMarcado=_listaChk?[..._listaChk.querySelectorAll('.nci-chk')].some(c=>c.checked):false;
+    if(!_temItemMarcado){showMsg("nc","Adicione item do processo: marque ao menos um item para vincular ao contrato (*).","err");return;}
+  }
   if(modoNC==='aquisicao'){
     const _lista=document.getElementById('nc-itens-lista');
     const _rows=_lista?[...(_lista.querySelectorAll('.nc-item-row'))]:[];
@@ -12721,7 +12736,7 @@ async function salvarNovoContrato(){
     });
     if(_semEmp.length){
       const _nomes=_semEmp.map(r=>{const d=r.querySelector('div[style*="font-weight:600"]');return d?d.textContent.trim():r.dataset.id;}).slice(0,3);
-      if(!await uiConfirm(`${_semEmp.length} item(ns) marcado(s) sem empenho vinculado:\n• ${_nomes.join('\n• ')}\n\nVocê poderá vincular depois em Itens → Empenhos. Continuar mesmo assim?`)) return;
+      if(!await uiConfirm(`${_semEmp.length} item(ns) marcado(s) sem empenho vinculado:\n• ${_nomes.join('\n• ')}\n\nVocê poderá vincular depois na aba Empenhos. Continuar mesmo assim?`)) return;
     }
   }
   const btn=document.querySelector("#modal-novo-contrato .btn-primary");
