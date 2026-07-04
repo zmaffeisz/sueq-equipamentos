@@ -8160,7 +8160,23 @@ function _ncRecalcVigencia(){
     else venc.value='';
   }
 }
-// Fase 10: Valor Global = soma dos valores dos itens marcados
+// Quantidade efetivamente contratada nesta linha (considera divisão de quantidade em nci-qtde)
+function _ncQtdeEfetivaRow(r){
+  const full=Number(r.dataset.qtde);
+  const qcRaw=(r.querySelector('.nci-qtde')?.value||'').trim().replace(',','.');
+  const qc=qcRaw?parseFloat(qcRaw):NaN;
+  return (Number.isFinite(qc)&&qc>0)?qc:(Number.isFinite(full)?full:null);
+}
+// Atualiza o "Total: R$ ..." (qtde efetiva x valor unitário) exibido ao lado do valor contratado do item
+function _ncUpdateItemTotal(el){
+  const r=el?.closest?.('.nc-item-row'); if(!r) return;
+  const totEl=r.querySelector('.nci-total'); if(!totEl) return;
+  const raw=(r.querySelector('.nci-valor')?.value||'').trim().replace(/\./g,'').replace(',','.');
+  const unit=parseFloat(raw); const qtde=_ncQtdeEfetivaRow(r);
+  totEl.textContent=(unit&&qtde)?('Total: R$ '+fmtFull(unit*qtde)):'Total: —';
+  _ncRecalcValorGlobal();
+}
+// Fase 10: Valor Global = soma dos valores dos itens marcados (qtde x valor unitário)
 function _ncRecalcValorGlobal(){
   const modo=_ncModo(window._gerarContratoProcesso?.natureza);
   if(modo!=='ata' && modo!=='aquisicao') return;
@@ -8169,7 +8185,8 @@ function _ncRecalcValorGlobal(){
   lista.querySelectorAll('.nc-item-row').forEach(r=>{
     const chk=r.querySelector('.nci-chk'); if(!chk||!chk.checked) return;
     const raw=(r.querySelector('.nci-valor')?.value||'').trim().replace(/\./g,'').replace(',','.');
-    tot+=parseFloat(raw)||0;
+    const unit=parseFloat(raw)||0; const qtde=_ncQtdeEfetivaRow(r)||0;
+    tot+=unit*qtde;
   });
   const el=document.getElementById('nc-valor-inicial'); if(el) el.value=tot?tot.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
 }
@@ -8206,16 +8223,20 @@ async function _ncCarregarItensProcesso(processoId){
         <div style="font-size:12px;font-weight:600">${_sanEsc(it.descricao||'(sem descrição)')}${jaCont?' <span style="color:var(--text3);font-weight:400">— já contratado</span>':''}</div>
         <div style="font-size:11px;color:var(--text3)">${meta}</div>
         ${jaCont?'':`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-          <input type="number" class="nci-qtde" min="0" step="any" placeholder="qtde p/ este contrato" title="Dividir quantidade: informe a quantidade adjudicada a esta empresa (≤ total). Vazio = quantidade total; o saldo permanece na licitação." style="width:150px;${inp}">
+          <input type="number" class="nci-qtde" min="0" step="any" placeholder="qtde p/ este contrato" title="Dividir quantidade: informe a quantidade adjudicada a esta empresa (≤ total). Vazio = quantidade total; o saldo permanece na licitação." oninput="_ncUpdateItemTotal(this)" style="width:150px;${inp}">
           <input type="text" class="nci-marca" placeholder="marca" style="width:110px;${inp}">
           <input type="text" class="nci-modelo" placeholder="modelo" style="width:110px;${inp}">
         </div>`}
         ${(window._ncModoAtual||'')==='aquisicao'&&!jaCont?_ncEmpItemHtml(String(it.id)):''}
       </div>
-      <input type="text" class="nci-valor" value="${jaCont?'':_sanEsc(defVal)}" ${jaCont?'disabled':''} oninput="_ncRecalcValorGlobal()" placeholder="vl. contratado" title="Valor contratado por item (default = estimado)" style="width:110px;${inp}">
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+        <input type="text" class="nci-valor" value="${jaCont?'':_sanEsc(defVal)}" ${jaCont?'disabled':''} oninput="_ncUpdateItemTotal(this)" placeholder="vl. unit. contratado" title="Valor UNITÁRIO contratado por item (default = estimado)" style="width:110px;${inp}">
+        ${jaCont?'':'<span class="nci-total" style="font-size:10px;color:var(--text3)">Total: —</span>'}
+      </div>
     </div>`;
   }).join('');
   if(typeof _ncRecalcValorGlobal==='function') _ncRecalcValorGlobal();
+  document.querySelectorAll('#nc-itens-lista .nci-valor').forEach(_ncUpdateItemTotal);
 }
 // Aplica contrato_id/fornecedor/valor/status aos itens marcados (Fase 3)
 async function _ncVincularItens(contratoId, fornecedorId){
@@ -12535,17 +12556,18 @@ async function _ncVinculEmp(sid){
   const valVinc=vlRaw?parseFloat(vlRaw):null;
   // validate against item totals
   const row=document.querySelector(`.nc-item-row[data-id="${sid}"]`);
-  const qtdeTotal=row?parseFloat(row.dataset.qtde||0)||null:null;
+  const qtdeTotal=row?_ncQtdeEfetivaRow(row):null;
   const nciValEl=row?row.querySelector('.nci-valor'):null;
-  const valContr=nciValEl?parseFloat((nciValEl.value||'').replace(/\./g,'').replace(',','.'))||null:null;
+  const valUnit=nciValEl?parseFloat((nciValEl.value||'').replace(/\./g,'').replace(',','.'))||null:null;
+  const valContrTotal=(valUnit!=null&&qtdeTotal!=null)?valUnit*qtdeTotal:null;
   const existing=window._ncEmpItens?.[sid]||[];
   const sumQtde=existing.reduce((a,x)=>a+(x.qtde_vinculada||0),0);
   const sumVal=existing.reduce((a,x)=>a+(x.val_vinculado||0),0);
   if(qtdeTotal!=null&&qtdeVinc!=null&&(sumQtde+qtdeVinc)>qtdeTotal+0.0001){
     if(msgEl) msgEl.textContent=`Qtde total vinculada (${sumQtde+qtdeVinc}) excede a qtde do item (${qtdeTotal}).`; return;
   }
-  if(valContr!=null&&valVinc!=null&&(sumVal+valVinc)>valContr+0.01){
-    if(msgEl) msgEl.textContent='Valor total vinculado excede o valor contratado do item.'; return;
+  if(valContrTotal!=null&&valVinc!=null&&(sumVal+valVinc)>valContrTotal+0.01){
+    if(msgEl) msgEl.textContent=`Valor total vinculado excede o valor total contratado do item (R$ ${fmtFull(valContrTotal)}).`; return;
   }
   let link;
   if(val==='__novo__'){
