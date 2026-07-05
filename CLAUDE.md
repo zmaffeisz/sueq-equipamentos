@@ -12,8 +12,22 @@ chamados, da Secretaria da Saúde de Sorocaba.
 
 ## Mapa rápido
 
-- `index.html` — **SPA principal** (~818 KB, ~12k linhas; HTML+CSS+JS no mesmo arquivo).
-  Abas via `showTab('<name>')`; painéis `#panel-<name>`; cliente Supabase global `sb`.
+- `index.html` — **casca da SPA principal** (~2,5k linhas após refatoração estrutural).
+  Mantém o HTML das abas/modais, carrega CSS/JS externos e segue usando abas via
+  `showTab('<name>')` e painéis `#panel-<name>`.
+- `js/legacy/` — JavaScript legado extraído do antigo monólito, dividido por domínio e
+  carregado em ordem por scripts clássicos. O cliente Supabase global `sb` ainda nasce em
+  `js/legacy/00-core.js`; muitos handlers inline ainda dependem de funções globais.
+- `js/theme.js` — alternância de tema.
+- `js/app.js` — entrada `type="module"` sem regra de negócio; importa a base de estado e
+  serve como ponto de partida para migração gradual para módulos nativos.
+- `js/modules/` — destino dos módulos funcionais futuros (`*.render.js`, `*.events.js`,
+  `*.service.js`). Por enquanto contém stubs/estrutura; a lógica real ainda está em
+  `js/legacy/`.
+- `js/state/` — base inicial de `store`, seletores e validadores compartilhados.
+- `js/components/` — destino de componentes vanilla reutilizáveis.
+- `styles.css`, `dashboard.css`, `chamado.css` — estilos da aplicação. `css/print-*.css`
+  concentra estilos de documentos/impressão extraídos das strings JS.
 - `login.html`, `cadastro.html` — auth. `chamado.html` — formulário público (RPC).
 - `supabase/migrations/` — migrations. `schema*.sql` — dumps.
 - Banco nuvem deste clone de teste: projeto **`qpvgpfwuurqcqprnpxua`** (`contratos-dag`). O projeto original **`djtwoesmgeetnrztyvzw`** (`zmaffeisz's Project`) NÃO deve ser alterado.
@@ -71,14 +85,34 @@ python -m http.server 8765   # na raiz; abrir http://localhost:8765/login.html
 ## Regras de trabalho
 
 - **Não** introduzir build/framework sem pedido explícito; manter o padrão estático.
-- **Editar `index.html` com cuidado** (arquivo gigante): localize por `id`/nome de função
-  (ex.: `showTab`, `loadAtas`, `abrirModalNovoContrato`) antes de alterar.
+- **Não recolocar lógica nova em `index.html`**. Depois da refatoração, ele deve continuar
+  como casca estrutural: HTML das telas + carregamento de assets. Mudanças em JS legado
+  devem ir para o arquivo correspondente em `js/legacy/`; novas extrações devem migrar
+  gradualmente para `js/modules/`, `js/state/` ou `js/components/`.
+- **Preservar a ordem dos scripts em `index.html`**. Os arquivos em `js/legacy/` são scripts
+  clássicos, não módulos ES, porque ainda compartilham escopo global e sustentam handlers
+  inline (`onclick`, `onchange`, etc.). Não converter para `type="module"` sem adaptar as
+  dependências globais.
+- **Editar o domínio correto**: Atas em `js/legacy/20-atas.js`; Licitações/Usuários em
+  `js/legacy/30-usuarios-licitacoes.js`; Controle de Entregas/Empenhos em
+  `js/legacy/40-itens-entregas.js`; Emendas/dashboard em
+  `js/legacy/60-emendas-dashboard.js`; Fiscalização/Sanções/Contratos em
+  `js/legacy/70-fiscalizacao-sancoes-contratos.js`.
+- **Ao criar código novo**, prefira módulos nativos (`js/modules/<domínio>`,
+  `js/state`, `js/components`) e exponha wrappers globais apenas quando necessário para
+  compatibilidade com handlers inline existentes.
+- **Editar `index.html` com cuidado**: localize por `id`/painel/modal antes de alterar.
+  A lógica de funções como `showTab`, `loadAtas` e `abrirModalNovoContrato` agora está nos
+  arquivos externos, não no HTML.
 - **Banco:** seguir a trava obrigatória de ambiente Supabase acima. Nenhuma escrita/execução
   no projeto original; migrations devem ser idempotentes e fixar `search_path` em funções.
 - Rodar `get_advisors` (segurança/performance) após mudanças de schema.
 - Atualizar [CHANGELOG.md](CHANGELOG.md) e os docs relevantes ao mudar comportamento.
 - Confirmar itens marcados como **"A confirmar"** em [docs/TODO.md](docs/TODO.md) antes de
   tratá-los como regra fixa.
+- Após mudanças estruturais de frontend, validar no mínimo:
+  `node --check` em todos os `.js`, `git diff --check`, e `python -m http.server 8765`
+  com verificação HTTP/console do carregamento dos assets.
 
 ## Documentação de referência
 

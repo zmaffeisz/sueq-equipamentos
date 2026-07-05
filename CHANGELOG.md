@@ -9,6 +9,14 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
 
 ## [Não versionado]
 
+### Alterado
+- **Refatoração estrutural incremental do frontend**: `index.html` foi reduzido para a
+  estrutura da SPA e carregamento de arquivos externos. O JavaScript monolítico foi
+  extraído e dividido em scripts clássicos menores em `js/legacy/`, preservando ordem de
+  execução e handlers inline. Estilos de documentos de impressão foram extraídos para
+  `css/print-*.css`. Criada a base de módulos nativos em `js/modules/`, `js/state/` e
+  `js/components/` para as próximas extrações sem alterar regra de negócio.
+
 ### Corrigido
 - **Atas Rp Vigentes "perdia" atas encerradas e suas execuções**: `loadAtas` descartava
   contratos/itens/execuções com `status=ENCERRADO` já na busca dos dados (não só na
