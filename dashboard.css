@@ -5,7 +5,7 @@
 
 /* ── LAYOUT GERAL ── */
 :root{--sidebar-expanded:220px;--sidebar-collapsed:58px;--table-min-height:620px;--table-extra-height:140px}
-.container{max-width:none;margin:0 auto;padding:1.25rem}
+.container{max-width:none;margin:0 auto;padding:1.25rem;transition:margin-left .22s ease}
 @media(min-width:769px){.container{margin-left:var(--sidebar-collapsed)}}
 
 /* ── HEADER ── */
@@ -31,6 +31,7 @@
 @media(min-width:769px){
   .sidebar{width:var(--sidebar-collapsed)}
   .sidebar:hover{width:var(--sidebar-expanded);box-shadow:6px 0 18px rgba(0,0,0,.12)}
+  .sidebar:hover ~ .container{margin-left:var(--sidebar-expanded)}
   .sidebar:not(:hover) .sidebar-nav{padding:0 .45rem}
   .sidebar:not(:hover) .sidebar-section{align-items:center}
   .sidebar:not(:hover) .sidebar-section-label{opacity:0;max-height:0;padding:0;overflow:hidden}
