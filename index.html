@@ -1973,7 +1973,23 @@
     <div class="filters" style="margin-bottom:1rem">
       <div class="fg">
         <div class="fg-label">Buscar <button onclick="clearF('ct-busca')">✕</button></div>
-        <input type="text" id="ct-busca" placeholder="CPL, prestador, objeto..." oninput="filtrarContratos()" style="min-width:280px">
+        <input type="text" id="ct-busca" placeholder="Nº, CPL, prestador, objeto, fiscal..." oninput="filtrarContratos()" style="min-width:320px">
+      </div>
+      <div class="fg">
+        <div class="fg-label">Alerta</div>
+        <select id="ct-alerta" onchange="filtrarContratos()" style="min-width:190px">
+          <option value="">Todos</option>
+          <option value="encerrados">Encerrados</option>
+          <option value="concluidos">Concluídos</option>
+          <option value="vencendo90">Vencendo em 90 dias</option>
+          <option value="vencidos">Vencidos</option>
+          <option value="semFiscal">Sem fiscal</option>
+          <option value="semClassificacao">Sem classificação</option>
+          <option value="medicaoPendente">Medição pendente</option>
+          <option value="nfPendente">NF pendente</option>
+          <option value="eventoRascunho">Evento em rascunho</option>
+          <option value="limiteAditivo80">Aditivo acima de 80%</option>
+        </select>
       </div>
       <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
     </div>
@@ -1983,6 +1999,11 @@
       <div class="metric"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
       <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
       <div class="metric"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric"><div class="metric-label">Sem fiscal</div><div class="metric-value" id="ct-m-sem-fiscal" style="color:var(--red)">—</div><div class="metric-sub">precisam revisar</div></div>
+      <div class="metric"><div class="metric-label">Medição pendente</div><div class="metric-value" id="ct-m-med-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric"><div class="metric-label">NF pendente</div><div class="metric-value" id="ct-m-nf-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric"><div class="metric-label">Evento em rascunho</div><div class="metric-value" id="ct-m-evento-rascunho" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric"><div class="metric-label">Valor atual</div><div class="metric-value" id="ct-m-valor-atual" style="font-size:20px">—</div><div class="metric-sub">contratos filtrados</div></div>
     </div>
 
     <div class="table-card">
@@ -1999,20 +2020,24 @@
             <tr>
               <th style="width:22px"></th>
               <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
-              <th style="width:170px">Ações</th>
-              <th style="width:90px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('tipo_instrumento')" style="cursor:pointer;user-select:none">Tipo <span id="sort-ct-tipo_instrumento"></span></span><span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
-              <th style="width:110px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:220px">Ações</th>
+              <th style="width:120px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('numero_contrato')" style="cursor:pointer;user-select:none">Nº Contrato <span id="sort-ct-numero_contrato"></span></span><span class="hdr-filter-btn" id="hfc-numero_contrato" onclick="openContratoFilter(event,'numero_contrato')" title="Filtrar">▾</span></span></th>
+              <th style="width:115px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">Processo/CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:160px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('modelo_contrato')" style="cursor:pointer;user-select:none">Modelo <span id="sort-ct-modelo_contrato"></span></span><span class="hdr-filter-btn" id="hfc-modelo_contrato" onclick="openContratoFilter(event,'modelo_contrato')" title="Filtrar">▾</span></span></th>
+              <th style="width:130px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('origem_contratacao')" style="cursor:pointer;user-select:none">Origem <span id="sort-ct-origem_contratacao"></span></span><span class="hdr-filter-btn" id="hfc-origem_contratacao" onclick="openContratoFilter(event,'origem_contratacao')" title="Filtrar">▾</span></span></th>
               <th style="width:170px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('objeto')" style="width:260px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('vigencia_atual')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('vencimento')" style="width:100px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('dias')" style="width:70px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
               <th style="width:150px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
-              <th style="width:110px;white-space:nowrap">Ação</th>
               <th style="width:80px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
               <th onclick="sortContratos('fiscalizacao')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('valor_mensal')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor mensal <span id="sort-ct-valor_mensal"></span><span class="hdr-filter-btn" id="hfc-valor_mensal" onclick="openContratoFilter(event,'valor_mensal')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('valor_total')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor total <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_inicial')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor inicial <span id="sort-ct-valor_inicial"></span></span></th>
+              <th onclick="sortContratos('valor_reajustado')" style="width:140px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Inicial reajustado <span id="sort-ct-valor_reajustado"></span></span></th>
+              <th onclick="sortContratos('valor_total')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor atual <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('aditivo_usado')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">% aditivo <span id="sort-ct-aditivo_usado"></span></span></th>
+              <th style="width:120px;white-space:nowrap">Alertas</th>
               <th onclick="sortContratos('atualizado_em')" style="width:120px;cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
               <th style="width:90px;white-space:nowrap">Editar</th>
             </tr>
@@ -2089,8 +2114,8 @@
       <div class="form-group"><div class="form-label">Data de assinatura</div><input id="ec-assinatura" type="date"></div>
       <div class="form-group"><div class="form-label">Vigência atual</div><input id="ec-vigencia" type="text"></div>
       <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
-      <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01" disabled title="Valor original preservado. Use reajuste, aditivo ou supressão para alterar valores de gestão."></div>
+      <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01" disabled title="Valor de gestão preservado. Use eventos formalizados para alterar o valor atual."></div>
       <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
       <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
       <div class="form-group"><div class="form-label">Fiscalização</div><select id="ec-fiscalizacao"><option value="">Selecione...</option></select></div>
@@ -2181,11 +2206,11 @@
 </div>
 
 <!-- Modal Detalhes do Contrato -->
-<div class="modal-overlay" id="modal-contrato-detalhe" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
-  <div class="modal-box" style="width:720px;max-width:98vw;max-height:90vh;overflow-y:auto">
+<div class="modal-overlay" id="modal-contrato-detalhe" style="align-items:flex-start;padding:1rem;overflow-y:auto">
+  <div class="modal-box" style="width:1180px;max-width:98vw;max-height:94vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
       <div class="modal-title" id="mcd-titulo">Contrato</div>
-      <button onclick="document.getElementById('modal-contrato-detalhe').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      <button onclick="fecharContratoIndividual()" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1">✕</button>
     </div>
     <div id="mcd-corpo"></div>
     <div id="mcd-acoes" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
@@ -2209,6 +2234,172 @@
         <button class="btn-primary" onclick="salvarValoresContrato()">Salvar valores</button>
         <span id="mcd-valores-msg" class="fmsg"></span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Documento do Contrato -->
+<div class="modal-overlay" id="modal-ct-documento">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div class="modal-title">Referência de documento</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctdoc-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Tipo *</div>
+        <select id="ctdoc-tipo">
+          <option value="contrato_assinado">Contrato assinado</option>
+          <option value="termo_aditivo">Termo aditivo</option>
+          <option value="prorrogacao">Prorrogação</option>
+          <option value="reajuste">Reajuste</option>
+          <option value="supressao">Supressão</option>
+          <option value="apostilamento">Apostilamento</option>
+          <option value="alteracao_fiscal">Alteração de fiscal</option>
+          <option value="nota_fiscal">Nota fiscal</option>
+          <option value="relatorio_medicao">Relatório de medição</option>
+          <option value="parecer">Parecer</option>
+          <option value="certidao">Certidão</option>
+          <option value="publicacao">Publicação</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><div class="form-label">Data do documento</div><input type="date" id="ctdoc-data"></div>
+      <div class="form-group full"><div class="form-label">Título *</div><input type="text" id="ctdoc-titulo" placeholder="Ex.: 1º Termo Aditivo"></div>
+      <div class="form-group"><div class="form-label">Número</div><input type="text" id="ctdoc-numero" placeholder="Ex.: TA 01/2026"></div>
+      <div class="form-group"><div class="form-label">Nome do arquivo/referência</div><input type="text" id="ctdoc-arquivo" placeholder="Ex.: termo_aditivo_01_2026.pdf"></div>
+      <div class="form-group full"><div class="form-label">Link ou caminho de referência</div><input type="text" id="ctdoc-url" placeholder="URL, SEI, caminho local ou referência documental"></div>
+      <div class="form-group"><div class="form-label">Vincular a</div>
+        <select id="ctdoc-related-type" onchange="ctDocAtualizarEntidadesRelacionadas()">
+          <option value="contract">Contrato inteiro</option>
+          <option value="contractEvent">Evento contratual</option>
+          <option value="measurement">Medição</option>
+          <option value="invoice">Nota fiscal</option>
+          <option value="history">Histórico</option>
+          <option value="other">Outro vínculo</option>
+        </select>
+      </div>
+      <div class="form-group"><div class="form-label">Registro vinculado</div><select id="ctdoc-related-id"></select></div>
+      <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="ctdoc-obs" placeholder="Referência cadastrada pelo fiscal, localização, ressalvas..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarDocumentoContrato()">Salvar referência</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-documento').classList.remove('active')">Cancelar</button>
+      <span id="ctdoc-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Item do Contrato -->
+<div class="modal-overlay" id="modal-ct-item">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div class="modal-title" id="ctitem-titulo">Item do contrato</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctitem-info"></div>
+    <input type="hidden" id="ctitem-id">
+    <div class="form-grid">
+      <div class="form-group full"><div class="form-label">Descrição *</div><input type="text" id="ctitem-descricao" placeholder="Item, serviço, posto, equipamento ou escopo"></div>
+      <div class="form-group"><div class="form-label">Tipo de execução *</div>
+        <select id="ctitem-tipo">
+          <option value="mensal">Mensal</option>
+          <option value="demanda">Por demanda</option>
+          <option value="entrega">Por entrega</option>
+          <option value="os">Por OS</option>
+          <option value="posto_equipe">Posto/equipe</option>
+          <option value="equipamento">Equipamento</option>
+          <option value="escopo">Escopo</option>
+        </select>
+      </div>
+      <div class="form-group"><div class="form-label">Status</div><select id="ctitem-status"><option value="contratado">Ativo/contratado</option><option value="inativo">Inativo</option><option value="cancelado">Cancelado</option></select></div>
+      <div class="form-group"><div class="form-label">Quantidade contratada *</div><input type="number" id="ctitem-qtde" step="any" min="0"></div>
+      <div class="form-group"><div class="form-label">Valor unitário atual (R$) *</div><input type="number" id="ctitem-valor" step="0.01" min="0"></div>
+      <div class="form-group"><div class="form-label">Marca</div><input type="text" id="ctitem-marca"></div>
+      <div class="form-group"><div class="form-label">Modelo</div><input type="text" id="ctitem-modelo"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="ctitem-obs" placeholder="Detalhes operacionais do item"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarItemContrato()">Salvar item</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-item').classList.remove('active')">Cancelar</button>
+      <button class="btn-secondary" id="ctitem-inativar" onclick="inativarItemContrato()" style="display:none;color:var(--red)">Inativar item</button>
+      <span id="ctitem-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Medição do Contrato -->
+<div class="modal-overlay" id="modal-ct-medicao">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div class="modal-title">Medição do contrato</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctmed-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Competência *</div><input type="month" id="ctmed-competencia"></div>
+      <div class="form-group"><div class="form-label">Data da medição *</div><input type="date" id="ctmed-data"></div>
+      <div class="form-group"><div class="form-label">Tipo *</div>
+        <select id="ctmed-tipo">
+          <option value="competencia">Competência</option>
+          <option value="entrega_parcelada">Entrega parcelada</option>
+          <option value="demanda">Demanda / OS</option>
+          <option value="recebimento">Recebimento / aceite</option>
+          <option value="aceite_instalacao">Aceite com instalação</option>
+          <option value="etapa_marco">Etapa / marco</option>
+          <option value="planilha_medicao">Planilha de medição</option>
+          <option value="medicao_mista">Serviço + materiais/peças</option>
+          <option value="procedimento_demanda">Procedimento / credenciamento</option>
+          <option value="configuravel">Configurável</option>
+        </select>
+      </div>
+      <div class="form-group"><div class="form-label">Status *</div>
+        <select id="ctmed-status">
+          <option value="registrada">Registrada</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="aprovada_pelo_fiscal">Aprovada pelo fiscal</option>
+          <option value="aprovada_com_glosa">Aprovada com glosa</option>
+          <option value="recusada">Recusada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="form-group"><div class="form-label">Fiscal responsável</div><input type="text" id="ctmed-fiscal"></div>
+      <div class="form-group"><div class="form-label">Valor bruto (R$) *</div><input type="number" id="ctmed-valor-bruto" step="0.01" min="0" oninput="ctAtualizarLiquidoMedicao()"></div>
+      <div class="form-group"><div class="form-label">Valor glosado (R$)</div><input type="number" id="ctmed-valor-glosa" step="0.01" min="0" oninput="ctAtualizarLiquidoMedicao()"></div>
+      <div class="form-group"><div class="form-label">Valor líquido</div><input type="text" id="ctmed-valor-liquido" disabled></div>
+      <div class="form-group full"><div class="form-label">Motivo da glosa</div><input type="text" id="ctmed-glosa-motivo" placeholder="Obrigatório quando houver glosa"></div>
+      <div class="form-group full"><div class="form-label">Observações do fiscal</div><input type="text" id="ctmed-obs" placeholder="Registro da execução, aceite, ressalvas ou recusa"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarMedicaoContrato()">Salvar medição</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-medicao').classList.remove('active')">Cancelar</button>
+      <span id="ctmed-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nota Fiscal do Contrato -->
+<div class="modal-overlay" id="modal-ct-nf">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div class="modal-title">Nota fiscal vinculada à medição</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctnf-info"></div>
+    <div class="form-grid">
+      <div class="form-group full"><div class="form-label">Medição vinculada *</div><select id="ctnf-medicao"></select></div>
+      <div class="form-group"><div class="form-label">Número da NF *</div><input type="text" id="ctnf-numero"></div>
+      <div class="form-group"><div class="form-label">Série</div><input type="text" id="ctnf-serie"></div>
+      <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="ctnf-emissao"></div>
+      <div class="form-group"><div class="form-label">Data de recebimento</div><input type="date" id="ctnf-recebimento"></div>
+      <div class="form-group"><div class="form-label">Valor bruto (R$) *</div><input type="number" id="ctnf-valor-total" step="0.01" min="0" oninput="ctAtualizarValorAprovadoNF()"></div>
+      <div class="form-group"><div class="form-label">Glosa/desconto (R$)</div><input type="number" id="ctnf-valor-glosa" step="0.01" min="0" oninput="ctAtualizarValorAprovadoNF()"></div>
+      <div class="form-group"><div class="form-label">Valor aprovado</div><input type="text" id="ctnf-valor-aprovado" disabled></div>
+      <div class="form-group"><div class="form-label">Status *</div>
+        <select id="ctnf-status">
+          <option value="pendente">Pendente</option>
+          <option value="em_conferencia">Em conferência</option>
+          <option value="aprovada">Aprovada</option>
+          <option value="aprovada_com_glosa">Aprovada com glosa</option>
+          <option value="recusada">Recusada</option>
+          <option value="encaminhada_para_pagamento">Encaminhada para pagamento</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="ctnf-obs" placeholder="Validação, conferência ou encaminhamento administrativo"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarNotaFiscalContrato()">Salvar NF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-nf').classList.remove('active')">Cancelar</button>
+      <span id="ctnf-msg" class="fmsg"></span>
     </div>
   </div>
 </div>
@@ -2240,6 +2431,7 @@
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctrea-info"></div>
     <div class="form-grid">
       <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctrea-data"></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="ctrea-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group"><div class="form-label">Percentual (%) *</div><input type="number" id="ctrea-pct" placeholder="ex: 5.5" step="0.01"></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctrea-obs" placeholder="ex: IPCA 2024..."></div>
     </div>
@@ -2257,9 +2449,15 @@
     <div class="modal-title">➕ Aditivo</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctad-info"></div>
     <div class="form-grid">
-      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctad-data"></div>
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctad-data" onchange="ctAtualizarImpactoEvento('aditivo')"></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="ctad-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctad-pct" placeholder="ex: 25" step="0.01"></div>
       <div class="form-group"><div class="form-label">Valor acrescido (R$)</div><input type="number" id="ctad-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group"><div class="form-label">Item base</div><select id="ctad-item"></select></div>
+      <div class="form-group"><div class="form-label">Quantidade acrescida</div><input type="number" id="ctad-qtde" step="any" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
+      <div class="form-group"><div class="form-label">Valor unitário/mensal</div><input type="number" id="ctad-unitario" step="0.01" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
+      <div class="form-group"><div class="form-label">Meses restantes</div><input type="number" id="ctad-meses" step="1" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
+      <div class="form-group full"><div class="form-label">Impacto calculado</div><input type="text" id="ctad-impacto" disabled></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctad-obs" placeholder="ex: Acréscimo de serviços..."></div>
     </div>
     <div class="form-actions">
@@ -2296,6 +2494,7 @@
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctpr-info"></div>
     <div class="form-grid">
       <div class="form-group"><div class="form-label">Nova data fim *</div><input type="date" id="ctpr-data-fim"></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="ctpr-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctpr-obs" placeholder="ex: Prorrogado por 12 meses..."></div>
     </div>
     <div class="form-actions">
@@ -2312,9 +2511,15 @@
     <div class="modal-title">✂️ Supressão</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctsu-info"></div>
     <div class="form-grid">
-      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctsu-data"></div>
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctsu-data" onchange="ctAtualizarImpactoEvento('supressao')"></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="ctsu-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctsu-pct" placeholder="ex: 10" step="0.01"></div>
       <div class="form-group"><div class="form-label">Valor reduzido (R$)</div><input type="number" id="ctsu-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group"><div class="form-label">Item base</div><select id="ctsu-item"></select></div>
+      <div class="form-group"><div class="form-label">Quantidade reduzida</div><input type="number" id="ctsu-qtde" step="any" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
+      <div class="form-group"><div class="form-label">Valor unitário/mensal</div><input type="number" id="ctsu-unitario" step="0.01" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
+      <div class="form-group"><div class="form-label">Meses restantes</div><input type="number" id="ctsu-meses" step="1" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
+      <div class="form-group full"><div class="form-label">Impacto calculado</div><input type="text" id="ctsu-impacto" disabled></div>
       <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctsu-obs" placeholder="ex: Redução de escopo..."></div>
     </div>
     <div class="form-actions">

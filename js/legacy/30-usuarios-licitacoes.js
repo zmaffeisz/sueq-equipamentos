@@ -192,9 +192,10 @@ function renderLicitacoes(){
   let mostrados=0;
   // por processo: itens que ainda estão na licitação = NÃO executados (entregue/execução/executado saem da aba)
   const info=_licitacoesCache.map(p=>{
-    const naLic=(porProc[p.id]||[]).filter(i=>!_licItemExecutado(i));   // pendentes + já contratados
+    const todosItens=porProc[p.id]||[];
+    const naLic=todosItens.filter(i=>!_licItemExecutado(i));            // pendentes + já contratados
     const pendentes=naLic.filter(i=>!_licItemContratado(i));            // ainda nem viraram contrato
-    return {p, naLic, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:naLic.length===0};
+    return {p, naLic, totContratado:naLic.length-pendentes.length, fullyContratado:naLic.length>0 && pendentes.length===0, gone:todosItens.length>0 && naLic.length===0};
   });
   const ocultos=info.filter(x=>x.fullyContratado).length;
   const base=info.filter(x=>{
@@ -601,4 +602,3 @@ async function _persistProcItens(processoId, natureza){
   if(inserts.length){ const {error}=await sb.from('itens').insert(inserts); if(error) throw error; }
   for(const x of current.filter(x=>x.id)){ const {error}=await sb.from('itens').update(x.row).eq('id',x.id); if(error) throw error; }
 }
-

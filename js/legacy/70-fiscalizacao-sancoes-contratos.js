@@ -656,7 +656,10 @@ async function salvarSancao(){
 // ── Filtros estilo Google Sheets para Contratos ──
 const CONTRATO_FILTER_COLS = {
   tipo_instrumento:{get:r=>r.tipo_instrumento||'CONTRATO',disp:v=>v||'CONTRATO'},
+  numero_contrato:{get:r=>r.numero_contrato||'',disp:v=>v||'(vazio)'},
   cpl:{get:r=>r.cpl||'',disp:v=>v||'(vazio)'},
+  modelo_contrato:{get:r=>_ctModeloKey(r),disp:v=>_ctModeloLabelFromKey(v)},
+  origem_contratacao:{get:r=>_ctOrigemKey(r),disp:v=>_ctHumanize(v||'nao_informada')},
   prestador:{get:r=>r.prestador||'',disp:v=>v||'(vazio)'},
   objeto:{get:r=>r.objeto||'',disp:v=>v||'(vazio)'},
   vigencia_atual:{get:r=>r.vigencia_atual||'',disp:v=>v||'(vazio)'},
@@ -740,13 +743,244 @@ let ctSortAsc = true;
 let contratosSelecionados = new Set();
 let ctExpandido = {};
 let ctItensPorContrato = {};
+let _ctMedicoesAtual = [];
+let _ctNotasAtual = [];
+let _ctDocumentosAtual = [];
+let _ctHistoricoAtual = [];
+let _ctItensAtual = [];
+const CT_TABLE_COLSPAN = 22;
+
+function _ctModule(){ return window.ContratosModule||{}; }
+function _ctNum(v){
+  const mod=_ctModule();
+  if(typeof mod.toContractNumber==='function') return mod.toContractNumber(v);
+  if(v==null||v==='') return 0;
+  if(typeof v==='number') return Number.isFinite(v)?v:0;
+  const n=Number(String(v).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.'));
+  return Number.isFinite(n)?n:0;
+}
+function _ctMoney(v){
+  if(v==null||v==='') return '—';
+  return fmtFull(_ctNum(v));
+}
+function _ctHumanize(v){
+  return String(v||'').replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase());
+}
+function _ctModeloKey(r){
+  return r.modelo_contrato||r.contractModel||r.modelo||'nao_classificado';
+}
+function _ctModeloLabelFromKey(key){
+  if(!key||key==='nao_classificado') return 'Não classificado';
+  const found=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===key);
+  return found?.label||_ctHumanize(key);
+}
+function _ctModeloLabel(r){ return _ctModeloLabelFromKey(_ctModeloKey(r)); }
+function _ctOrigemKey(r){ return r.origem_contratacao||r.procurementOrigin||r.origem||'nao_informada'; }
+function _ctFormaKey(r){ return r.forma_execucao_pagamento||r.executionPaymentModel||r.forma_pagamento||'nao_informada'; }
+function _ctValorInicial(r){ return _ctNum(r.valor_inicial_num??r.valor_inicial); }
+function _ctValorAtual(r){ return _ctNum(r.valor_atual_num??r.valor_atual??r.valor_total??r.valor_inicial); }
+function _ctValorReajustado(r){
+  const mod=_ctModule();
+  if(typeof mod.createContractRecord==='function'&&typeof mod.calculateInitialAdjustedValue==='function'){
+    return mod.calculateInitialAdjustedValue(mod.createContractRecord(r),[],r._contractEvents||[]);
+  }
+  return _ctValorInicial(r);
+}
+function _ctAditivoUsado(r){
+  const mod=_ctModule();
+  if(!r._contractEvents?.length||typeof mod.createContractRecord!=='function'||typeof mod.calculateContractFinancialSummary!=='function') return null;
+  return mod.calculateContractFinancialSummary(mod.createContractRecord(r),[],r._contractEvents,[],[]).additiveLimitUsedPercent;
+}
+function _ctPendenciasResumo(r){
+  const tags=[];
+  const dias=diasContratoVencer(r.vencimento);
+  if(dias!==null&&dias<0) tags.push(['Vencido','var(--red-bg)','var(--red-text)']);
+  else if(dias!==null&&dias<=90) tags.push(['Vence em 90d','var(--amber-bg)','var(--amber-text)']);
+  if(!r.fiscalizacao) tags.push(['Sem fiscal','var(--red-bg)','var(--red-text)']);
+  if(_ctModeloKey(r)==='nao_classificado') tags.push(['Sem modelo','var(--surface2)','var(--text3)']);
+  if(r._medicoesPendentes) tags.push([`${r._medicoesPendentes} med. pend.`,'var(--amber-bg)','var(--amber-text)']);
+  if(r._nfsPendentes) tags.push([`${r._nfsPendentes} NF pend.`,'var(--amber-bg)','var(--amber-text)']);
+  if(r._eventosRascunho) tags.push([`${r._eventosRascunho} evento(s) rasc.`,'var(--surface2)','var(--text3)']);
+  const aditivo=_ctAditivoUsado(r);
+  if(aditivo!==null&&aditivo>=80) tags.push(['Aditivo >80%','var(--red-bg)','var(--red-text)']);
+  return tags.length?tags.map(([t,bg,c])=>`<span class="badge" style="background:${bg};color:${c};margin-right:3px">${t}</span>`):'<span style="color:var(--text3)">Sem alerta</span>';
+}
+function abrirContratoGerencial(id){
+  window._contratoGerencialId=id;
+  if(location.hash!==`#/contratos/${id}`) location.hash=`#/contratos/${id}`;
+  else abrirDetalheContrato(id);
+}
+
+const CT_MEDICAO_STATUS_LABELS={
+  rascunho:'Rascunho',
+  registrada:'Registrada',
+  aprovada_pelo_fiscal:'Aprovada pelo fiscal',
+  aprovada_com_glosa:'Aprovada com glosa',
+  recusada:'Recusada',
+  cancelada:'Cancelada'
+};
+const CT_NF_STATUS_LABELS={
+  pendente:'Pendente',
+  em_conferencia:'Em conferência',
+  aprovada:'Aprovada',
+  aprovada_com_glosa:'Aprovada com glosa',
+  recusada:'Recusada',
+  encaminhada_para_pagamento:'Encaminhada para pagamento',
+  cancelada:'Cancelada'
+};
+function _ctStatusBadge(status,map){
+  const key=String(status||'').toLowerCase();
+  const label=map[key]||_ctHumanize(key||'sem_status');
+  const ok=['aprovada','aprovada_pelo_fiscal','aprovada_com_glosa','encaminhada_para_pagamento'].includes(key);
+  const bad=['recusada','cancelada'].includes(key);
+  const bg=bad?'var(--red-bg)':ok?'var(--green-bg)':key==='rascunho'?'var(--surface2)':'var(--amber-bg)';
+  const color=bad?'var(--red-text)':ok?'var(--green-text)':key==='rascunho'?'var(--text3)':'var(--amber-text)';
+  return `<span class="badge" style="background:${bg};color:${color}">${label}</span>`;
+}
+function _ctTodayISO(){return new Date().toISOString().slice(0,10);}
+function _ctMonthISO(){return new Date().toISOString().slice(0,7);}
+function _ctNormalizedDoc(v){
+  if(typeof normalizarNumeroDocumento==='function') return normalizarNumeroDocumento(v);
+  return String(v||'').replace(/\D/g,'');
+}
+function _ctDocTypeLabel(v){
+  const labels={
+    contrato_assinado:'Contrato assinado',
+    termo_aditivo:'Termo aditivo',
+    prorrogacao:'Prorrogação',
+    reajuste:'Reajuste',
+    supressao:'Supressão',
+    apostilamento:'Apostilamento',
+    alteracao_fiscal:'Alteração de fiscal',
+    nota_fiscal:'Nota fiscal',
+    relatorio_medicao:'Relatório de medição',
+    parecer:'Parecer',
+    certidao:'Certidão',
+    publicacao:'Publicação',
+    outro:'Outro'
+  };
+  return labels[v]||_ctHumanize(v||'outro');
+}
+function _ctRelatedTypeLabel(v){
+  return {
+    contract:'Contrato',
+    contractEvent:'Evento contratual',
+    measurement:'Medição',
+    invoice:'Nota fiscal',
+    history:'Histórico',
+    other:'Outro'
+  }[v]||_ctHumanize(v||'contrato');
+}
+function _ctHistDateValue(h){
+  return h.data_evento||h.created_at||h.date||'';
+}
+function _ctItemTipo(i){
+  const obs=String(i?.observacoes||i?.obs||'');
+  const m=obs.match(/\[tipo_execucao:([^\]]+)\]/i);
+  if(m) return m[1];
+  const forma=_ctFormaKey(_ctAtual||{});
+  if(forma.includes('mensal')||forma.includes('competencia')||forma.includes('continuo')) return 'mensal';
+  if(forma.includes('demanda')) return 'demanda';
+  if(forma.includes('ordem_servico')) return 'os';
+  if(forma.includes('entrega')) return 'entrega';
+  return 'demanda';
+}
+function _ctItemTipoLabel(v){
+  return {mensal:'Mensal',demanda:'Por demanda',entrega:'Por entrega',os:'Por OS',posto_equipe:'Posto/equipe',equipamento:'Equipamento',escopo:'Escopo'}[v]||_ctHumanize(v||'demanda');
+}
+function _ctObsSemTipo(obs=''){
+  return String(obs||'').replace(/\s*\[tipo_execucao:[^\]]+\]\s*/i,'').trim();
+}
+function _ctObsComTipo(obs,tipo){
+  const base=_ctObsSemTipo(obs);
+  return `${base}${base?' ':''}[tipo_execucao:${tipo||'demanda'}]`;
+}
+function _ctEventStatus(h){
+  const raw=String(h?.status_evento||h?.event_status||h?.status||'').toLowerCase();
+  if(['rascunho','formalizado','cancelado'].includes(raw)) return raw;
+  return 'formalizado';
+}
+function _ctEventType(h){
+  const t=normalizar(h?.tipo||h?.action_type||'');
+  if(t.includes('reajuste')) return 'reajuste';
+  if(t.includes('aditivo')) return 'aditivo';
+  if(t.includes('supress')) return 'supressao';
+  if(t.includes('prorrog')||t.includes('renov')) return 'prorrogacao';
+  return 'outro';
+}
+function _ctHistoricoToEvents(hist=[]){
+  return (hist||[]).map(h=>{
+    const eventType=_ctEventType(h);
+    return {
+      id:h.id,
+      eventType,
+      tipo:eventType,
+      status:_ctEventStatus(h),
+      percentage:h.percentual,
+      impactValue:h.valor_impacto??h.impact_value??(eventType==='reajuste'?null:h.valor_novo),
+      adjustedValueAfter:h.valor_reajustado??h.adjusted_value_after??(eventType==='reajuste'?h.valor_novo:null),
+      affectsValue:eventType!=='reajuste',
+      affectsInitialAdjustedValue:eventType==='reajuste',
+      effectiveDate:h.data_evento,
+      notes:h.obs
+    };
+  }).filter(e=>['reajuste','aditivo','supressao','prorrogacao'].includes(e.eventType));
+}
+function _ctIsSchemaCacheError(error){
+  const msg=String(error?.message||error?.details||'').toLowerCase();
+  return msg.includes('schema cache')||msg.includes('column')||msg.includes('could not find');
+}
+async function ctRegistrarHistoricoContrato(entry={}){
+  if(!_ctAtual&&!entry.contrato_id) return {error:new Error('Contrato não definido')};
+  const payload={
+    contrato_id:entry.contrato_id??_ctAtual.id,
+    cpl:entry.cpl??_ctAtual?.cpl??null,
+    tipo:entry.tipo??entry.action_type??entry.actionType??'Evento',
+    action_type:entry.action_type??entry.actionType??entry.tipo??'evento',
+    titulo:entry.titulo??entry.title??entry.tipo??'Evento registrado',
+    data_evento:entry.data_evento??entry.date??_ctTodayISO(),
+    percentual:entry.percentual??null,
+    valor_novo:entry.valor_novo??null,
+    valor_mensal_novo:entry.valor_mensal_novo??null,
+    vigencia_nova_inicio:entry.vigencia_nova_inicio??null,
+    vigencia_nova_fim:entry.vigencia_nova_fim??null,
+    obs:entry.obs??entry.description??'',
+    fiscalizacao_nova:entry.fiscalizacao_nova??null,
+    related_entity_type:entry.related_entity_type??entry.relatedEntityType??null,
+    related_entity_id:entry.related_entity_id??entry.relatedEntityId??null,
+    documento_id:entry.documento_id??entry.documentId??null,
+    status_evento:entry.status_evento??entry.eventStatus??entry.status??null,
+    valor_impacto:entry.valor_impacto??entry.impactValue??null,
+    valor_reajustado:entry.valor_reajustado??entry.adjustedValueAfter??null,
+    usuario:entry.usuario??currentProfile?.nome??currentProfile?.email??null
+  };
+  const res=await sb.from('contratos_historico').insert(payload);
+  if(!res.error||!_ctIsSchemaCacheError(res.error)) return res;
+  return sb.from('contratos_historico').insert({
+    contrato_id:payload.contrato_id,
+    cpl:payload.cpl,
+    tipo:payload.tipo,
+    data_evento:payload.data_evento,
+    percentual:payload.percentual,
+    valor_novo:payload.valor_novo,
+    valor_mensal_novo:payload.valor_mensal_novo,
+    vigencia_nova_inicio:payload.vigencia_nova_inicio,
+    vigencia_nova_fim:payload.vigencia_nova_fim,
+    obs:payload.obs,
+    fiscalizacao_nova:payload.fiscalizacao_nova,
+    usuario:payload.usuario
+  });
+}
 
 async function loadContratos(){
   document.getElementById("contratos-loading").style.display="block";
   document.getElementById("contratos-main").style.display="none";
-  const [ctRes,forRes]=await Promise.all([
+  const [ctRes,forRes,medRes,nfRes,histRes]=await Promise.all([
     sb.from("contratos").select("*"),
-    sb.from("fornecedores").select("id,razao_social,cnpj_normalizado")
+    sb.from("fornecedores").select("id,razao_social,cnpj_normalizado"),
+    sb.from("contratos_medicoes").select("contrato_id,status"),
+    sb.from("notas_fiscais").select("contrato_id,status"),
+    sb.from("contratos_historico").select("*")
   ]);
   if(ctRes.error||forRes.error){document.getElementById("contratos-loading").innerHTML=`<div style="color:var(--red)">Erro ao carregar contratos: ${(ctRes.error||forRes.error).message}</div>`;return;}
   const secaoPredialIds=(ctRes.data||[]).filter(c=>/^SUEQ\s*-\s*PREDIAL$/i.test(String(c.secao||'').trim())).map(c=>c.id);
@@ -755,10 +989,15 @@ async function loadContratos(){
     if(normalizacaoErro) console.warn("Não foi possível persistir a normalização SUEQ - PREDIAL → SMCP:",normalizacaoErro);
   }
   const fornecedores=new Map((forRes.data||[]).map(f=>[String(f.id),f]));
+  const countBy=(rows=[],pred=()=>true)=>rows.reduce((m,r)=>{if(pred(r)){const k=String(r.contrato_id);m[k]=(m[k]||0)+1;}return m;},{});
+  const medPend=countBy(medRes.error?[]:(medRes.data||[]),r=>['rascunho','registrada'].includes(String(r.status||'').toLowerCase()));
+  const nfPend=countBy(nfRes.error?[]:(nfRes.data||[]),r=>['pendente','em_conferencia'].includes(String(r.status||'').toLowerCase()));
+  const eventosRasc=countBy(histRes.error?[]:(histRes.data||[]),r=>String(r.status_evento||'').toLowerCase()==='rascunho');
+  const eventosPorContrato=(histRes.error?[]:(histRes.data||[])).reduce((m,h)=>{const k=String(h.contrato_id);(m[k]||(m[k]=[])).push(h);return m;},{});
   contratosRows=(ctRes.data||[]).map(c=>{
     const f=fornecedores.get(String(c.fornecedor_id));
     const secao=/^SUEQ\s*-\s*PREDIAL$/i.test(String(c.secao||'').trim())?"SMCP":c.secao;
-    return {...c,secao,tipo_instrumento:c.tipo_instrumento||"CONTRATO",prestador:f?.razao_social||c.prestador||"",cnpj_fornecedor:f?.cnpj_normalizado||c.cnpj||""};
+    return {...c,secao,tipo_instrumento:c.tipo_instrumento||"CONTRATO",prestador:f?.razao_social||c.prestador||"",cnpj_fornecedor:f?.cnpj_normalizado||c.cnpj||"",_contractEvents:_ctHistoricoToEvents(eventosPorContrato[String(c.id)]||[]),_medicoesPendentes:medPend[String(c.id)]||0,_nfsPendentes:nfPend[String(c.id)]||0,_eventosRascunho:eventosRasc[String(c.id)]||0};
   }).sort((a,b)=>{
     const ord={VIGENTE:0,SUSPENSO:1,CONCLUIDO:2,ENCERRADO:3};
     const oa=ord[a.status]??3, ob=ord[b.status]??3;
@@ -1577,6 +1816,7 @@ async function salvarNovoContrato(){
 
 function clearAllContratos(){
   const el=document.getElementById("ct-busca");if(el)el.value="";
+  const alerta=document.getElementById("ct-alerta");if(alerta)alerta.value="";
   Object.keys(contratoHeaderFilters).forEach(k=>contratoHeaderFilters[k]=[]);
   _ctUpdateHdrBtns();
   filtrarContratos();
@@ -1584,6 +1824,7 @@ function clearAllContratos(){
 
 function filtrarContratos(){
   const busca=(document.getElementById("ct-busca")?.value||"").toLowerCase();
+  const alerta=document.getElementById("ct-alerta")?.value||"";
   const hoje=new Date();
   const d90=new Date(hoje);d90.setDate(d90.getDate()+90);
 
@@ -1597,14 +1838,32 @@ function filtrarContratos(){
       if(!sel.includes(val)) return false;
     }
     // Se não há filtro de status ativo, esconde ENCERRADO e CONCLUIDO por padrão
-    if(!contratoHeaderFilters.status.length && (r.status==="ENCERRADO"||r.status==="CONCLUIDO")) return false;
-    if(busca&&![r.cpl,r.prestador,r.objeto,r.secao].filter(Boolean).join(" ").toLowerCase().includes(busca)) return false;
+    if(!contratoHeaderFilters.status.length && !["encerrados","concluidos"].includes(alerta) && (r.status==="ENCERRADO"||r.status==="CONCLUIDO")) return false;
+    if(alerta){
+      const dias=diasContratoVencer(r.vencimento);
+      if(alerta==="encerrados" && r.status!=="ENCERRADO") return false;
+      if(alerta==="concluidos" && r.status!=="CONCLUIDO") return false;
+      if(alerta==="vencendo90" && !(r.status==="VIGENTE"&&dias!==null&&dias>=0&&dias<=90)) return false;
+      if(alerta==="vencidos" && !(dias!==null&&dias<0)) return false;
+      if(alerta==="semFiscal" && r.fiscalizacao) return false;
+      if(alerta==="semClassificacao" && _ctModeloKey(r)!=="nao_classificado") return false;
+      if(alerta==="medicaoPendente" && !(r._medicoesPendentes>0)) return false;
+      if(alerta==="nfPendente" && !(r._nfsPendentes>0)) return false;
+      if(alerta==="eventoRascunho" && !(r._eventosRascunho>0)) return false;
+      if(alerta==="limiteAditivo80" && !((_ctAditivoUsado(r)||0)>=80)) return false;
+    }
+    if(busca&&![r.numero_contrato,r.cpl,r.prestador,r.objeto,r.secao,r.fiscalizacao,_ctModeloLabel(r),_ctHumanize(_ctOrigemKey(r)),_ctHumanize(_ctFormaKey(r))].filter(Boolean).join(" ").toLowerCase().includes(busca)) return false;
     return true;
   });
 
   const total=contratosFiltrados.length;
   const vigentes=contratosFiltrados.filter(r=>r.status==="VIGENTE").length;
   const encerrados=contratosFiltrados.filter(r=>r.status==="ENCERRADO").length;
+  const semFiscal=contratosFiltrados.filter(r=>!r.fiscalizacao).length;
+  const medPendente=contratosFiltrados.filter(r=>r._medicoesPendentes>0).length;
+  const nfPendente=contratosFiltrados.filter(r=>r._nfsPendentes>0).length;
+  const eventoRascunho=contratosFiltrados.filter(r=>r._eventosRascunho>0).length;
+  const valorAtual=contratosFiltrados.reduce((s,r)=>s+_ctValorAtual(r),0);
   const vencendo=contratosFiltrados.filter(r=>{
     if(r.status!=="VIGENTE"||!r.vencimento) return false;
     const v=parseDataBR(r.vencimento);
@@ -1615,6 +1874,11 @@ function filtrarContratos(){
   document.getElementById("ct-m-vigentes").textContent=vigentes;
   document.getElementById("ct-m-vencendo").textContent=vencendo;
   document.getElementById("ct-m-encerrados").textContent=encerrados;
+  const semFiscalEl=document.getElementById("ct-m-sem-fiscal");if(semFiscalEl)semFiscalEl.textContent=semFiscal;
+  const medPendenteEl=document.getElementById("ct-m-med-pendente");if(medPendenteEl)medPendenteEl.textContent=medPendente;
+  const nfPendenteEl=document.getElementById("ct-m-nf-pendente");if(nfPendenteEl)nfPendenteEl.textContent=nfPendente;
+  const eventoRascunhoEl=document.getElementById("ct-m-evento-rascunho");if(eventoRascunhoEl)eventoRascunhoEl.textContent=eventoRascunho;
+  const valorAtualEl=document.getElementById("ct-m-valor-atual");if(valorAtualEl)valorAtualEl.textContent=fmtFull(valorAtual);
   document.getElementById("ct-count").textContent=`${total} contrato(s)`;
   renderTabelaContratos();
 }
@@ -1657,8 +1921,14 @@ function ctGetSortVal(r,col){
     const d=parseDataBR(r.vencimento);
     return d?d.getTime():(ctSortAsc?Infinity:-Infinity);
   }
+  if(col==="numero_contrato") return (r.numero_contrato||'').toString().toLowerCase();
+  if(col==="modelo_contrato") return _ctModeloLabel(r).toLowerCase();
+  if(col==="origem_contratacao") return _ctHumanize(_ctOrigemKey(r)).toLowerCase();
   if(col==="valor_mensal") return r.valor_mensal??-Infinity;
-  if(col==="valor_total") return (r.valor_atual??r.valor_total??r.valor_inicial)??-Infinity;
+  if(col==="valor_inicial") return _ctValorInicial(r);
+  if(col==="valor_reajustado") return _ctValorReajustado(r);
+  if(col==="valor_total") return _ctValorAtual(r);
+  if(col==="aditivo_usado") return _ctAditivoUsado(r)??-Infinity;
   if(col==="atualizado_em") return (r.atualizado_em||r.data_atualizacao||'').toString().toLowerCase();
   return ((r[col])||"").toString().toLowerCase();
 }
@@ -1676,7 +1946,7 @@ function renderTabelaContratos(){
   if(!tbody) return;
 
   // Atualizar ícones de ordenação
-  ["tipo_instrumento","cpl","prestador","objeto","vigencia_atual","vencimento","dias","status","secao","fiscalizacao","valor_mensal","valor_total","atualizado_em"].forEach(col=>{
+  ["numero_contrato","cpl","modelo_contrato","origem_contratacao","prestador","objeto","vigencia_atual","vencimento","dias","status","secao","fiscalizacao","valor_inicial","valor_reajustado","valor_total","aditivo_usado","atualizado_em"].forEach(col=>{
     const el=document.getElementById("sort-ct-"+col);
     if(el) el.textContent=ctSortCol===col?(ctSortAsc?" ▲":" ▼"):"";
   });
@@ -1685,7 +1955,7 @@ function renderTabelaContratos(){
   const selectAll=document.getElementById('ct-select-all');
   if(selectAll){selectAll.disabled=!podeManter;selectAll.checked=false;}
   atualizarBotaoManterStatus();
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="18" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="${CT_TABLE_COLSPAN}" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){
@@ -1708,8 +1978,11 @@ function renderTabelaContratos(){
       else if(dias<=90) diasHtml=`<span style="color:var(--amber);font-weight:600">${dias}d</span>`;
       else diasHtml=`<span style="color:var(--green)">${dias}d</span>`;
     }
-    const vm=r.valor_mensal!=null?r.valor_mensal:"—";
-    const vt=(r.valor_atual??r.valor_total??r.valor_inicial)!=null?(r.valor_atual??r.valor_total??r.valor_inicial):"—";
+    const valorInicial=_ctValorInicial(r);
+    const valorReajustado=_ctValorReajustado(r);
+    const valorAtual=_ctValorAtual(r);
+    const aditivoUsado=_ctAditivoUsado(r);
+    const aditivoHtml=aditivoUsado==null?'<span style="color:var(--text3)" title="Aguardando eventos estruturados">—</span>':`<span style="color:${aditivoUsado>=80?'var(--red)':aditivoUsado>=60?'var(--amber)':'var(--text2)'};font-weight:${aditivoUsado>=80?'700':'500'}">${aditivoUsado}%</span>`;
     const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar('contratos')
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
@@ -1721,20 +1994,24 @@ function renderTabelaContratos(){
     return `<tr>
       <td style="text-align:center;cursor:pointer;color:var(--text3);user-select:none" onclick="ctToggleExpand('${r.id}')" title="Ver itens do contrato">${expandido?'▼':'▶'}</td>
       <td style="text-align:center"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} ${podeManter?'':'disabled'} onchange="selecionarContrato('${r.id}',this.checked)" style="accent-color:var(--blue)"></td>
-      <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap"><button onclick="abrirDetalheContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver detalhes">📋 Detalhes</button>${btnEmailCt}</div></td>
-      <td><span class="badge" style="background:${r.tipo_instrumento==='ATA'?'var(--blue-bg)':'var(--surface2)'};color:${r.tipo_instrumento==='ATA'?'var(--blue-text)':'var(--text2)'}">${r.tipo_instrumento||'CONTRATO'}</span></td>
+      <td style="min-width:220px"><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap"><button onclick="abrirContratoGerencial('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap" title="Abrir a gestão individual do contrato">Gerenciar contrato</button>${btnEmailCt}${btnEncerrarCt}</div></td>
+      <td class="td-trunc" style="min-width:120px;max-width:140px;white-space:nowrap">${r.numero_contrato||"—"}</td>
       <td class="td-trunc" style="max-width:120px">${r.cpl||"—"}</td>
+      <td class="td-wrap" style="max-width:180px">${_sanEsc(_ctModeloLabel(r))}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(_ctHumanize(_ctFormaKey(r)))}</span></td>
+      <td>${_sanEsc(_ctHumanize(_ctOrigemKey(r)))}</td>
       <td class="td-trunc">${r.prestador||"—"}</td>
       <td class="td-wrap" style="max-width:280px">${r.objeto||"—"}</td>
       <td style="white-space:nowrap">${r.vigencia_atual||"—"}</td>
       <td style="white-space:nowrap;color:${cor};font-weight:500">${r.vencimento||"—"}</td>
       <td style="text-align:center">${diasHtml}</td>
       <td>${badgeStatusContrato(r.status,dias!==null&&dias<0)}</td>
-      <td>${btnEncerrarCt}</td>
       <td>${r.secao||"—"}</td>
       <td class="td-trunc" style="max-width:180px" title="${fisc}">${fisc}</td>
-      <td style="text-align:right;white-space:nowrap">${vm}</td>
-      <td style="text-align:right;white-space:nowrap">${vt}</td>
+      <td style="text-align:right;white-space:nowrap">${valorInicial?_ctMoney(valorInicial):"—"}</td>
+      <td style="text-align:right;white-space:nowrap">${valorReajustado?_ctMoney(valorReajustado):"—"}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600">${valorAtual?_ctMoney(valorAtual):"—"}</td>
+      <td style="text-align:right;white-space:nowrap">${aditivoHtml}</td>
+      <td style="white-space:nowrap">${_ctPendenciasResumo(r)}</td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text3)">${r.atualizado_em||r.data_atualizacao||"—"}</td>
       <td>${_isAdmin()?`<button onclick="abrirEditarContrato('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">✏️ Editar</button>`:'—'}</td>
     </tr>${expandido?_ctLinhaItensHtml(r.id):''}`;
@@ -1745,16 +2022,18 @@ function renderTabelaContratos(){
 function _ctLinhaItensHtml(contratoId){
   const itens=ctItensPorContrato[contratoId];
   if(itens===undefined){
-    return `<tr><td colspan="18" style="padding:10px 16px;color:var(--text3);background:var(--surface2)"><span class="spinner"></span> Carregando itens...</td></tr>`;
+    return `<tr><td colspan="${CT_TABLE_COLSPAN}" style="padding:10px 16px;color:var(--text3);background:var(--surface2)"><span class="spinner"></span> Carregando itens...</td></tr>`;
   }
   if(!itens.length){
-    return `<tr><td colspan="18" style="padding:10px 16px;color:var(--text3);background:var(--surface2)">Nenhum item de aquisição vinculado a este contrato.</td></tr>`;
+    return `<tr><td colspan="${CT_TABLE_COLSPAN}" style="padding:10px 16px;color:var(--text3);background:var(--surface2)">Nenhum item vinculado a este contrato nesta matriz.</td></tr>`;
   }
   const linhas=itens.map(i=>{
     const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
     const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
     const qtde=Number(i.qtde)||0;
     const saldo=qtde-recebido;
+    const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
+    const valorTotal=valorUnit*qtde;
     const temAF=entregas.some(e=>e.af_numero);
     return `<tr style="border-top:1px solid var(--border)">
       <td style="padding:6px 10px 6px 40px">${_sanEsc(i.descricao||'—')}</td>
@@ -1762,15 +2041,18 @@ function _ctLinhaItensHtml(contratoId){
       <td style="padding:6px 10px;text-align:right">${qtde}</td>
       <td style="padding:6px 10px;text-align:right">${recebido}</td>
       <td style="padding:6px 10px;text-align:right;font-weight:600;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td>
+      <td style="padding:6px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'—'}</td>
+      <td style="padding:6px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'—'}</td>
       <td style="padding:6px 10px">${temAF?'✅ emitida':'<span style="color:var(--amber-text)">⚠ sem AF</span>'}</td>
     </tr>`;
   }).join('');
-  return `<tr><td colspan="18" style="padding:0;background:var(--surface2)">
+  return `<tr><td colspan="${CT_TABLE_COLSPAN}" style="padding:0;background:var(--surface2)">
     <table style="width:100%;font-size:12px;border-collapse:collapse">
       <thead><tr style="color:var(--text2);text-align:left">
         <th style="padding:6px 10px 6px 40px">Item</th><th style="padding:6px 10px">Marca/Modelo</th>
         <th style="padding:6px 10px;text-align:right">Qtde</th><th style="padding:6px 10px;text-align:right">Recebido</th>
-        <th style="padding:6px 10px;text-align:right">Saldo</th><th style="padding:6px 10px">AF</th>
+        <th style="padding:6px 10px;text-align:right">Saldo</th><th style="padding:6px 10px;text-align:right">Valor unit.</th>
+        <th style="padding:6px 10px;text-align:right">Valor total</th><th style="padding:6px 10px">AF</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
     </table>
@@ -1781,7 +2063,7 @@ async function ctToggleExpand(id){
   if(ctExpandido[id] && !ctItensPorContrato[id]){
     renderTabelaContratos();
     const {data,error}=await sb.from('itens')
-      .select('id,descricao,qtde,marca,modelo,itens_entregas(id,af_numero,qtde_recebida,status)')
+      .select('id,descricao,qtde,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)')
       .eq('contrato_id',id).eq('origem','aquisicao').order('created_at');
     ctItensPorContrato[id]=error?[]:(data||[]);
   }
@@ -1866,6 +2148,8 @@ async function salvarEdicaoContrato(){
     else valor=String(valor).trim()||null;
     dados[coluna]=valor;
   });
+  delete dados.valor_inicial;
+  delete dados.valor_atual;
   if(dados.tipo_instrumento==="ATA") dados.valor_mensal=null;
   dados.prefixo_chamado=prefixo||null;
   // fornecedor via combobox
@@ -1967,7 +2251,7 @@ async function salvarEmailContrato(){
   setTimeout(()=>document.getElementById("modal-email-contrato").classList.remove("active"),700);
 }
 
-async function abrirDetalheContrato(id){
+async function abrirDetalheContratoLegado(id){
   _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||null;
   if(!_ctAtual) return;
   const el=document.getElementById("modal-contrato-detalhe");
@@ -2051,6 +2335,774 @@ async function abrirDetalheContrato(id){
   document.getElementById("mcd-corpo").innerHTML=html;
 }
 
+function fecharContratoIndividual(){
+  document.getElementById('modal-contrato-detalhe')?.classList.remove('active');
+  if(location.hash.startsWith('#/contratos/')) history.replaceState(null,'',location.pathname+location.search);
+  window._contratoGerencialId=null;
+}
+
+function ctOpenContratoTab(tab){
+  document.querySelectorAll('.ct-detail-tab').forEach(btn=>{
+    const active=btn.dataset.tab===tab;
+    btn.classList.toggle('active',active);
+    btn.style.borderBottomColor=active?'var(--blue)':'transparent';
+    btn.style.color=active?'var(--blue)':'var(--text)';
+  });
+  document.querySelectorAll('.ct-detail-pane').forEach(pane=>pane.style.display=pane.dataset.tab===tab?'block':'none');
+}
+
+async function abrirContratoPorHash(){
+  const m=location.hash.match(/^#\/contratos\/([^/]+)$/);
+  if(!m) return;
+  const id=decodeURIComponent(m[1]);
+  if(!contratosCarregado) await loadContratos();
+  await abrirDetalheContrato(id);
+}
+
+window.addEventListener('hashchange',abrirContratoPorHash);
+setTimeout(abrirContratoPorHash,0);
+
+async function abrirDetalheContrato(id){
+  _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||null;
+  const el=document.getElementById("modal-contrato-detalhe");
+  if(!el) return;
+  el.classList.add("active");
+
+  if(!_ctAtual){
+    document.getElementById("mcd-titulo").textContent="Contrato não encontrado";
+    document.getElementById("mcd-corpo").innerHTML=`<div style="padding:1.25rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2)">
+      <div style="font-weight:700;margin-bottom:.375rem">Não foi possível localizar o contrato.</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">ID solicitado: <code>${_sanEsc(String(id))}</code></div>
+      <button class="btn-secondary" onclick="fecharContratoIndividual()">Voltar para Contratos em execução</button>
+    </div>`;
+    const acoes=document.getElementById("mcd-acoes");if(acoes)acoes.style.display="none";
+    const valores=document.getElementById("mcd-valores");if(valores)valores.style.display="none";
+    return;
+  }
+
+  window._contratoGerencialId=id;
+  document.getElementById("mcd-titulo").textContent=`Gestão do contrato ${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id}`;
+  document.getElementById("mcd-corpo").innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spinner"></span> Carregando contrato...</div>`;
+
+  const editor=podeEditar('contratos');
+  const acoes=document.getElementById("mcd-acoes");
+  if(acoes) acoes.style.display="none";
+  const mcdValores=document.getElementById("mcd-valores");
+  if(mcdValores){
+    mcdValores.style.display=editor&&_ctAtual.tipo_instrumento!=="ATA"?"block":"none";
+    document.getElementById("mcd-novo-mensal").value="";
+    document.getElementById("mcd-novo-total").value="";
+    const msgV=document.getElementById("mcd-valores-msg");
+    if(msgV){msgV.className="fmsg";msgV.textContent="";}
+  }
+
+  const [vigRes,histRes,fiscRes,itemRes,medRes,nfRes,docRes]=await Promise.all([
+    sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
+    sb.from("contratos_historico").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
+    sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
+    sb.from("itens").select("id,descricao,qtde,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)").eq("contrato_id",id).eq("origem","aquisicao").order("created_at"),
+    sb.from("contratos_medicoes").select("*,contratos_medicao_itens(*),contratos_medicao_glosas(*)").eq("contrato_id",id).order("data_medicao",{ascending:false}),
+    sb.from("notas_fiscais").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
+    sb.from("contratos_documentos").select("*").eq("contrato_id",id).order("created_at",{ascending:false})
+  ]);
+
+  const c=_ctAtual;
+  const hist=histRes.data||[];
+  const fiscais=fiscRes.data||[];
+  const itens=itemRes.data||[];
+  const medicoes=medRes.error?[]:(medRes.data||[]);
+  const notas=nfRes.error?[]:(nfRes.data||[]);
+  const documentos=docRes.error?[]:(docRes.data||[]);
+  _ctMedicoesAtual=medicoes;
+  _ctNotasAtual=notas;
+  _ctDocumentosAtual=documentos;
+  _ctHistoricoAtual=hist;
+  _ctItensAtual=itens;
+  const eventosContrato=_ctHistoricoToEvents(hist);
+  const medicoesNorm=medicoes.map(m=>({
+    ...m,
+    grossValue:m.valor_bruto,
+    glosaValue:m.valor_glosa,
+    netValue:m.valor_liquido,
+    items:m.contratos_medicao_itens||[]
+  }));
+  const notasNorm=notas.map(n=>({
+    ...n,
+    grossValue:n.valor_total,
+    glosaValue:n.valor_glosa,
+    approvedValue:n.valor_aprovado
+  }));
+  const contratoNorm=_ctModule().createContractRecord?_ctModule().createContractRecord(c):c;
+  const financial=_ctModule().calculateContractFinancialSummary
+    ? _ctModule().calculateContractFinancialSummary(contratoNorm,[],eventosContrato,medicoesNorm,notasNorm)
+    : {
+      initialValue:_ctValorInicial(c),
+      initialAdjustedValue:_ctValorReajustado(c),
+      currentValue:_ctValorAtual(c),
+      executedValue:medicoes.filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase())).reduce((s,m)=>s+_ctNum(m.valor_liquido),0),
+      approvedInvoiceValue:notas.filter(n=>['aprovada','aprovada_com_glosa','encaminhada_para_pagamento'].includes(String(n.status||'').toLowerCase())).reduce((s,n)=>s+_ctNum(n.valor_aprovado??n.valor_total),0),
+      contractBalance:_ctValorAtual(c)-medicoes.filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase())).reduce((s,m)=>s+_ctNum(m.valor_liquido),0),
+      additiveLimitUsedPercent:0,
+      availableAdditiveBalance:0
+    };
+  const dias=diasContratoVencer(c.vencimento);
+  const alertas=[];
+  if(dias!==null&&dias<0) alertas.push(["Contrato vencido","var(--red-bg)","var(--red-text)"]);
+  else if(dias!==null&&dias<=90) alertas.push(["Vence em até 90 dias","var(--amber-bg)","var(--amber-text)"]);
+  if(!c.fiscalizacao) alertas.push(["Sem fiscal definido","var(--red-bg)","var(--red-text)"]);
+  if(_ctModeloKey(c)==='nao_classificado') alertas.push(["Modelo não classificado","var(--surface2)","var(--text3)"]);
+  if(financial.additiveLimitUsedPercent>=80) alertas.push(["Limite de aditivo acima de 80%","var(--red-bg)","var(--red-text)"]);
+  const pendencias=[];
+  const medPendentes=medicoes.filter(m=>['rascunho','registrada'].includes(String(m.status||'').toLowerCase())).length;
+  const nfPendentes=notas.filter(n=>['pendente','em_conferencia'].includes(String(n.status||'').toLowerCase())).length;
+  if(medPendentes) pendencias.push([`${medPendentes} medição(ões) pendente(s)`,'var(--amber-bg)','var(--amber-text)']);
+  if(nfPendentes) pendencias.push([`${nfPendentes} NF(s) pendente(s)`,'var(--amber-bg)','var(--amber-text)']);
+
+  const metric=(label,value,sub='',color='var(--text)')=>`<div class="metric"><div class="metric-label">${label}</div><div class="metric-value" style="font-size:20px;color:${color}">${value}</div><div class="metric-sub">${sub}</div></div>`;
+  const actionBtn=(tab,label,fn,primary=false,color='')=>`<button class="${primary?'btn-primary':'btn-secondary'}" onclick="ctOpenContratoTab('${tab}');${fn}" style="font-size:12px;${color?`background:${color};border-color:${color};color:#fff;`:''}">${label}</button>`;
+  const quickActions=editor?`
+    <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;border:1px solid var(--border);background:var(--surface2);border-radius:var(--radius-sm);padding:.625rem .75rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Ações de gestão</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        ${actionBtn('reajustes','Registrar reajuste',"abrirModalContratoOp('reajuste')")}
+        ${actionBtn('aditivos','Registrar aditivo',"abrirModalContratoOp('aditivo')")}
+        ${actionBtn('supressoes','Registrar supressão',"abrirModalContratoOp('supressao')",false,'var(--red)')}
+        ${actionBtn('prorrogacoes','Registrar prorrogação',"abrirModalContratoOp('prorrogacao')")}
+        ${actionBtn('medicoes','Nova medição','abrirModalMedicaoContrato()',true)}
+        ${actionBtn('notas','Vincular NF','abrirModalNotaFiscalContrato()')}
+        ${actionBtn('documentos','Registrar documento','abrirModalDocumentoContrato()')}
+      </div>
+    </div>`:'';
+  const rowsItens=itens.map(i=>{
+    const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
+    const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+    const qtde=Number(i.qtde)||0;
+    const saldo=qtde-recebido;
+    const unit=_ctNum(i.valor_contratado??i.valor_estimado);
+    const inativo=['inativo','cancelado'].includes(String(i.status||'').toLowerCase());
+    return `<tr style="${inativo?'opacity:.62':''}"><td>${_sanEsc(i.descricao||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(i.status||'contratado')}</span></td><td>${_sanEsc(_ctItemTipoLabel(_ctItemTipo(i)))}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${qtde}</td><td style="text-align:right">${recebido}</td><td style="text-align:right">${saldo}</td><td style="text-align:right">${unit?_ctMoney(unit):'—'}</td><td style="text-align:right">${unit?_ctMoney(unit*qtde):'—'}</td><td>${editor?`<button class="btn-secondary" onclick="abrirModalItemContrato('${i.id}')" style="font-size:11px;padding:3px 8px">Editar</button>`:'—'}</td></tr>`;
+  }).join('');
+  const rowsVigs=(vigRes.data||[]).map(v=>`<tr><td>${fmtDate(v.data_inicio)}</td><td>${fmtDate(v.data_fim)}</td><td>${v.valor_total?fmtFull(v.valor_total):'—'}</td><td>${_sanEsc(v.obs||'')}</td></tr>`).join('');
+  const rowsFiscais=fiscais.map(f=>`<tr><td>${_sanEsc(f.nome||'—')}</td><td>${_sanEsc(f.cargo||'')}</td><td>${fmtDate(f.data_inicio)}</td><td>${f.data_fim?fmtDate(f.data_fim):'Ativo'}</td></tr>`).join('');
+  const relatedLabel=(type,id)=>{
+    if(!type) return '—';
+    if(type==='measurement'){
+      const m=medicoes.find(x=>String(x.id)===String(id));
+      return m?`Medição ${m.competencia||''}`:'Medição';
+    }
+    if(type==='invoice'){
+      const n=notas.find(x=>String(x.id)===String(id));
+      return n?`NF ${n.numero||''}`:'Nota fiscal';
+    }
+    if(type==='contractEvent') return 'Evento contratual';
+    if(type==='history') return 'Histórico';
+    if(type==='contract') return 'Contrato';
+    return _ctRelatedTypeLabel(type);
+  };
+  const rowsHist=[...hist].sort((a,b)=>String(_ctHistDateValue(b)).localeCompare(String(_ctHistDateValue(a)))).map(h=>{
+    const titulo=h.titulo||h.tipo||h.action_type||'Evento';
+    const rel=relatedLabel(h.related_entity_type,h.related_entity_id);
+    return `<tr>
+      <td style="white-space:nowrap">${fmtDate((h.data_evento||h.created_at||'').substring(0,10))||'—'}<br><span style="font-size:11px;color:var(--text3)">${h.created_at?fmtDate((h.created_at||'').substring(0,10)):''}</span></td>
+      <td>${_sanEsc(titulo)}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(h.action_type||h.tipo||'')}</span></td>
+      <td class="td-wrap" style="max-width:420px">${_sanEsc(h.obs||'—')}</td>
+      <td>${_sanEsc(h.usuario||'—')}</td>
+      <td>${_sanEsc(rel)}</td>
+    </tr>`;
+  }).join('');
+  const histPorTipo=(termos)=>hist.filter(h=>termos.some(t=>normalizar(h.tipo||'').includes(t)));
+  const rowsEvento=(termos)=>histPorTipo(termos).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Evento')}</td><td>${_ctStatusBadge(_ctEventStatus(h),{rascunho:'Rascunho',formalizado:'Formalizado',cancelado:'Cancelado'})}</td><td style="text-align:right">${h.percentual?String(h.percentual)+'%':'—'}</td><td style="text-align:right">${h.valor_impacto?_ctMoney(h.valor_impacto):(h.valor_novo?_ctMoney(h.valor_novo):'—')}</td><td>${_sanEsc(h.obs||'')}</td></tr>`).join('');
+  const rowsReajustes=rowsEvento(['reajuste']);
+  const rowsAditivos=rowsEvento(['aditivo']);
+  const rowsSupressoes=rowsEvento(['supressao','supress']);
+  const rowsProrrogacoes=histPorTipo(['prorrogacao','renovacao']).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Prorrogação')}</td><td>${fmtDate(h.vigencia_nova_inicio)}</td><td>${fmtDate(h.vigencia_nova_fim)}</td><td>${_sanEsc(h.obs||'')}</td></tr>`).join('');
+  const medicaoLabel=(m)=>`${_sanEsc(m.competencia||'sem competência')} · ${_sanEsc(CT_MEDICAO_STATUS_LABELS[m.status]||m.status||'status')}`;
+  const rowsMedicoes=medicoes.map(m=>{
+    const nfCount=notas.filter(n=>String(n.medicao_id)===String(m.id)).length;
+    const glosas=m.contratos_medicao_glosas||[];
+    return `<tr>
+      <td>${_sanEsc(m.competencia||'—')}<br><span style="font-size:11px;color:var(--text3)">${fmtDate(m.data_medicao)}</span></td>
+      <td>${_sanEsc(_ctHumanize(m.tipo_medicao||'competencia'))}</td>
+      <td>${_sanEsc(m.fiscal_responsavel||'—')}</td>
+      <td style="text-align:right">${_ctMoney(m.valor_bruto)}</td>
+      <td style="text-align:right;color:${_ctNum(m.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(m.valor_glosa)}</td>
+      <td style="text-align:right;font-weight:700">${_ctMoney(m.valor_liquido)}</td>
+      <td>${_ctStatusBadge(m.status,CT_MEDICAO_STATUS_LABELS)}</td>
+      <td>${nfCount?nfCount+' NF(s)':'—'}</td>
+      <td class="td-wrap" style="max-width:220px">${_sanEsc(m.observacoes||glosas.map(g=>g.motivo).filter(Boolean).join('; ')||'—')}</td>
+    </tr>`;
+  }).join('');
+  const rowsNotas=notas.map(n=>{
+    const med=medicoes.find(m=>String(m.id)===String(n.medicao_id));
+    return `<tr>
+      <td>${_sanEsc(n.numero||'—')}${n.serie?`<br><span style="font-size:11px;color:var(--text3)">Série ${_sanEsc(n.serie)}</span>`:''}</td>
+      <td>${med?medicaoLabel(med):'<span style="color:var(--red)">Sem medição</span>'}</td>
+      <td>${fmtDate(n.data_emissao)||'—'}<br><span style="font-size:11px;color:var(--text3)">Receb.: ${fmtDate(n.data_recebimento)||'—'}</span></td>
+      <td style="text-align:right">${_ctMoney(n.valor_total)}</td>
+      <td style="text-align:right;color:${_ctNum(n.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(n.valor_glosa)}</td>
+      <td style="text-align:right;font-weight:700">${_ctMoney(n.valor_aprovado??n.valor_total)}</td>
+      <td>${_ctStatusBadge(n.status,CT_NF_STATUS_LABELS)}</td>
+      <td class="td-wrap" style="max-width:220px">${_sanEsc(n.observacoes||'—')}</td>
+    </tr>`;
+  }).join('');
+  const medError=medRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">A estrutura de medições ainda não está disponível no banco: ${_sanEsc(medRes.error.message||'erro ao consultar contratos_medicoes')}.</div>`:'';
+  const nfError=nfRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Não foi possível carregar notas fiscais: ${_sanEsc(nfRes.error.message||'erro ao consultar notas_fiscais')}.</div>`:'';
+  const docError=docRes.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">A estrutura de documentos ainda não está disponível no banco: ${_sanEsc(docRes.error.message||'erro ao consultar contratos_documentos')}.</div>`:'';
+  const rowsDocumentos=documentos.map(d=>{
+    const link=d.url_arquivo?`<a href="${_sanEsc(d.url_arquivo)}" target="_blank" rel="noopener" style="color:var(--blue)">Abrir referência</a>`:'—';
+    const ref=[d.nome_arquivo,d.referencia].filter(Boolean).join(' · ');
+    return `<tr>
+      <td>${_sanEsc(_ctDocTypeLabel(d.tipo_documento))}</td>
+      <td class="td-wrap" style="max-width:260px">${_sanEsc(d.titulo||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc([d.numero_documento,fmtDate(d.data_documento)].filter(Boolean).join(' · ')||'sem número/data')}</span></td>
+      <td>${_sanEsc(_ctRelatedTypeLabel(d.related_entity_type))}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(relatedLabel(d.related_entity_type,d.related_entity_id))}</span></td>
+      <td class="td-wrap" style="max-width:260px">${_sanEsc(ref||'—')}<br>${link}</td>
+      <td class="td-wrap" style="max-width:220px">${_sanEsc(d.observacoes||'—')}</td>
+      <td>${fmtDate((d.created_at||'').substring(0,10))||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById("mcd-corpo").innerHTML=`
+    <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap">
+      <div>
+        <button class="btn-secondary" onclick="fecharContratoIndividual()" style="margin-bottom:.75rem">← Voltar para Contratos em execução</button>
+        <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1.15">Contrato ${_sanEsc(c.numero_contrato||c.cpl||String(c.id))}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:.375rem;max-width:760px">${_sanEsc(c.objeto||'Objeto não informado')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${badgeStatusContrato(c.status,dias!==null&&dias<0)}</div>
+    </div>
+
+    <div class="ficha-grid" style="margin-bottom:1rem">
+      <div class="ficha-field"><div class="ficha-field-label">Fornecedor</div><div class="ficha-field-value">${_sanEsc(c.prestador||'—')}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Vigência</div><div class="ficha-field-value">${_sanEsc(c.vigencia_atual||'—')}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Vencimento</div><div class="ficha-field-value">${_sanEsc(c.vencimento||'—')} ${dias!==null?`(${dias<0?'vencido':dias+' dias'})`:''}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Fiscal</div><div class="ficha-field-value">${_sanEsc(c.fiscalizacao||'—')}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Setor</div><div class="ficha-field-value">${_sanEsc(c.secao||'—')}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Modelo</div><div class="ficha-field-value">${_sanEsc(_ctModeloLabel(c))}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Origem</div><div class="ficha-field-value">${_sanEsc(_ctHumanize(_ctOrigemKey(c)))}</div></div>
+      <div class="ficha-field"><div class="ficha-field-label">Forma</div><div class="ficha-field-value">${_sanEsc(_ctHumanize(_ctFormaKey(c)))}</div></div>
+    </div>
+
+    <div style="display:${alertas.length?'flex':'none'};gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+      ${alertas.map(([t,bg,color])=>`<span class="badge" style="background:${bg};color:${color};font-size:11px">${t}</span>`).join('')}
+    </div>
+    <div style="display:${pendencias.length?'flex':'none'};gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+      ${pendencias.map(([t,bg,color])=>`<span class="badge" style="background:${bg};color:${color};font-size:11px">${t}</span>`).join('')}
+    </div>
+
+    ${quickActions}
+
+    <div class="metrics" style="margin-bottom:1rem">
+      ${metric('Valor inicial',_ctMoney(financial.initialValue))}
+      ${metric('Inicial reajustado',_ctMoney(financial.initialAdjustedValue))}
+      ${metric('Valor atual',_ctMoney(financial.currentValue),'consolidado','var(--blue)')}
+      ${metric('Executado/medido',_ctMoney(financial.executedValue),'medições válidas')}
+      ${metric('NF aprovada',_ctMoney(financial.approvedInvoiceValue),'não é pagamento')}
+      ${metric('Saldo a executar',_ctMoney(financial.contractBalance))}
+      ${metric('% aditivo',financial.additiveLimitUsedPercent?financial.additiveLimitUsedPercent+'%':'—','limite 25%')}
+      ${metric('Saldo disponível para aditivo',financial.availableAdditiveBalance?_ctMoney(financial.availableAdditiveBalance):'—')}
+      ${metric('Dias p/ vencer',dias===null?'—':(dias<0?'Vencido':dias+'d'),'',dias!==null&&dias<=90?'var(--amber)':'var(--text)')}
+    </div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:1rem">
+      ${[
+        ['geral','Visão geral'],['itens','Itens'],['reajustes','Reajustes'],['aditivos','Aditivos'],['supressoes','Supressões'],['prorrogacoes','Prorrogações'],['medicoes','Medições'],['notas','Notas fiscais'],['documentos','Documentos'],['historico','Histórico']
+      ].map(([key,label],idx)=>`<button class="ct-detail-tab ${idx===0?'active':''}" data-tab="${key}" onclick="ctOpenContratoTab('${key}')" style="border:none;border-bottom:2px solid ${idx===0?'var(--blue)':'transparent'};background:none;color:var(--text);padding:8px 10px;cursor:pointer;font-weight:600">${label}</button>`).join('')}
+    </div>
+
+    <div class="ct-detail-pane" data-tab="geral" style="display:block">
+      <div class="ficha-grid">
+        <div class="ficha-field"><div class="ficha-field-label">CPL / Processo</div><div class="ficha-field-value">${_sanEsc(c.cpl||'—')}</div></div>
+        <div class="ficha-field"><div class="ficha-field-label">E-mail da empresa</div><div class="ficha-field-value">${_sanEsc(c.email_empresa||'—')}</div></div>
+        <div class="ficha-field"><div class="ficha-field-label">Prefixo chamado</div><div class="ficha-field-value">${_sanEsc(c.prefixo_chamado||'—')}</div></div>
+        <div class="ficha-field"><div class="ficha-field-label">Observações</div><div class="ficha-field-value">${_sanEsc(c.obs||'—')}</div></div>
+      </div>
+      <div style="margin-top:1rem"><div class="card-title" style="font-size:11px;text-transform:uppercase;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem">Fiscalizadores</div>
+        ${rowsFiscais?`<div class="table-wrap" style="height:auto;max-height:260px"><table style="font-size:12px"><thead><tr><th>Nome</th><th>Cargo</th><th>Início</th><th>Fim</th></tr></thead><tbody>${rowsFiscais}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum fiscalizador registrado.</div>'}
+      </div>
+    </div>
+
+    <div class="ct-detail-pane" data-tab="itens" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Itens do contrato usados como base para saldos, medições, aditivos e supressões.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalItemContrato()">Novo item</button>':''}
+      </div>
+      ${rowsItens?`<div class="table-wrap" style="height:auto;max-height:380px"><table style="font-size:12px"><thead><tr><th>Item</th><th>Tipo</th><th>Marca/Modelo</th><th style="text-align:right">Qtde</th><th style="text-align:right">Executado</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Ações</th></tr></thead><tbody>${rowsItens}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado a este contrato.</div>'}
+    </div>
+
+    <div class="ct-detail-pane" data-tab="reajustes" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Reajustes formais aplicados ao contrato. Reajuste não é aditivo e deve preservar o valor inicial original.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalContratoOp(\'reajuste\')">Registrar reajuste</button>':''}
+      </div>
+      ${rowsReajustes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th></tr></thead><tbody>${rowsReajustes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum reajuste registrado para este contrato.</div>'}
+    </div>
+
+    <div class="ct-detail-pane" data-tab="aditivos" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Aditivos formalizados que podem alterar escopo ou valor atual após aprovação.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalContratoOp(\'aditivo\')">Registrar aditivo</button>':''}
+      </div>
+      ${rowsAditivos?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th></tr></thead><tbody>${rowsAditivos}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum aditivo registrado para este contrato.</div>'}
+    </div>
+
+    <div class="ct-detail-pane" data-tab="supressoes" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Supressões formalizadas, separadas de reajustes e aditivos para manter rastreabilidade.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalContratoOp(\'supressao\')">Registrar supressão</button>':''}
+      </div>
+      ${rowsSupressoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th></tr></thead><tbody>${rowsSupressoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma supressão registrada para este contrato.</div>'}
+    </div>
+
+    <div class="ct-detail-pane" data-tab="prorrogacoes" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Prorrogações e vigências registradas para acompanhamento da continuidade contratual.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalContratoOp(\'prorrogacao\')">Registrar prorrogação</button>':''}
+      </div>
+      ${rowsProrrogacoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Nova vigência inicial</th><th>Nova vigência final</th><th>Obs.</th></tr></thead><tbody>${rowsProrrogacoes}</tbody></table></div>`:(rowsVigs?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Início</th><th>Fim</th><th>Valor</th><th>Obs.</th></tr></thead><tbody>${rowsVigs}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma prorrogação ou vigência registrada para este contrato.</div>')}
+    </div>
+    <div class="ct-detail-pane" data-tab="medicoes" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Medições vinculadas ao contrato. Rascunhos, recusadas e canceladas não compõem o valor executado.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalMedicaoContrato()">Nova medição</button>':''}
+      </div>
+      ${medError}
+      ${rowsMedicoes?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
+    </div>
+    <div class="ct-detail-pane" data-tab="notas" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Notas fiscais associadas à execução contratual. O registro da NF não representa pagamento e deve estar vinculado a uma medição.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalNotaFiscalContrato()">Vincular NF</button>':''}
+      </div>
+      ${nfError}
+      ${rowsNotas?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Número</th><th>Medição</th><th>Datas</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor aprovado</th><th>Status</th><th>Obs.</th></tr></thead><tbody>${rowsNotas}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma nota fiscal vinculada a este contrato.</div>'}
+    </div>
+    <div class="ct-detail-pane" data-tab="documentos" style="display:none">
+      <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2)">Referências documentais do contrato. Esta tela cadastra metadados, links ou caminhos; não faz upload real de arquivo.</div>
+        ${editor?'<button class="btn-secondary" onclick="abrirModalDocumentoContrato()">Registrar documento</button>':''}
+      </div>
+      ${docError}
+      ${rowsDocumentos?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Tipo</th><th>Título</th><th>Vínculo</th><th>Arquivo/referência</th><th>Obs.</th><th>Criado em</th></tr></thead><tbody>${rowsDocumentos}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum documento registrado para este contrato.</div>'}
+    </div>
+    <div class="ct-detail-pane" data-tab="historico" style="display:none">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Linha do tempo do contrato. Registros anteriores não são apagados; correções devem entrar como novos eventos.</div>
+      ${rowsHist?`<div class="table-wrap" style="height:auto;max-height:420px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Evento</th><th>Descrição</th><th>Responsável</th><th>Vínculo</th></tr></thead><tbody>${rowsHist}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum histórico registrado.</div>'}
+    </div>
+  `;
+  ctOpenContratoTab('geral');
+}
+
+function abrirModalItemContrato(itemId){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  const item=itemId?(_ctItensAtual||[]).find(i=>String(i.id)===String(itemId)):null;
+  document.getElementById('ctitem-titulo').textContent=item?'Editar item do contrato':'Novo item do contrato';
+  document.getElementById('ctitem-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — item usado como base para execução, aditivos e supressões.`;
+  document.getElementById('ctitem-id').value=item?.id||'';
+  document.getElementById('ctitem-descricao').value=item?.descricao||'';
+  document.getElementById('ctitem-tipo').value=item?_ctItemTipo(item):((_ctFormaKey(_ctAtual).includes('mensal')||_ctFormaKey(_ctAtual).includes('continuo'))?'mensal':'demanda');
+  document.getElementById('ctitem-status').value=item?.status||'contratado';
+  document.getElementById('ctitem-qtde').value=item?.qtde??'';
+  document.getElementById('ctitem-valor').value=item?(_ctNum(item.valor_contratado??item.valor_estimado)||''):'';
+  document.getElementById('ctitem-marca').value=item?.marca||'';
+  document.getElementById('ctitem-modelo').value=item?.modelo||'';
+  document.getElementById('ctitem-obs').value=item?_ctObsSemTipo(item.observacoes):'';
+  const inativar=document.getElementById('ctitem-inativar');
+  if(inativar) inativar.style.display=item?'inline-flex':'none';
+  const msg=document.getElementById('ctitem-msg'); if(msg){msg.className='fmsg';msg.textContent='';}
+  document.getElementById('modal-ct-item').classList.add('active');
+}
+
+async function salvarItemContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  const msg=document.getElementById('ctitem-msg');
+  const id=document.getElementById('ctitem-id').value;
+  const descricao=(document.getElementById('ctitem-descricao').value||'').trim();
+  const tipo=document.getElementById('ctitem-tipo').value||'demanda';
+  const status=document.getElementById('ctitem-status').value||'contratado';
+  const qtde=_ctNum(document.getElementById('ctitem-qtde').value);
+  const valor=_ctNum(document.getElementById('ctitem-valor').value);
+  const marca=(document.getElementById('ctitem-marca').value||'').trim()||null;
+  const modelo=(document.getElementById('ctitem-modelo').value||'').trim()||null;
+  const obs=_ctObsComTipo(document.getElementById('ctitem-obs').value||'',tipo);
+  if(!descricao){if(msg){msg.textContent='Informe a descrição do item.';msg.className='fmsg err';}return;}
+  if(qtde<=0){if(msg){msg.textContent='Informe a quantidade contratada.';msg.className='fmsg err';}return;}
+  if(valor<0){if(msg){msg.textContent='Informe um valor unitário válido.';msg.className='fmsg err';}return;}
+  const payload={
+    contrato_id:_ctAtual.id,
+    processo_id:_ctAtual.processo_id||null,
+    fornecedor_id:_ctAtual.fornecedor_id||null,
+    origem:'aquisicao',
+    fonte_tipo:'contrato',
+    fonte_descricao:_ctAtual.numero_contrato||_ctAtual.cpl||String(_ctAtual.id),
+    descricao,
+    qtde,
+    valor_contratado:valor,
+    marca,
+    modelo,
+    status,
+    observacoes:obs
+  };
+  const btn=document.querySelector('#modal-ct-item .btn-primary'); if(btn)btn.disabled=true;
+  const res=id
+    ? await sb.from('itens').update(payload).eq('id',id).select('*').single()
+    : await sb.from('itens').insert(payload).select('*').single();
+  if(res.error){if(btn)btn.disabled=false;if(msg){msg.textContent='Erro: '+res.error.message;msg.className='fmsg err';}return;}
+  await ctRegistrarHistoricoContrato({
+    tipo:id?'Item editado':'Item criado',
+    action_type:id?'item_editado':'item_criado',
+    titulo:id?'Item editado':'Item criado',
+    obs:`${descricao} (${_ctItemTipoLabel(tipo)}), quantidade ${qtde}, valor unitário ${_ctMoney(valor)}.`,
+    related_entity_type:'contract',
+    related_entity_id:String(_ctAtual.id)
+  });
+  if(btn)btn.disabled=false;
+  document.getElementById('modal-ct-item').classList.remove('active');
+  if(window.toast) toast(id?'Item atualizado.':'Item cadastrado.','success');
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab('itens');
+}
+
+async function inativarItemContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  const id=document.getElementById('ctitem-id').value;
+  if(!id||!await uiConfirm('Inativar este item? Ele não será apagado e continuará no histórico.')) return;
+  const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(id));
+  const {error}=await sb.from('itens').update({status:'inativo'}).eq('id',id);
+  if(error){const msg=document.getElementById('ctitem-msg'); if(msg){msg.textContent='Erro: '+error.message;msg.className='fmsg err';} return;}
+  await ctRegistrarHistoricoContrato({
+    tipo:'Item inativado',
+    action_type:'item_inativado',
+    titulo:'Item inativado',
+    obs:`Item inativado: ${item?.descricao||id}.`,
+    related_entity_type:'contract',
+    related_entity_id:String(_ctAtual.id)
+  });
+  document.getElementById('modal-ct-item').classList.remove('active');
+  if(window.toast) toast('Item inativado.','success');
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab('itens');
+}
+
+function ctEventoUsaMesesRestantes(){
+  const forma=_ctFormaKey(_ctAtual||{});
+  const modelo=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===_ctModeloKey(_ctAtual||{}));
+  return modelo?.usesRemainingMonths===true||['mensal','mensal_fixo','por_competencia','continuo','continua','contínua'].includes(forma);
+}
+
+function ctMesesRestantesEvento(dataInicio){
+  const mod=_ctModule();
+  if(typeof mod.calculateRemainingMonths==='function') return mod.calculateRemainingMonths(_ctAtual?.vencimento,dataInicio||_ctTodayISO());
+  return 0;
+}
+
+function ctPreencherItensEvento(prefix){
+  const sel=document.getElementById(prefix+'-item');
+  if(!sel) return;
+  const ativos=(_ctItensAtual||[]).filter(i=>!['inativo','cancelado'].includes(String(i.status||'').toLowerCase()));
+  sel.innerHTML='<option value="">Sem item específico</option>'+ativos.map(i=>`<option value="${i.id}" data-valor="${_ctNum(i.valor_contratado??i.valor_estimado)}">${_sanEsc(i.descricao||'Item')}</option>`).join('');
+  sel.onchange=()=>{
+    const opt=sel.selectedOptions?.[0];
+    const unit=document.getElementById(prefix+'-unitario');
+    if(unit&&opt?.dataset.valor) unit.value=opt.dataset.valor;
+    ctAtualizarImpactoEvento(prefix==='ctad'?'aditivo':'supressao');
+  };
+}
+
+function ctAtualizarImpactoEvento(op){
+  const prefix=op==='supressao'?'ctsu':'ctad';
+  const data=document.getElementById(prefix+'-data')?.value||_ctTodayISO();
+  const qtde=_ctNum(document.getElementById(prefix+'-qtde')?.value);
+  const unit=_ctNum(document.getElementById(prefix+'-unitario')?.value);
+  const mesesEl=document.getElementById(prefix+'-meses');
+  const usaMeses=ctEventoUsaMesesRestantes();
+  const meses=usaMeses?_ctNum(mesesEl?.value||ctMesesRestantesEvento(data)):1;
+  if(mesesEl){
+    mesesEl.disabled=!usaMeses;
+    if(usaMeses&&!mesesEl.value) mesesEl.value=meses;
+    if(!usaMeses) mesesEl.value='';
+  }
+  const impacto=qtde&&unit?_ctModule().roundMoney?.(qtde*unit*(usaMeses?meses:1))??(qtde*unit*(usaMeses?meses:1)):0;
+  const out=document.getElementById(prefix+'-impacto');
+  if(out) out.value=impacto?_ctMoney(impacto):(usaMeses?'Informe quantidade, valor e meses':'Informe quantidade e valor');
+  const valor=document.getElementById(prefix+'-valor');
+  if(valor&&impacto&&!valor.value) valor.value=impacto;
+  return impacto;
+}
+
+function ctAtualizarLiquidoMedicao(){
+  const bruto=_ctNum(document.getElementById('ctmed-valor-bruto')?.value);
+  const glosa=_ctNum(document.getElementById('ctmed-valor-glosa')?.value);
+  const liquido=Math.max(bruto-glosa,0);
+  const el=document.getElementById('ctmed-valor-liquido');
+  if(el) el.value=_ctMoney(liquido);
+  const status=document.getElementById('ctmed-status');
+  if(status&&glosa>0&&['registrada','aprovada_pelo_fiscal'].includes(status.value)) status.value='aprovada_com_glosa';
+}
+
+function ctAtualizarValorAprovadoNF(){
+  const bruto=_ctNum(document.getElementById('ctnf-valor-total')?.value);
+  const glosa=_ctNum(document.getElementById('ctnf-valor-glosa')?.value);
+  const aprovado=Math.max(bruto-glosa,0);
+  const el=document.getElementById('ctnf-valor-aprovado');
+  if(el) el.value=_ctMoney(aprovado);
+  const status=document.getElementById('ctnf-status');
+  if(status&&glosa>0&&status.value==='aprovada') status.value='aprovada_com_glosa';
+}
+
+function abrirModalMedicaoContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  document.getElementById('ctmed-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — ${_ctAtual.prestador||''}`;
+  document.getElementById('ctmed-competencia').value=_ctMonthISO();
+  document.getElementById('ctmed-data').value=_ctTodayISO();
+  document.getElementById('ctmed-tipo').value=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===_ctModeloKey(_ctAtual))?.measurementMode||'competencia';
+  document.getElementById('ctmed-status').value='registrada';
+  document.getElementById('ctmed-fiscal').value=_ctAtual.fiscalizacao||currentProfile?.nome||currentProfile?.email||'';
+  document.getElementById('ctmed-valor-bruto').value='';
+  document.getElementById('ctmed-valor-glosa').value='0';
+  document.getElementById('ctmed-glosa-motivo').value='';
+  document.getElementById('ctmed-obs').value='';
+  const msg=document.getElementById('ctmed-msg'); if(msg){msg.className='fmsg';msg.textContent='';}
+  ctAtualizarLiquidoMedicao();
+  document.getElementById('modal-ct-medicao').classList.add('active');
+}
+
+function abrirModalNotaFiscalContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  document.getElementById('ctnf-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — NF sempre vinculada a uma medição; não há controle de pagamento.`;
+  const sel=document.getElementById('ctnf-medicao');
+  sel.innerHTML=(_ctMedicoesAtual||[]).filter(m=>!['cancelada','recusada'].includes(String(m.status||'').toLowerCase())).map(m=>{
+    const label=`${m.competencia||'sem competência'} · ${CT_MEDICAO_STATUS_LABELS[m.status]||m.status||'status'} · ${_ctMoney(m.valor_liquido)}`;
+    return `<option value="${m.id}">${_sanEsc(label)}</option>`;
+  }).join('');
+  if(!sel.innerHTML) sel.innerHTML='<option value="">Cadastre uma medição antes de vincular NF</option>';
+  ['ctnf-numero','ctnf-serie','ctnf-emissao','ctnf-recebimento','ctnf-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ctnf-valor-total').value='';
+  document.getElementById('ctnf-valor-glosa').value='0';
+  document.getElementById('ctnf-status').value='pendente';
+  const msg=document.getElementById('ctnf-msg'); if(msg){msg.className='fmsg';msg.textContent='';}
+  ctAtualizarValorAprovadoNF();
+  document.getElementById('modal-ct-nf').classList.add('active');
+}
+
+async function salvarMedicaoContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  const msg=document.getElementById('ctmed-msg');
+  const competencia=document.getElementById('ctmed-competencia').value;
+  const data=document.getElementById('ctmed-data').value||_ctTodayISO();
+  const tipo=document.getElementById('ctmed-tipo').value||'competencia';
+  const status=document.getElementById('ctmed-status').value||'registrada';
+  const fiscal=(document.getElementById('ctmed-fiscal').value||'').trim();
+  const valorBruto=_ctNum(document.getElementById('ctmed-valor-bruto').value);
+  const valorGlosa=_ctNum(document.getElementById('ctmed-valor-glosa').value);
+  const valorLiquido=Math.max(valorBruto-valorGlosa,0);
+  const motivoGlosa=(document.getElementById('ctmed-glosa-motivo').value||'').trim();
+  const obs=(document.getElementById('ctmed-obs').value||'').trim();
+  if(!competencia){if(msg){msg.textContent='Informe a competência.';msg.className='fmsg err';}return;}
+  if(!valorBruto&&status!=='rascunho'){if(msg){msg.textContent='Informe o valor bruto da medição.';msg.className='fmsg err';}return;}
+  if(valorGlosa>valorBruto){if(msg){msg.textContent='A glosa não pode ser maior que o valor bruto.';msg.className='fmsg err';}return;}
+  if(valorGlosa>0&&!motivoGlosa){if(msg){msg.textContent='Informe o motivo da glosa.';msg.className='fmsg err';}return;}
+  const validada=['aprovada_pelo_fiscal','aprovada_com_glosa'].includes(status);
+  const payload={
+    contrato_id:_ctAtual.id,
+    competencia,
+    tipo_medicao:tipo,
+    data_medicao:data,
+    fiscal_responsavel:fiscal||currentProfile?.nome||currentProfile?.email||null,
+    status,
+    valor_bruto:valorBruto,
+    valor_glosa:valorGlosa,
+    valor_liquido:valorLiquido,
+    observacoes:obs||null,
+    validado_por:validada?(currentProfile?.nome||currentProfile?.email||fiscal||null):null,
+    validado_em:validada?new Date().toISOString():null,
+    updated_at:new Date().toISOString()
+  };
+  const btn=document.querySelector('#modal-ct-medicao .btn-primary'); if(btn)btn.disabled=true;
+  const {data:med,error}=await sb.from('contratos_medicoes').insert(payload).select('*').single();
+  if(error){if(btn)btn.disabled=false;if(msg){msg.textContent='Erro: '+error.message;msg.className='fmsg err';}return;}
+  if(valorGlosa>0){
+    const {error:gErr}=await sb.from('contratos_medicao_glosas').insert({
+      medicao_id:med.id,
+      contrato_id:_ctAtual.id,
+      motivo:motivoGlosa,
+      valor_glosa:valorGlosa,
+      justificativa:obs||motivoGlosa,
+      status:'registrada'
+    });
+    if(gErr) console.warn('Falha ao registrar glosa da medição',gErr);
+  }
+  await sb.from('contratos_historico').insert({
+    contrato_id:_ctAtual.id,
+    cpl:_ctAtual.cpl||null,
+    tipo:'Medição contratual',
+    data_evento:data,
+    valor_novo:String(valorLiquido),
+    obs:`Medição ${competencia} registrada com status ${CT_MEDICAO_STATUS_LABELS[status]||status}. Valor bruto ${_ctMoney(valorBruto)}, glosa ${_ctMoney(valorGlosa)}, líquido ${_ctMoney(valorLiquido)}.`,
+    usuario:currentProfile?.nome||currentProfile?.email||null
+  });
+  if(btn)btn.disabled=false;
+  document.getElementById('modal-ct-medicao').classList.remove('active');
+  if(window.toast) toast('Medição registrada.','success');
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab('medicoes');
+}
+
+async function salvarNotaFiscalContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  const msg=document.getElementById('ctnf-msg');
+  const medicaoId=document.getElementById('ctnf-medicao').value;
+  const medicao=(_ctMedicoesAtual||[]).find(m=>String(m.id)===String(medicaoId));
+  const numero=(document.getElementById('ctnf-numero').value||'').trim();
+  const serie=(document.getElementById('ctnf-serie').value||'').trim();
+  const dataEmissao=document.getElementById('ctnf-emissao').value||null;
+  const dataRecebimento=document.getElementById('ctnf-recebimento').value||null;
+  const valorTotal=_ctNum(document.getElementById('ctnf-valor-total').value);
+  const valorGlosa=_ctNum(document.getElementById('ctnf-valor-glosa').value);
+  const valorAprovado=Math.max(valorTotal-valorGlosa,0);
+  const status=document.getElementById('ctnf-status').value||'pendente';
+  const obs=(document.getElementById('ctnf-obs').value||'').trim();
+  if(!medicaoId||!medicao){if(msg){msg.textContent='Vincule a NF a uma medição.';msg.className='fmsg err';}return;}
+  if(!numero){if(msg){msg.textContent='Informe o número da NF.';msg.className='fmsg err';}return;}
+  if(!valorTotal){if(msg){msg.textContent='Informe o valor bruto da NF.';msg.className='fmsg err';}return;}
+  if(valorGlosa>valorTotal){if(msg){msg.textContent='A glosa/desconto não pode ser maior que o valor bruto.';msg.className='fmsg err';}return;}
+  const numeroNorm=_ctNormalizedDoc(numero);
+  const dup=(_ctNotasAtual||[]).find(n=>String(n.numero_normalizado||_ctNormalizedDoc(n.numero))===String(numeroNorm)&&String(n.status||'')!=='cancelada');
+  if(dup&&!await uiConfirm('Já existe NF com este número para este contrato. Deseja registrar mesmo assim?')) return;
+  const validada=['aprovada','aprovada_com_glosa','encaminhada_para_pagamento'].includes(status);
+  const payload={
+    numero,
+    numero_normalizado:numeroNorm||null,
+    serie:serie||null,
+    fornecedor_id:_ctAtual.fornecedor_id||null,
+    contrato_id:_ctAtual.id,
+    processo_id:_ctAtual.processo_id||null,
+    medicao_id:medicaoId,
+    competencia:medicao.competencia||null,
+    data_emissao:dataEmissao,
+    data_recebimento:dataRecebimento,
+    valor_total:valorTotal,
+    valor_glosa:valorGlosa,
+    valor_aprovado:valorAprovado,
+    status,
+    origem_sistema:'contratos_medicoes',
+    origem_codigo:medicaoId,
+    observacoes:obs||null,
+    validado_por:validada?(currentProfile?.nome||currentProfile?.email||null):null,
+    validado_em:validada?new Date().toISOString():null,
+    encaminhado_em:status==='encaminhada_para_pagamento'?new Date().toISOString():null,
+    updated_at:new Date().toISOString()
+  };
+  const btn=document.querySelector('#modal-ct-nf .btn-primary'); if(btn)btn.disabled=true;
+  const {data:nf,error}=await sb.from('notas_fiscais').insert(payload).select('*').single();
+  if(error){if(btn)btn.disabled=false;if(msg){msg.textContent='Erro: '+error.message;msg.className='fmsg err';}return;}
+  await sb.from('contratos_historico').insert({
+    contrato_id:_ctAtual.id,
+    cpl:_ctAtual.cpl||null,
+    tipo:'Nota fiscal contratual',
+    data_evento:dataRecebimento||dataEmissao||_ctTodayISO(),
+    valor_novo:String(valorAprovado),
+    obs:`NF ${numero} vinculada à medição ${medicao.competencia||medicaoId}. Status ${CT_NF_STATUS_LABELS[status]||status}. Valor aprovado ${_ctMoney(valorAprovado)}. Não representa pagamento.`,
+    usuario:currentProfile?.nome||currentProfile?.email||null
+  });
+  if(btn)btn.disabled=false;
+  document.getElementById('modal-ct-nf').classList.remove('active');
+  if(window.toast) toast('Nota fiscal vinculada à medição.','success');
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab('notas');
+}
+
+function ctDocAtualizarEntidadesRelacionadas(){
+  const type=document.getElementById('ctdoc-related-type')?.value||'contract';
+  const sel=document.getElementById('ctdoc-related-id');
+  if(!sel) return;
+  let opts=[];
+  if(type==='contract'){
+    opts=[{id:String(_ctAtual?.id||''),label:'Contrato inteiro'}];
+  }else if(type==='contractEvent'){
+    opts=(_ctHistoricoAtual||[]).filter(h=>['Reajuste','Aditivo','Supressão','Prorrogação','Renovação','Troca de fiscal','Troca de marca/modelo'].some(t=>normalizar(h.tipo||h.action_type||'').includes(normalizar(t)))).map(h=>({
+      id:String(h.id),
+      label:`${fmtDate((h.data_evento||h.created_at||'').substring(0,10))||'sem data'} · ${h.titulo||h.tipo||h.action_type||'Evento'}`
+    }));
+  }else if(type==='measurement'){
+    opts=(_ctMedicoesAtual||[]).map(m=>({id:String(m.id),label:`Medição ${m.competencia||'sem competência'} · ${_ctMoney(m.valor_liquido)}`}));
+  }else if(type==='invoice'){
+    opts=(_ctNotasAtual||[]).map(n=>({id:String(n.id),label:`NF ${n.numero||'sem número'} · ${_ctMoney(n.valor_aprovado??n.valor_total)}`}));
+  }else if(type==='history'){
+    opts=(_ctHistoricoAtual||[]).map(h=>({id:String(h.id),label:`${fmtDate((h.data_evento||h.created_at||'').substring(0,10))||'sem data'} · ${h.titulo||h.tipo||'Evento'}`}));
+  }
+  if(!opts.length) opts=[{id:'',label:'Sem registro específico'}];
+  sel.innerHTML=opts.map(o=>`<option value="${_sanEsc(o.id)}">${_sanEsc(o.label)}</option>`).join('');
+}
+
+function abrirModalDocumentoContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  document.getElementById('ctdoc-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — cadastre referência, link ou metadados; não há upload automático.`;
+  document.getElementById('ctdoc-tipo').value='contrato_assinado';
+  document.getElementById('ctdoc-data').value=_ctTodayISO();
+  ['ctdoc-titulo','ctdoc-numero','ctdoc-arquivo','ctdoc-url','ctdoc-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ctdoc-related-type').value='contract';
+  const msg=document.getElementById('ctdoc-msg'); if(msg){msg.className='fmsg';msg.textContent='';}
+  ctDocAtualizarEntidadesRelacionadas();
+  document.getElementById('modal-ct-documento').classList.add('active');
+}
+
+async function salvarDocumentoContrato(){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!_ctAtual) return;
+  const msg=document.getElementById('ctdoc-msg');
+  const tipo=document.getElementById('ctdoc-tipo').value||'outro';
+  const data=document.getElementById('ctdoc-data').value||null;
+  const titulo=(document.getElementById('ctdoc-titulo').value||'').trim();
+  const numero=(document.getElementById('ctdoc-numero').value||'').trim();
+  const arquivo=(document.getElementById('ctdoc-arquivo').value||'').trim();
+  const url=(document.getElementById('ctdoc-url').value||'').trim();
+  const relatedType=document.getElementById('ctdoc-related-type').value||'contract';
+  const relatedId=(document.getElementById('ctdoc-related-id').value||'').trim()||null;
+  const obs=(document.getElementById('ctdoc-obs').value||'').trim();
+  if(!titulo){if(msg){msg.textContent='Informe o título do documento.';msg.className='fmsg err';}return;}
+  if(!arquivo&&!url&&!numero){if(msg){msg.textContent='Informe ao menos número, arquivo/referência ou link.';msg.className='fmsg err';}return;}
+  const payload={
+    contrato_id:_ctAtual.id,
+    related_entity_type:relatedType,
+    related_entity_id:relatedId,
+    tipo_documento:tipo,
+    titulo,
+    numero_documento:numero||null,
+    data_documento:data,
+    nome_arquivo:arquivo||null,
+    url_arquivo:url||null,
+    referencia:arquivo||url||numero||null,
+    observacoes:obs||null,
+    criado_por:currentProfile?.nome||currentProfile?.email||null,
+    updated_at:new Date().toISOString()
+  };
+  const btn=document.querySelector('#modal-ct-documento .btn-primary'); if(btn)btn.disabled=true;
+  const {data:doc,error}=await sb.from('contratos_documentos').insert(payload).select('*').single();
+  if(error){if(btn)btn.disabled=false;if(msg){msg.textContent='Erro: '+error.message;msg.className='fmsg err';}return;}
+  await ctRegistrarHistoricoContrato({
+    tipo:'Documento registrado',
+    action_type:'documento_registrado',
+    titulo:'Documento registrado',
+    data_evento:data||_ctTodayISO(),
+    obs:`${_ctDocTypeLabel(tipo)}: ${titulo}${numero?' ('+numero+')':''}. Referência cadastrada; não representa upload automático.`,
+    related_entity_type:relatedType,
+    related_entity_id:relatedId,
+    documento_id:doc.id
+  });
+  if(btn)btn.disabled=false;
+  document.getElementById('modal-ct-documento').classList.remove('active');
+  if(window.toast) toast('Documento registrado no contrato.','success');
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab('documentos');
+}
+
 // Fase 13: troca de marca/modelo via termo aditivo
 async function abrirTrocaMarcaModelo(contratoId){
   if(bloquearSeVisualiz('contratos')) return;
@@ -2119,6 +3171,27 @@ function abrirModalContratoOp(op){
     if(mensalWrap) mensalWrap.style.display=ata?"none":"";
     if(ata) document.getElementById("ctr-valor-mensal").value="";
   }
+  if(op==="reajuste"){
+    const st=document.getElementById('ctrea-status'); if(st) st.value='rascunho';
+    const dt=document.getElementById('ctrea-data'); if(dt&&!dt.value) dt.value=_ctTodayISO();
+  }
+  if(op==="aditivo"){
+    const st=document.getElementById('ctad-status'); if(st) st.value='rascunho';
+    const dt=document.getElementById('ctad-data'); if(dt&&!dt.value) dt.value=_ctTodayISO();
+    ctPreencherItensEvento('ctad');
+    const meses=document.getElementById('ctad-meses'); if(meses) meses.value=ctEventoUsaMesesRestantes()?ctMesesRestantesEvento(document.getElementById('ctad-data')?.value):'';
+    ctAtualizarImpactoEvento('aditivo');
+  }
+  if(op==="supressao"){
+    const st=document.getElementById('ctsu-status'); if(st) st.value='rascunho';
+    const dt=document.getElementById('ctsu-data'); if(dt&&!dt.value) dt.value=_ctTodayISO();
+    ctPreencherItensEvento('ctsu');
+    const meses=document.getElementById('ctsu-meses'); if(meses) meses.value=ctEventoUsaMesesRestantes()?ctMesesRestantesEvento(document.getElementById('ctsu-data')?.value):'';
+    ctAtualizarImpactoEvento('supressao');
+  }
+  if(op==="prorrogacao"){
+    const st=document.getElementById('ctpr-status'); if(st) st.value='rascunho';
+  }
   if(op==="fiscal"){
     preencherSelectPessoas('ctfi-nome', true);
     const wrap=document.getElementById("ctfi-fiscais-atuais");
@@ -2142,6 +3215,110 @@ async function removerFiscalizador(fiscId){
 }
 
 async function salvarOperacaoContrato(op){
+  if(bloquearSeVisualiz()) return;
+  if(!_ctAtual){alert("Contrato nao selecionado.");return;}
+  const id=_ctAtual.id;
+  const msgEl=document.getElementById({renovar:"ctr-msg",reajuste:"ctrea-msg",aditivo:"ctad-msg",prorrogacao:"ctpr-msg",supressao:"ctsu-msg",fiscal:"ctfi-msg"}[op]);
+  const setMsg=(txt,ok)=>{if(msgEl){msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;}};
+  const fmtBR=d=>{if(!d)return"";const[a,m,dd]=d.split("-");return`${dd}/${m}/${a}`;};
+
+  try{
+    if(op==="renovar"){
+      const inicio=document.getElementById("ctr-inicio").value;
+      const fim=document.getElementById("ctr-fim").value;
+      if(!inicio||!fim){setMsg("Vigencia inicio e fim sao obrigatorios",false);return;}
+      const valor=document.getElementById("ctr-valor").value;
+      const valorMensal=_ctAtual.tipo_instrumento==="ATA"?"":document.getElementById("ctr-valor-mensal").value;
+      const obs=document.getElementById("ctr-obs").value.trim();
+      const vigStr=`${fmtBR(inicio)} a ${fmtBR(fim)}`;
+      const upd={vigencia_atual:vigStr,vencimento:fmtBR(fim),status:"VIGENTE"};
+      if(valor) upd.valor_atual=_ctNum(valor);
+      if(valorMensal) upd.valor_mensal=_ctNum(valorMensal);
+      const {error:e1}=await sb.from("contratos").update(upd).eq("id",id);
+      if(e1) throw e1;
+      await sb.from("contratos_vigencias").insert({contrato_id:id,data_inicio:inicio,data_fim:fim,valor_total:valor?_ctNum(valor):null,valor_mensal:valorMensal?_ctNum(valorMensal):null,obs});
+      await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Renovacao",action_type:"renovacao",titulo:"Renovacao formalizada",data_evento:inicio,status_evento:"formalizado",vigencia_nova_inicio:inicio,vigencia_nova_fim:fim,valor_impacto:valor?_ctNum(valor):null,valor_novo:valor?String(_ctNum(valor)):null,valor_mensal_novo:valorMensal?String(_ctNum(valorMensal)):null,obs:`Valor anterior: ${_ctAtual.valor_atual??"—"}${obs?". "+obs:""}`});
+      setMsg("Contrato renovado.",true);
+    } else if(op==="reajuste"){
+      const data=document.getElementById("ctrea-data").value;
+      const pct=document.getElementById("ctrea-pct").value;
+      if(!data||!pct){setMsg("Data e percentual sao obrigatorios",false);return;}
+      const status=document.getElementById("ctrea-status")?.value||"rascunho";
+      const obs=document.getElementById("ctrea-obs").value.trim();
+      const eventos=_ctHistoricoToEvents(_ctHistoricoAtual||[]);
+      const base=_ctModule().calculateInitialAdjustedValue?_ctModule().calculateInitialAdjustedValue(_ctModule().createContractRecord(_ctAtual),[],eventos):_ctValorInicial(_ctAtual);
+      const impacto=_ctModule().roundMoney?_ctModule().roundMoney(base*(_ctNum(pct)/100)):base*(_ctNum(pct)/100);
+      const reajustado=_ctModule().roundMoney?_ctModule().roundMoney(base+impacto):base+impacto;
+      const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Reajuste",action_type:"reajuste",titulo:"Reajuste registrado",data_evento:data,percentual:pct,status_evento:status,valor_impacto:impacto,valor_reajustado:reajustado,valor_novo:status==="formalizado"?String(reajustado):null,obs:`${pct}% sobre valor inicial reajustado ${_ctMoney(base)}. Status: ${status}.${obs?". "+obs:""}`});
+      if(error) throw error;
+      setMsg(status==="formalizado"?"Reajuste formalizado.":"Reajuste salvo como "+status+".",true);
+    } else if(op==="aditivo"){
+      const data=document.getElementById("ctad-data").value;
+      if(!data){setMsg("Data e obrigatoria",false);return;}
+      const status=document.getElementById("ctad-status")?.value||"rascunho";
+      const pct=document.getElementById("ctad-pct").value;
+      const valor=document.getElementById("ctad-valor").value;
+      const obs=document.getElementById("ctad-obs").value.trim();
+      const impacto=valor?_ctNum(valor):ctAtualizarImpactoEvento("aditivo");
+      if(!impacto){setMsg("Informe valor acrescido ou quantidade/valor unitario.",false);return;}
+      const eventos=_ctHistoricoToEvents(_ctHistoricoAtual||[]);
+      const resumo=_ctModule().calculateContractFinancialSummary?_ctModule().calculateContractFinancialSummary(_ctModule().createContractRecord(_ctAtual),[],eventos,[],[]):null;
+      const saldo=resumo?.availableAdditiveBalance??Infinity;
+      if(status==="formalizado"&&impacto>saldo&&!await uiConfirm(`Este aditivo ultrapassa o saldo disponivel (${_ctMoney(saldo)}). Registrar mesmo assim?`)) return;
+      const novoTotal=_ctValorAtual(_ctAtual)+impacto;
+      const itemId=document.getElementById("ctad-item")?.value||null;
+      const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Aditivo",action_type:"aditivo",titulo:"Aditivo registrado",data_evento:data,percentual:pct||null,status_evento:status,valor_impacto:impacto,valor_novo:status==="formalizado"?String(novoTotal):null,related_entity_type:itemId?"contractItem":"contract",related_entity_id:itemId||String(id),obs:`Impacto ${_ctMoney(impacto)}. Status: ${status}. Saldo disponivel antes: ${resumo?_ctMoney(saldo):"nao calculado"}.${obs?". "+obs:""}`});
+      if(error) throw error;
+      if(status==="formalizado") await sb.from("contratos").update({valor_atual:novoTotal}).eq("id",id);
+      setMsg(status==="formalizado"?"Aditivo formalizado.":"Aditivo salvo como "+status+".",true);
+    } else if(op==="prorrogacao"){
+      const dataFim=document.getElementById("ctpr-data-fim").value;
+      if(!dataFim){setMsg("Nova data fim e obrigatoria",false);return;}
+      const status=document.getElementById("ctpr-status")?.value||"rascunho";
+      const obs=document.getElementById("ctpr-obs").value.trim();
+      if(status==="formalizado"){
+        const {error}=await sb.from("contratos").update({vencimento:fmtBR(dataFim)}).eq("id",id);
+        if(error) throw error;
+      }
+      const res=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Prorrogacao",action_type:"prorrogacao",titulo:"Prorrogacao registrada",data_evento:_ctTodayISO(),vigencia_nova_fim:dataFim,status_evento:status,obs:`Nova data fim: ${dataFim}. Status: ${status}${obs?". "+obs:""}`});
+      if(res.error) throw res.error;
+      setMsg(status==="formalizado"?"Prorrogacao formalizada.":"Prorrogacao salva como "+status+".",true);
+    } else if(op==="supressao"){
+      const data=document.getElementById("ctsu-data").value;
+      if(!data){setMsg("Data e obrigatoria",false);return;}
+      const status=document.getElementById("ctsu-status")?.value||"rascunho";
+      const pct=document.getElementById("ctsu-pct").value;
+      const valor=document.getElementById("ctsu-valor").value;
+      const obs=document.getElementById("ctsu-obs").value.trim();
+      const impacto=valor?_ctNum(valor):ctAtualizarImpactoEvento("supressao");
+      if(!impacto){setMsg("Informe valor reduzido ou quantidade/valor unitario.",false);return;}
+      const novoTotal=Math.max(_ctValorAtual(_ctAtual)-impacto,0);
+      const itemId=document.getElementById("ctsu-item")?.value||null;
+      const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Supressao",action_type:"supressao",titulo:"Supressao registrada",data_evento:data,percentual:pct||null,status_evento:status,valor_impacto:impacto,valor_novo:status==="formalizado"?String(novoTotal):null,related_entity_type:itemId?"contractItem":"contract",related_entity_id:itemId||String(id),obs:`Impacto redutor ${_ctMoney(impacto)}. Status: ${status}.${obs?". "+obs:""}`});
+      if(error) throw error;
+      if(status==="formalizado") await sb.from("contratos").update({valor_atual:novoTotal}).eq("id",id);
+      setMsg(status==="formalizado"?"Supressao formalizada.":"Supressao salva como "+status+".",true);
+    } else if(op==="fiscal"){
+      const nome=selValorTexto('ctfi-nome');
+      const inicio=document.getElementById("ctfi-inicio").value;
+      if(!nome||!inicio){setMsg("Nome e data inicio sao obrigatorios",false);return;}
+      if(document.getElementById("ctfi-nome").value==='__novo__' && nome){ try{ await obterOuCriarPessoa(nome); }catch(_){} }
+      const cargo=document.getElementById("ctfi-cargo").value.trim();
+      const {error}=await sb.from("contratos_fiscalizadores").insert({contrato_id:id,nome,data_inicio:inicio,cargo:cargo||null});
+      if(error) throw error;
+      await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Troca de fiscal",action_type:"alteracao_fiscal",titulo:"Fiscal adicionado",data_evento:inicio,status_evento:"formalizado",obs:`Novo fiscal: ${nome}${cargo?" ("+cargo+")":""} a partir de ${inicio}`});
+      await sb.from("contratos").update({fiscalizacao:nome}).eq("id",id);
+      setMsg("Fiscal adicionado.",true);
+    }
+    await loadContratos();
+    _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||_ctAtual;
+    setTimeout(()=>{document.getElementById("modal-ct-"+op).classList.remove("active");},1200);
+  }catch(e){
+    setMsg("Erro: "+(e.message||e),false);
+  }
+}
+
+async function salvarOperacaoContratoLegacy(op){
   if(bloquearSeVisualiz()) return;
   if(!_ctAtual){alert("Contrato não selecionado.");return;}
   const id=_ctAtual.id;
