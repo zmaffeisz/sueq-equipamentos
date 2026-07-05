@@ -1,0 +1,2364 @@
+          <option>AGUARDANDO RESERVA</option><option>RESERVA SOLICITADA</option>
+          <option>EM TRAMITE DE AQUISIÇÃO POR CARONA/ADESÃO</option>
+          <option>PROCESSO SEAD - AGUARDANDO HOMOLOGAÇÃO</option>
+          <option>ANÁLISE DO CONTROLE INTERNO</option><option>PREGÃO AGENDADO</option>
+          <option>AF EMITIDA - AGUARDANDO ENTREGA DOS ITENS</option><option>ADQUIRIDO/ENTREGUE</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Unidade e quantidade por emenda</div>
+        <div id="ni-emendas-detalhe" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div style="font-size:12px;color:var(--text3)">Selecione as emendas acima para preencher unidade e quantidade de cada uma.</div>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:1.25rem">
+      <button class="btn-primary" onclick="salvarNovoItem()">Salvar item</button>
+      <button class="btn-secondary" onclick="limparForm('ni')">Limpar</button>
+      <button class="btn-secondary" onclick="fecharModalEdicao('novo-item')">Fechar</button>
+      <span id="ni-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL ATUALIZAR STATUS ══════════════════════ -->
+<div class="modal-overlay" id="panel-atualizar-status">
+  <div class="modal-box" style="width:780px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.875rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Atualizar status de itens</span>
+      <button onclick="fecharModalEdicao('atualizar-status')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <div class="form-label">CPL / Processo</div>
+        <button type="button" id="mf-btn-cpl" class="modal-filter-btn" onclick="openModalFilter(event,'cpl')">Todos os CPLs <span style="float:right">▾</span></button>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Emenda</div>
+        <button type="button" id="mf-btn-emenda" class="modal-filter-btn" onclick="openModalFilter(event,'emenda')">Todas as emendas <span style="float:right">▾</span></button>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Tipo</div>
+        <button type="button" id="mf-btn-tipo" class="modal-filter-btn" onclick="openModalFilter(event,'tipo')">Todos os tipos <span style="float:right">▾</span></button>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Buscar item <button onclick="clearFAs('as-busca-item')" style="font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;margin-left:4px">✕</button></div>
+        <input type="text" id="as-busca-item" placeholder="ex: computador..." oninput="popularItens()">
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Novo status * <span style="font-size:10px;color:var(--text3);font-weight:400">(selecione ou digite livremente)</span></div>
+        <input list="status-opcoes" id="as-status" placeholder="Selecione ou digite o status..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:100%">
+        <datalist id="status-opcoes">
+          <option value="ADQUIRIDO/ENTREGUE">
+          <option value="AF EMITIDA - AGUARDANDO ENTREGA DOS ITENS">
+          <option value="AGUARDANDO RESERVA">
+          <option value="RESERVA SOLICITADA">
+          <option value="EM TRAMITE DE AQUISIÇÃO POR CARONA/ADESÃO">
+          <option value="PROCESSO SEAD - AGUARDANDO HOMOLOGAÇÃO">
+          <option value="ANÁLISE DO CONTROLE INTERNO">
+          <option value="PREGÃO AGENDADO">
+          <option value="PROCESSO FRACASSADO">
+          <option value="EXECUÇÃO SUSPENSA">
+          <option value="CANCELADO">
+          <option value="ITEM REMOVIDO - FOI ADQUIRIDO COM OUTRAS FONTES DE RECURSO">
+        </datalist>
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Selecione os itens a atualizar <span id="as-count" style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px"></span></div>
+        <div class="check-actions-row">
+          <button onclick="selectAll(true)">Marcar todos</button>
+          <button onclick="selectAll(false)">Desmarcar todos</button>
+        </div>
+        <div class="check-list" id="as-itens-lista">
+          <div style="font-size:12px;color:var(--text3);padding:.875rem">Selecione um CPL, emenda, tipo ou busque por item.</div>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:1.25rem">
+      <button class="btn-primary btn-enviar-status" onclick="salvarStatus()">Atualizar selecionados</button>
+      <button class="btn-secondary" onclick="limparStatus()">Limpar tudo</button>
+      <button class="btn-secondary" onclick="fecharModalEdicao('atualizar-status')">Fechar</button>
+      <span id="as-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════ CHAMADOS ══════════════════════ -->
+<div id="panel-chamados" class="panel">
+  <div id="chamados-loading" class="loading"><span class="spinner"></span>Carregando chamados...</div>
+  <div id="chamados-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Unidade <button onclick="clearF('fc-unidade')">✕</button></div>
+        <select id="fc-unidade" onchange="filtrarChamados()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Categoria <button onclick="clearF('fc-categoria')">✕</button></div>
+        <select id="fc-categoria" onchange="filtrarChamados()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Serviço <button onclick="clearF('fc-servico')">✕</button></div>
+        <select id="fc-servico" onchange="filtrarChamados()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('fc-status')">✕</button></div>
+        <select id="fc-status" onchange="filtrarChamados()">
+          <option value="">Todos</option>
+          <option>Aberto</option>
+          <option>Em andamento</option>
+          <option>Concluído</option>
+          <option>Pendente</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Período <button onclick="clearF('fc-periodo')">✕</button></div>
+        <select id="fc-periodo" onchange="filtrarChamados()">
+          <option value="12">Último ano</option>
+          <option value="6">Últimos 6 meses</option>
+          <option value="3">Últimos 3 meses</option>
+          <option value="0">Todos</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('fc-busca')">✕</button></div>
+        <input type="text" id="fc-busca" placeholder="equipamento, patrimônio..." oninput="filtrarChamados()">
+      </div>
+      <button class="clear-btn" onclick="clearAllChamados()">✕ Limpar</button>
+      <button onclick="marcarTodosChamados()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--green);background:var(--green-bg);color:var(--green-text);cursor:pointer;align-self:flex-end" title="Marcar todos os chamados visíveis como enviados">✅ Marcar todos como enviados</button>
+    </div>
+
+    <!-- Métricas chamados -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cm-total">—</div><div class="metric-sub">chamados</div></div>
+      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cm-abertos" style="color:var(--red)">—</div><div class="metric-sub">sem atendimento</div></div>
+      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="cm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="cm-pendentes" style="color:var(--purple)">—</div><div class="metric-sub">com pendência</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Chamados</span>
+        <span class="table-hdr-count" id="chamados-count">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th title="Enviado à empresa">📬</th>
+              <th title="Gerar PDF">📄</th>
+              <th>Protocolo</th>
+              <th>Carimbo</th>
+              <th>Data</th>
+              <th>Unidade</th>
+              <th>Endereço</th>
+              <th>Telefone</th>
+              <th>Responsável</th>
+              <th>Urgência</th>
+              <th>Patrimônio</th>
+              <th>Equipamento</th>
+              <th>Fabricante</th>
+              <th>Série</th>
+              <th>Categoria</th>
+              <th>Serviço</th>
+              <th>Problema</th>
+              <th>Descrição</th>
+              <th>Rechamado?</th>
+              <th>Status</th>
+              <th>Dt. Atendimento</th>
+              <th>Empresa</th>
+              <th>Nº OS</th>
+              <th>O que foi feito</th>
+              <th>Ações</th>
+              <th>📧</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody id="chamados-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal de atualização de chamado -->
+    <div class="modal-overlay" id="modal-chamado" onclick="fecharModalChamadoFora(event)">
+      <div class="modal-box" style="width:500px">
+        <div class="modal-title">✏️ Atualizar chamado</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mc-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Status *</div>
+            <select id="mc-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Concluído">Concluído</option>
+              <option value="Pendente">Pendente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Data do atendimento</div>
+            <input type="date" id="mc-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Empresa</div>
+            <input type="text" id="mc-empresa" placeholder="Nome da empresa">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Nº OS</div>
+            <input type="text" id="mc-os" placeholder="ex: OS 1234">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">O que foi feito</div>
+            <input type="text" id="mc-feito" placeholder="Descrição do atendimento">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Observação</div>
+            <input type="text" id="mc-obs" placeholder="Observações adicionais">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarControleChamado()">Salvar</button>
+          <button class="btn-secondary" onclick="fecharModalChamado()">Cancelar</button>
+          <span id="mc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ CHAMADOS NOVOS (SUPABASE) ══════════════════════ -->
+<div id="panel-chamados-novos" class="panel">
+  <div id="cn-loading" class="loading"><span class="spinner"></span>Carregando chamados...</div>
+  <div id="cn-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Unidade <button onclick="clearF('cn-unidade')">✕</button></div>
+        <select id="cn-unidade" onchange="filtrarChamadosNovos()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Categoria <button onclick="clearF('cn-categoria')">✕</button></div>
+        <select id="cn-categoria" onchange="filtrarChamadosNovos()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('cn-status')">✕</button></div>
+        <select id="cn-status" onchange="filtrarChamadosNovos()">
+          <option value="">Todos</option>
+          <option>Aguardando abertura</option>
+          <option>Aberto</option>
+          <option>Pendente</option>
+          <option>Inválido</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Urgência <button onclick="clearF('cn-urgencia')">✕</button></div>
+        <select id="cn-urgencia" onchange="filtrarChamadosNovos()">
+          <option value="">Todas</option>
+          <option>P1 (interrupção de atendimento)</option>
+          <option>P2 (atendimento parcialmente prejudicado)</option>
+          <option>P3 (pouco urgente)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Serviço <button onclick="clearF('cn-servico')">✕</button></div>
+        <select id="cn-servico" onchange="filtrarChamadosNovos()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('cn-busca')">✕</button></div>
+        <input type="text" id="cn-busca" placeholder="equipamento, patrimônio, responsável..." oninput="filtrarChamadosNovos()">
+      </div>
+      <button class="clear-btn" onclick="clearAllChamadosNovos()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cnm-total">—</div><div class="metric-sub">chamados</div></div>
+      <div class="metric"><div class="metric-label">Aguardando abertura</div><div class="metric-value" id="cnm-abertos" style="color:var(--red)">—</div><div class="metric-sub">não enviados</div></div>
+      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cnm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">em atendimento</div></div>
+      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cnm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Chamados novos (Supabase)</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="cn-count">—</span>
+          <button onclick="loadChamadosNovos()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ações</th><th>PDF</th><th>E-mail</th><th>Fotos</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
+              <th>Equipamento</th><th>Descrição</th><th>Endereço</th>
+              <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
+              <th>Fabricante/Modelo</th><th>Série</th>
+              <th>Categoria</th><th>Serviço</th><th>Problema apresentado</th>
+              <th>Rechamado?</th>
+            </tr>
+          </thead>
+          <tbody id="cn-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-cn">
+      <div class="modal-box" style="width:520px">
+        <div class="modal-title">✏️ Atualizar chamado</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mcn-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Status *</div>
+            <select id="mcn-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)" onchange="_mcnOnStatusChange()">
+              <option>Aguardando abertura</option>
+              <option>Aberto</option>
+              <option>Pendente</option>
+              <option>Inválido</option>
+            </select>
+            <div id="mcn-invalido-wrap" style="display:none;margin-top:8px">
+              <div class="form-label">Motivo da invalidação *</div>
+              <input type="text" id="mcn-motivo-invalido" placeholder="Descreva o motivo...">
+            </div>
+            <div id="mcn-pendente-wrap" style="display:none;margin-top:8px">
+              <div class="form-label">Motivo do pendente *</div>
+              <input type="text" id="mcn-motivo-pendente" placeholder="Descreva o motivo...">
+            </div>
+          </div>
+          <div class="form-group full" id="mcn-cpl-wrap">
+            <div class="form-label">Contrato / CPL * <span style="font-size:10px;color:var(--text3);font-weight:400">(obrigatório para status Aberto — somente SUEQ EQUIP)</span></div>
+            <input type="text" id="mcn-cpl-busca" placeholder="🔍 Buscar por CPL, objeto ou empresa..." oninput="_filtrarCplModal()" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
+            <select id="mcn-cpl" size="5" style="font-size:13px;padding:4px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box">
+              <option value="">Selecione o contrato...</option>
+            </select>
+          </div>
+
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarChamadoNovo()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-cn').classList.remove('active')">Cancelar</button>
+          <span id="mcn-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ FISCALIZAÇÃO DE CONTRATOS ══════════════════════ -->
+<div id="panel-fiscalizacao" class="panel">
+  <div id="fisc-loading" class="loading"><span class="spinner"></span>Carregando fiscalização...</div>
+  <div id="fisc-main" style="display:none">
+
+    <!-- Filtros -->
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('fisc-busca')">✕</button></div>
+        <input type="text" id="fisc-busca" placeholder="equipamento, protocolo, unidade, CPL..." oninput="filtrarFiscalizacao()">
+      </div>
+      <button class="clear-btn" onclick="clearAllFiscalizacao()">✕ Limpar</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total OS</div><div class="metric-value" id="fm-total">—</div><div class="metric-sub">na seleção</div></div>
+      <div class="metric"><div class="metric-label">Não fiscalizados</div><div class="metric-value" id="fm-nao" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="fm-pend" style="color:var(--amber)">—</div><div class="metric-sub">em aberto</div></div>
+      <div class="metric"><div class="metric-label">Conformes</div><div class="metric-value" id="fm-conf" style="color:var(--green)">—</div><div class="metric-sub">ok</div></div>
+    </div>
+
+    <!-- Ações -->
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      <button onclick="selecionarTodasFisc(true)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☑ Marcar todas</button>
+      <button onclick="selecionarTodasFisc(false)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☐ Desmarcar</button>
+      <button onclick="gerarTermoAteste()" style="font-size:12px;padding:6px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar Termo de Ateste</button>
+      <span id="fisc-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="fisc-check-all" onchange="selecionarTodasFisc(this.checked)" style="accent-color:var(--blue);cursor:pointer"></th>
+              <th>Ações</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('protocolo')" style="cursor:pointer;user-select:none">Protocolo <span id="sort-fisc-protocolo"></span></span><span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('data')" style="cursor:pointer;user-select:none">Data <span id="sort-fisc-data"></span></span><span class="hdr-filter-btn" id="hff-data" onclick="openFiscFilter(event,'data')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-fisc-unidade"></span></span><span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('equipamento')" style="cursor:pointer;user-select:none">Equipamento <span id="sort-fisc-equipamento"></span></span><span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('patrimonio')" style="cursor:pointer;user-select:none">Patrimônio <span id="sort-fisc-patrimonio"></span></span><span class="hdr-filter-btn" id="hff-patrimonio" onclick="openFiscFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('cpl')" style="cursor:pointer;user-select:none">CPL / Contrato <span id="sort-fisc-cpl"></span></span><span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('os')" style="cursor:pointer;user-select:none">Nº OS <span id="sort-fisc-os"></span></span><span class="hdr-filter-btn" id="hff-os" onclick="openFiscFilter(event,'os')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('servico')" style="cursor:pointer;user-select:none">Serviço realizado <span id="sort-fisc-servico"></span></span><span class="hdr-filter-btn" id="hff-servico" onclick="openFiscFilter(event,'servico')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('situacao')" style="cursor:pointer;user-select:none">Situação <span id="sort-fisc-situacao"></span></span><span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('competencia')" style="cursor:pointer;user-select:none">Competência <span id="sort-fisc-competencia"></span></span><span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('nf')" style="cursor:pointer;user-select:none">NF Referência <span id="sort-fisc-nf"></span></span><span class="hdr-filter-btn" id="hff-nf" onclick="openFiscFilter(event,'nf')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('sla')" style="cursor:pointer;user-select:none">Dias p/ atend. <span id="sort-fisc-sla"></span></span><span class="hdr-filter-btn" id="hff-sla" onclick="openFiscFilter(event,'sla')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('fiscalizado_por')" style="cursor:pointer;user-select:none">Fiscalizado por <span id="sort-fisc-fiscalizado_por"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_por" onclick="openFiscFilter(event,'fiscalizado_por')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('fiscalizado_em')" style="cursor:pointer;user-select:none">Fiscalizado em <span id="sort-fisc-fiscalizado_em"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_em" onclick="openFiscFilter(event,'fiscalizado_em')" title="Filtrar">▾</span></span></th>
+              <th>Editar</th>
+            </tr>
+          </thead>
+          <tbody id="fisc-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal editar OS na fiscalização -->
+    <div class="modal-overlay" id="modal-fisc-os">
+      <div class="modal-box" style="width:620px;max-width:96vw;max-height:92vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+          <span style="font-size:15px;font-weight:700">🔍 Fiscalizar OS</span>
+          <button onclick="document.getElementById('modal-fisc-os').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="mfo-info"></div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group full">
+            <div class="form-label">Situação da OS *</div>
+            <select id="mfo-situacao" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+              <option value="">Selecione...</option>
+              <option value="conforme">✅ Conforme</option>
+              <option value="conforme_ressalva">⚠️ Conforme com ressalva</option>
+              <option value="parcial">🟠 Parcial</option>
+              <option value="nao_conforme">❌ Não conforme</option>
+              <option value="pendente">⏳ Pendente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">Data de atendimento da OS</div>
+            <input type="date" id="mfo-data-atendimento">
+          </div>
+          <div class="form-group" id="mfo-sla-wrap" style="display:none">
+            <div class="form-label">Prazo de atendimento</div>
+            <div id="mfo-sla-info" style="font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border)">—</div>
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Serviço realizado</div>
+            <input type="text" id="mfo-servico" placeholder="Descreva o que foi realizado...">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Ocorrências / Observações</div>
+            <input type="text" id="mfo-ocorrencias" placeholder="Registre qualquer ocorrência ou ressalva...">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarFiscalizacaoOS()">Salvar fiscalização</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-fisc-os').classList.remove('active')">Cancelar</button>
+          <span id="mfo-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal editar NF + Competência -->
+<div class="modal-overlay" id="modal-editar-nf">
+  <div class="modal-box" style="width:400px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Editar NF e Competência</span>
+      <button onclick="document.getElementById('modal-editar-nf').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="enf-info"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Competência</div>
+        <input type="text" id="enf-competencia" placeholder="ex: 06/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Nota Fiscal</div>
+        <input type="text" id="enf-nf" placeholder="ex: NF 12345">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarEditarNF()">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-editar-nf').classList.remove('active')">Cancelar</button>
+      <span id="enf-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal histórico OS -->
+<div class="modal-overlay" id="modal-historico-os">
+  <div class="modal-box" style="width:540px;max-width:96vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📋 Histórico de situações</span>
+      <button onclick="document.getElementById('modal-historico-os').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)" id="hist-info"></div>
+    <div id="hist-body"></div>
+    <div style="text-align:right;margin-top:1rem">
+      <button class="btn-secondary" onclick="document.getElementById('modal-historico-os').classList.remove('active')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal NF + Competência antes de gerar o termo -->
+<div class="modal-overlay" id="modal-termo-ateste">
+  <div class="modal-box" style="width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Gerar Termo de Ateste</span>
+      <button onclick="document.getElementById('modal-termo-ateste').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:1rem" id="mta-info"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Competência * <span style="font-size:10px;font-weight:400">(mês/ano)</span></div>
+        <input type="text" id="mta-competencia" placeholder="ex: 06/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Nota Fiscal de referência *</div>
+        <input type="text" id="mta-nf" placeholder="ex: NF 12345">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="confirmarGerarTermo()">Gerar PDF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-termo-ateste').classList.remove('active')">Cancelar</button>
+      <span id="mta-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ INVENTÁRIO ══════════════════════ -->
+<div id="panel-inventario-ac" class="panel">
+  <div id="inv-loading" class="loading"><span class="spinner"></span>Carregando inventário...</div>
+  <div id="inv-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Tipo <button onclick="clearF('finv-tipo')">✕</button></div>
+        <select id="finv-tipo" onchange="filtrarInventario()">
+          <option value="">Todos</option>
+          <option value="Aquisição">Aquisição</option>
+          <option value="ATA">ATA</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Unidade <button onclick="clearF('finv-unidade')">✕</button></div>
+        <select id="finv-unidade" onchange="filtrarInventario()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('finv-busca')">✕</button></div>
+        <input type="text" id="finv-busca" placeholder="item, empresa, patrimônio, empenho..." oninput="filtrarInventario()">
+      </div>
+      <button class="clear-btn" onclick="clearAllInv()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="inv-total">—</div><div class="metric-sub">itens no inventário</div></div>
+      <div class="metric"><div class="metric-label">Aquisições</div><div class="metric-value" id="inv-aq" style="color:var(--blue,#378ADD)">—</div><div class="metric-sub">itens</div></div>
+      <div class="metric"><div class="metric-label">ATAs</div><div class="metric-value" id="inv-ata" style="color:#A371F7">—</div><div class="metric-sub">itens</div></div>
+      <div class="metric"><div class="metric-label">Unidades atendidas</div><div class="metric-value" id="inv-unids">—</div><div class="metric-sub">unidades</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Inventário Geral</span>
+        <span class="table-hdr-count" id="inv-count">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th><th>Item</th><th>Unidade</th><th>Empresa</th>
+              <th>Patrimônio</th><th>Entrega na Unidade</th>
+              <th>Empenho</th><th>Emenda</th><th>Contrato/ATA</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="inv-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Detalhes do Item -->
+    <div class="modal-overlay" id="modal-inv-detalhe">
+      <div class="modal-box" style="width:700px;max-height:90vh;overflow-y:auto">
+        <div class="modal-title">📋 Detalhes do Item</div>
+        <div id="inv-detalhe-content"></div>
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-secondary" onclick="document.getElementById('modal-inv-detalhe').classList.remove('active')">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ PLANILHAS ══════════════════════ -->
+<div id="panel-planilhas" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="form-title" style="margin:0;padding:0;border:none">📊 Planilhas</div>
+        <div style="display:flex;gap:4px">
+          <button onclick="mudarPlanilha('ac')" id="pl-btn-ac" style="font-size:12px;padding:4px 12px;border-radius:20px;border:none;background:var(--blue);color:#fff;cursor:pointer">🗂️ Inventário</button>
+          <button onclick="mudarPlanilha('chamados')" id="pl-btn-chamados" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">🆕 Chamados novos</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="adicionarLinhaAC()" id="btn-add-ac" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:#fff;cursor:pointer">+ Nova linha</button>
+        <button onclick="carregarPlanilhaAC()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:.75rem;display:flex;gap:8px">
+      <input type="text" id="pl-busca" placeholder="🔍 Buscar..." oninput="filtrarPlanilhaAC()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:250px;background:var(--surface);color:var(--text)">
+      <span id="pl-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
+      <span style="font-size:11px;color:var(--text3);align-self:center;margin-left:auto">Clique em qualquer célula para editar</span>
+    </div>
+
+    <div id="pl-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
+    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;height:max(var(--table-min-height,620px),calc(100vh - var(--table-offset,300px) + var(--table-extra-height,140px)))">
+      <table id="pl-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px">
+        <thead id="pl-thead" style="position:sticky;top:0;z-index:1"></thead>
+        <tbody id="pl-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Modal editar célula -->
+    <div class="modal-overlay" id="modal-celula">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title" id="mc-titulo">Editar</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 .75rem" id="mc-ctx"></div>
+        <input type="text" id="mc-valor" style="width:100%;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')salvarCelula();if(event.key==='Escape')fecharModalCelula()">
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-primary" onclick="salvarCelula()">Salvar</button>
+          <button class="btn-secondary" onclick="fecharModalCelula()">Cancelar</button>
+          <span id="mc-msg2" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal nova linha AC -->
+    <div class="modal-overlay" id="modal-nova-linha-ac">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">➕ Novo equipamento AC</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group"><div class="form-label">Nº</div><input type="text" id="nl-num" placeholder="ex: 284"></div>
+          <div class="form-group"><div class="form-label">Situação</div><input type="text" id="nl-situacao" placeholder="ex: CONTRATO VIGENTE - instalado"></div>
+          <div class="form-group"><div class="form-label">Estabelecimento</div><input type="text" id="nl-estab" placeholder="ex: UBS CAJURU"></div>
+          <div class="form-group"><div class="form-label">Endereço</div><input type="text" id="nl-end" placeholder="ex: RUA X, 123"></div>
+          <div class="form-group"><div class="form-label">Sala</div><input type="text" id="nl-sala" placeholder="ex: RECEPÇÃO"></div>
+          <div class="form-group"><div class="form-label">Patrimônio</div><input type="text" id="nl-pat" placeholder="ex: 123456"></div>
+          <div class="form-group"><div class="form-label">Ano fab.</div><input type="text" id="nl-ano" placeholder="ex: 2023"></div>
+          <div class="form-group"><div class="form-label">Marca</div><input type="text" id="nl-marca" placeholder="ex: AGRATTO"></div>
+          <div class="form-group"><div class="form-label">Modelo</div><input type="text" id="nl-modelo" placeholder="ex: LCST24F"></div>
+          <div class="form-group"><div class="form-label">Série</div><input type="text" id="nl-serie" placeholder="ex: ABC123"></div>
+          <div class="form-group"><div class="form-label">BTU</div><input type="text" id="nl-btu" placeholder="ex: 24000"></div>
+          <div class="form-group"><div class="form-label">Q/F</div><input type="text" id="nl-qf" placeholder="ex: FRIO"></div>
+          <div class="form-group"><div class="form-label">Tipo</div><input type="text" id="nl-tipo" placeholder="ex: SPLIT HI WALL"></div>
+          <div class="form-group full">
+            <div class="form-label">Emenda vinculada (opcional)</div>
+            <input type="search" id="nl-emenda-busca" placeholder="Digite o nº da emenda ou item..." autocomplete="off" oninput="filtrarNlEmendaAC()" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px">
+            <div id="nl-emenda-options" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;background:var(--surface);display:none"></div>
+            <div id="nl-emenda-sel" style="display:none;margin-top:4px;padding:5px 8px;background:var(--green-bg,#d1fae5);color:var(--green-text,#065f46);border-radius:var(--radius-sm);font-size:12px"></div>
+            <input type="hidden" id="nl-emenda-item-id">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaLinhaAC()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-linha-ac').classList.remove('active')">Cancelar</button>
+          <span id="nl-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ USUÁRIOS ══════════════════════ -->
+<div id="panel-usuarios" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">⚙️ Gerenciar usuários</div>
+      <button onclick="carregarUsuarios()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻ Atualizar</button>
+    </div>
+    <div id="usuarios-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
+    <div id="usuarios-table" style="display:none">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Nome</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">E-mail</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Papel atual</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Status</th>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">Alterar para</th>
+            <th style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)"></th>
+          </tr>
+        </thead>
+        <tbody id="usuarios-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CADASTROS ══════════════════════ -->
+<div id="panel-cadastros" class="panel">
+  <div class="form-card">
+    <div class="form-title">🗂️ Cadastros</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:1.25rem">Dados centrais reutilizados em todo o sistema (empresas, unidades, pessoas, etc.). Só admin edita; as outras telas escolhem destas listas.</div>
+    <div id="cad-revisao" style="margin-bottom:1.25rem"></div>
+    <div id="cad-hub" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"></div>
+    <div id="cad-lista" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ITENS ══════════════════════ -->
+<div id="panel-itens" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">📦 Controle de Entregas</div>
+      <button onclick="loadItens()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="itens-subtab-btn" data-sub="aquisicoes" onclick="itensShowSub('aquisicoes')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Itens de Aquisições</button>
+      <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Itens de Atas</button>
+      <button class="itens-subtab-btn" data-sub="entregas" onclick="itensShowSub('entregas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Controle de Entregas / Prazos</button>
+      <button class="itens-subtab-btn" data-sub="confirmacao" onclick="itensShowSub('confirmacao')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Confirmação de Entrega na Unidade</button>
+    </div>
+
+    <div id="itens-sub-aquisicoes" class="itens-sub">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+        <input type="text" id="itens-busca" placeholder="buscar descrição, processo, emenda, empresa..." oninput="renderItensAquisicoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
+        <select id="itens-f-fonte" onchange="renderItensAquisicoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="">Todas as fontes</option>
+          <option value="emenda">Emenda</option>
+          <option value="sem_emenda">Não há emenda</option>
+          <option value="recurso_proprio">Recurso próprio</option>
+          <option value="municipal">Fonte municipal</option>
+          <option value="outra">Outra</option>
+        </select>
+        <select id="itens-f-status" onchange="renderItensAquisicoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)"><option value="">Todos os status</option></select>
+        <span id="itens-count" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div id="itens-aquisicoes-wrap" style="overflow-x:auto"></div>
+    </div>
+    <div id="itens-sub-atas" class="itens-sub" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.5rem">
+        <input type="text" id="itens-atas-busca" placeholder="buscar descrição, processo, empresa..." oninput="renderItensAtas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
+        <span id="itens-atas-count" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Itens de processos <b>ATA DE RP</b>. Aqui é só rastreabilidade — <b>saldo e execução ficam na aba ATAs</b>.</div>
+      <div id="itens-atas-wrap" style="overflow-x:auto"></div>
+    </div>
+    <div id="itens-sub-entregas" class="itens-sub" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+        <input type="text" id="entregas-busca" placeholder="buscar item, processo, empresa, AF, unidade..." oninput="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
+        <select id="entregas-f-tipo" onchange="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="">Aquisições + Atas</option>
+          <option value="Aquisição">Só Aquisições</option>
+          <option value="ATA">Só Atas</option>
+        </select>
+        <select id="entregas-f-prazo" onchange="renderItensEntregas()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="">Todos os prazos</option>
+          <option value="aguardando AF">Aguardando AF</option>
+          <option value="atrasado">Atrasado</option>
+          <option value="vence hoje">Vence hoje</option>
+          <option value="no prazo">No prazo</option>
+          <option value="sem prazo">Sem prazo</option>
+          <option value="recebido">Recebido</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <button onclick="loadItensEntregas()" title="Recarregar" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
+        <span id="entregas-count" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div id="entregas-wrap" style="overflow-x:auto"></div>
+    </div>
+    <div id="itens-sub-confirmacao" class="itens-sub" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+        <input type="text" id="conf-busca" placeholder="buscar item, unidade, processo, termo..." oninput="renderConfirmacoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:260px">
+        <select id="conf-f-tipo" onchange="renderConfirmacoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="">Aquisições + Atas</option>
+          <option value="Aquisição">Só Aquisições</option>
+          <option value="ATA">Só Atas</option>
+        </select>
+        <select id="conf-f-status" onchange="renderConfirmacoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          <option value="pendente">Pendentes</option>
+          <option value="confirmado">Confirmados</option>
+          <option value="todos">Todos</option>
+        </select>
+        <button onclick="loadConfirmacoes()" title="Recarregar" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
+        <span id="conf-count" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div id="confirmacao-wrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ EMPENHOS ══════════════════════ -->
+<div id="panel-empenhos" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">💵 Empenhos</div>
+      <button onclick="loadEmpenhos()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+      <input type="text" id="emp-busca" placeholder="buscar número, despesa, contrato, emenda, fornecedor..." oninput="renderEmpenhos()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);min-width:280px">
+      <button id="emp-novo-btn" onclick="abrirModalEmpenho()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">+ Novo empenho</button>
+      <span id="emp-count" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Cadastre os empenhos e vincule a itens de contratos. O <b>saldo</b> desconta conforme o valor vinculado aos itens.</div>
+    <div id="empenhos-wrap" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- Modal Empenho (Fase 8) -->
+<div class="modal-overlay" id="modal-empenho">
+  <div class="modal-box" style="width:820px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span id="emp-modal-titulo" style="font-size:15px;font-weight:700">Novo empenho</span>
+      <button onclick="document.getElementById('modal-empenho').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <input type="hidden" id="emp-id">
+    <div class="form-grid" style="grid-template-columns:1fr 100px 1fr">
+      <div class="form-group"><div class="form-label">Número do empenho *</div><input type="text" id="emp-numero" placeholder="ex: 10296/2026"></div>
+      <div class="form-group"><div class="form-label">Ano</div><input type="number" id="emp-ano" min="2000" step="1"></div>
+      <div class="form-group"><div class="form-label">Número da despesa</div><input type="text" id="emp-despesa" placeholder="ex: 3.3.90.30"></div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Fonte</div>
+        <select id="emp-fonte-tipo"></select>
+      </div>
+      <div class="form-group"><div class="form-label">Detalhe da fonte</div><input type="text" id="emp-fonte-desc" placeholder="opcional"></div>
+      <div class="form-group"><div class="form-label">Valor do empenho (R$) *</div><input type="number" id="emp-valor" min="0" step="any" oninput="_empRecalcSaldo()" placeholder="ex: 120000"></div>
+      <div class="form-group"><div class="form-label">Data de emissão</div><input type="date" id="emp-data"></div>
+      <div class="form-group"><div class="form-label">Emenda (opcional)</div><select id="emp-emenda"></select></div>
+      <div class="form-group s2-outer">
+        <div class="form-label">Contrato *</div>
+        <input type="hidden" id="emp-contrato">
+        <div id="emp-contrato-wrap" class="s2-wrap" onclick="_s2Toggle('emp-contrato')">
+          <span id="emp-contrato-display" class="s2-display placeholder">— selecione um contrato —</span>
+          <span class="s2-arrow">▼</span>
+        </div>
+        <div id="emp-contrato-dropdown" class="s2-dropdown" style="display:none">
+          <input type="text" id="emp-contrato-search" class="s2-search" placeholder="Pesquisar..." oninput="_s2Filter('emp-contrato')" onclick="event.stopPropagation()">
+          <div id="emp-contrato-list" class="s2-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:.25rem">
+      <div class="form-label">Itens do contrato — quantidade e valor vinculados a este empenho</div>
+      <div id="emp-itens-wrap" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);max-height:280px;overflow-y:auto;font-size:12px;color:var(--text3)">Selecione um contrato para listar os itens.</div>
+    </div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:.6rem 0;font-size:13px">
+      <span>Valor: <b id="emp-resumo-valor">R$ 0,00</b></span>
+      <span>Vinculado: <b id="emp-resumo-vinc">R$ 0,00</b></span>
+      <span>Saldo: <b id="emp-resumo-saldo" style="color:var(--green)">R$ 0,00</b></span>
+    </div>
+    <div class="form-group"><div class="form-label">Observações</div><input type="text" id="emp-obs" placeholder="opcional"></div>
+    <div class="form-actions">
+      <button class="btn-primary" id="emp-salvar" onclick="salvarEmpenho()">Salvar empenho</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-empenho').classList.remove('active')">Cancelar</button>
+      <span id="emp-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vincular Empenho ao item (Fase 11) -->
+<div class="modal-overlay" id="modal-vincular-empenho">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">Vincular empenho ao item</span>
+      <button onclick="document.getElementById('modal-vincular-empenho').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <input type="hidden" id="ve-item-id">
+    <div id="ve-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Marque os empenhos pré-cadastrados e informe a quantidade/valor que cada um cobre deste item. Cadastre empenhos na aba <b>Empenhos</b>.</div>
+    <div id="ve-lista" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;max-height:320px;overflow-y:auto;font-size:12px"></div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ve-salvar" onclick="salvarVincularEmpenho()">Salvar vínculos</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-vincular-empenho').classList.remove('active')">Cancelar</button>
+      <span id="ve-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Emitir AF (Fase 5) -->
+<div class="modal-overlay" id="modal-af">
+  <div class="modal-box" style="width:640px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Emitir AF — Autorização de Fornecimento</span>
+      <button onclick="document.getElementById('modal-af').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div id="af-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <input type="hidden" id="af-item-id">
+    <input type="hidden" id="af-exec-id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Qtde contratada/solicitada</div>
+        <input type="text" id="af-qtde-contratada" disabled>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Já autorizado</div>
+        <input type="text" id="af-ja-autorizado" disabled>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Saldo a autorizar</div>
+        <input type="text" id="af-saldo" disabled>
+      </div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">AF número *</div>
+        <input type="text" id="af-numero" placeholder="ex: AF 123/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">AF data *</div>
+        <input type="date" id="af-data" onchange="_afRecalcLimite()">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Quantidade autorizada *</div>
+        <input type="number" id="af-qtde-autorizada" min="0" step="any" placeholder="0">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Prazo de entrega (dias) <span style="color:var(--text3);font-weight:400">(herdado da licitação)</span></div>
+        <input type="number" id="af-prazo-dias" min="0" step="1" placeholder="—" readonly title="Prazo definido no item da licitação; não editável aqui" style="background:var(--surface2);opacity:.85">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Data limite de entrega <span style="color:var(--text3);font-weight:400">(AF data + prazo — calculada)</span></div>
+        <input type="date" id="af-data-limite" readonly title="Calculada automaticamente: data da AF + prazo herdado" style="background:var(--surface2);opacity:.85">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Observação</div>
+        <textarea id="af-obs" rows="2" placeholder="opcional"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="af-salvar" onclick="salvarAF()">Emitir AF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-af').classList.remove('active')">Cancelar</button>
+      <span id="af-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Emitir AF em lote (vários itens do mesmo contrato) -->
+<div class="modal-overlay" id="modal-af-lote">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Emitir AF para vários itens</span>
+      <button onclick="document.getElementById('modal-af-lote').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <div id="afl-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">Número da AF *</div><input type="text" id="afl-numero" placeholder="ex: 10310/2026"></div>
+      <div class="form-group"><div class="form-label">Data da AF *</div><input type="date" id="afl-data"></div>
+    </div>
+    <div class="form-group" style="margin-top:.25rem">
+      <div class="form-label">Itens incluídos nesta AF</div>
+      <div id="afl-itens" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);max-height:300px;overflow-y:auto;font-size:12px"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="afl-salvar" onclick="confirmarAFLote()">Emitir AF e gerar PDF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-af-lote').classList.remove('active')">Cancelar</button>
+      <span id="afl-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Registrar Recebimento (Fase 6) -->
+<div class="modal-overlay" id="modal-recebimento">
+  <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">Registrar recebimento administrativo</span>
+      <button onclick="document.getElementById('modal-recebimento').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <div id="rec-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <input type="hidden" id="rec-entrega-id">
+    <input type="hidden" id="rec-item-id">
+    <input type="hidden" id="rec-origem" value="Aquisicao">
+    <input type="hidden" id="rec-exec-id">
+    <div class="form-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="form-group"><div class="form-label">Qtde autorizada</div><input type="text" id="rec-qtde-autorizada" disabled></div>
+      <div class="form-group"><div class="form-label">Ja recebida na AF</div><input type="text" id="rec-ja-recebida" disabled></div>
+      <div class="form-group"><div class="form-label">Saldo da AF</div><input type="text" id="rec-saldo-af" disabled></div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Quantidade recebida agora *</div>
+        <input type="number" id="rec-qtde" min="0" step="any" placeholder="0" oninput="_recRenderUnidades()">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Tipo de recebimento *</div>
+        <select id="rec-tipo"><option value="parcial">Parcial</option><option value="total">Total</option></select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Data do recebimento *</div>
+        <input type="date" id="rec-data">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Recebido por</div>
+        <input type="text" id="rec-recebido-por" placeholder="nome do responsavel">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Marca / Modelo (do contrato)</div>
+        <input type="text" id="rec-marca-modelo" disabled placeholder="—">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Unidades recebidas <span style="color:var(--text3);font-weight:400">(patrimônio e série por unidade)</span></div>
+        <div id="rec-unidades" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Empenho <span style="color:var(--text3);font-weight:400">(herdado — vinculado antes da AF)</span></div>
+        <input type="text" id="rec-empenho-info" disabled placeholder="—" style="background:var(--surface2);opacity:.85">
+        <input type="hidden" id="rec-empenho-id-herdado">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Nota fiscal *</div>
+        <select id="rec-nf-select" onchange="_recToggleNovoDoc('nf')"></select>
+      </div>
+      <div id="rec-nf-novo" class="form-grid" style="grid-column:1 / -1;grid-template-columns:1fr 110px 160px;display:none">
+        <div class="form-group"><div class="form-label">Nova NF - numero</div><input type="text" id="rec-nf-numero" placeholder="ex: NF 12345"></div>
+        <div class="form-group"><div class="form-label">Serie</div><input type="text" id="rec-nf-serie"></div>
+        <div class="form-group"><div class="form-label">Data emissao</div><input type="date" id="rec-nf-data"></div>
+        <div class="form-group" style="grid-column:1 / -1"><div class="form-label">Chave de acesso</div><input type="text" id="rec-nf-chave"></div>
+        <div class="form-group"><div class="form-label">Valor total NF</div><input type="number" id="rec-nf-valor" min="0" step="any"></div>
+        <div class="form-group" style="grid-column:span 2"><div class="form-label">Observacao</div><input type="text" id="rec-nf-obs"></div>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Observacoes</div>
+        <textarea id="rec-obs" rows="2" placeholder="opcional"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="rec-salvar" onclick="salvarRecebimento()">Salvar recebimento</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-recebimento').classList.remove('active')">Cancelar</button>
+      <span id="rec-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Entrega na Unidade (Fase 7) -->
+<div class="modal-overlay" id="modal-confirmacao-unidade">
+  <div class="modal-box" style="width:680px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">Confirmar entrega na unidade</span>
+      <button onclick="document.getElementById('modal-confirmacao-unidade').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <div id="cu-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <input type="hidden" id="cu-tipo">
+    <input type="hidden" id="cu-id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">Data real de entrega *</div>
+        <input type="date" id="cu-data">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Responsável na unidade *</div>
+        <input type="text" id="cu-responsavel" placeholder="nome do responsável">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Cargo do responsável</div>
+        <input type="text" id="cu-cargo" placeholder="ex: Gerente da unidade">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Termo PDF ou imagem</div>
+        <input type="file" id="cu-arquivo" accept="application/pdf,image/*">
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Observação</div>
+        <textarea id="cu-obs" rows="2" placeholder="opcional"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="cu-salvar" onclick="salvarConfirmacaoUnidade()">Salvar confirmação</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-confirmacao-unidade').classList.remove('active')">Cancelar</button>
+      <span id="cu-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ LICITAÇÕES EM ANDAMENTO ══════════════════════ -->
+<div id="panel-licitacoes" class="panel">
+  <div class="form-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <div class="form-title" style="margin:0;padding:0;border:none">🧭 Licitações em andamento</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="lic-count" style="font-size:12px;color:var(--text3)">—</span>
+        <button class="btn-primary" onclick="abrirNovoProcesso()" style="font-size:13px;padding:7px 14px">➕ Novo processo</button>
+        <button onclick="loadLicitacoes()" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">↻</button>
+      </div>
+    </div>
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg"><div class="fg-label">Buscar</div><input type="text" id="lic-busca" placeholder="identificador, objeto, item..." oninput="filtrarLicitacoes()"></div>
+      <div class="fg"><div class="fg-label">Tipo</div><select id="lic-f-tipo" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="fg"><div class="fg-label">Órgão (bola)</div><select id="lic-f-orgao" onchange="filtrarLicitacoes()"><option value="">Todos</option><option>SES</option><option>SEAD</option><option>CONTROLADORIA</option></select></div>
+      <div class="fg"><div class="fg-label">&nbsp;</div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="lic-f-contratados" onchange="filtrarLicitacoes()" style="cursor:pointer">incluir já contratadas</label></div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Clique numa licitação para abrir os itens e definir o status de cada um. &nbsp; <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span> automático (o sistema controla 🔒)</span></div>
+    <div id="lic-lista"></div>
+  </div>
+</div>
+
+
+<!-- Modal: criar/editar processo -->
+<div class="modal-overlay" id="modal-processo" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:860px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span id="proc-titulo" style="font-size:15px;font-weight:700">➕ Novo processo</span>
+      <button onclick="document.getElementById('modal-processo').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
+      <div class="form-group"><div class="form-label">Tipo * <span style="font-size:10px;color:var(--text3);font-weight:400">(origem do processo)</span></div><select id="proc-tipo" onchange="_procIdentFiltrar()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
+      <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
+      <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
+      <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
+      <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
+      <div class="form-group"><div class="form-label">Modalidade</div><input type="text" id="proc-modalidade" placeholder="ex: Pregão Eletrônico"></div>
+      <div class="form-group"><div class="form-label">Valor estimado (R$)</div><input type="number" id="proc-valor" step="0.01" placeholder="ex: 50000"></div>
+      <div class="form-group full"><div class="form-label">Observação / andamento</div><input type="text" id="proc-obs" placeholder="anotações livres"></div>
+    </div>
+    <div id="proc-itens-section" style="display:none;margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.5rem">
+        <div style="font-size:13px;font-weight:700">📦 Itens da licitação <span id="proc-itens-hint" style="font-size:11px;color:var(--text3);font-weight:400">(fonte de recurso obrigatória por item)</span></div>
+        <div style="display:flex;gap:6px">
+          <button type="button" id="proc-btn-puxar-emenda" onclick="procImportarDeEmenda()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--surface);color:var(--blue);cursor:pointer">⬇ Puxar de emenda</button>
+          <button type="button" onclick="procAddItemRow()" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer">+ Adicionar item</button>
+        </div>
+      </div>
+      <div id="proc-import-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem;margin-bottom:.5rem"></div>
+      <div id="proc-itens-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="proc-itens-vazio" style="font-size:12px;color:var(--text3);padding:.5rem 0">Nenhum item adicionado. Use "Adicionar item" ou "Puxar de emenda".</div>
+    </div>
+    <div class="form-actions" style="margin-top:1.25rem">
+      <button class="btn-primary" onclick="salvarProcesso()">Salvar processo</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-processo').classList.remove('active')">Cancelar</button>
+      <span id="proc-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ATAS ══════════════════════ -->
+<div id="panel-atas" class="panel">
+  <div id="atas-loading" class="loading"><span class="spinner"></span>Carregando ATAs...</div>
+  <div id="atas-main" style="display:none">
+
+    <!-- Alertas de vencimento -->
+    <div id="atas-alertas" style="margin-bottom:1rem"></div>
+
+    <!-- Filtros -->
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">CPL <button onclick="clearF('fat-cpl')">✕</button></div>
+        <select id="fat-cpl" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">SIM <button onclick="clearF('fat-sim')">✕</button></div>
+        <select id="fat-sim" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Empresa <button onclick="clearF('fat-empresa')">✕</button></div>
+        <select id="fat-empresa" onchange="filtrarAtas()"><option value="">Todas</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('fat-status')">✕</button></div>
+        <select id="fat-status" onchange="filtrarAtas()"><option value="">Todos</option></select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Buscar item <button onclick="clearF('fat-busca')">✕</button></div>
+        <input type="text" id="fat-busca" placeholder="item, marca..." oninput="filtrarAtas()">
+      </div>
+      <button class="clear-btn" onclick="clearAllAtas()">✕ Limpar</button>
+    </div>
+
+    <!-- Métricas -->
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Itens de ata</div><div class="metric-value" id="at-total">—</div><div class="metric-sub">cadastrados</div></div>
+      <div class="metric"><div class="metric-label">Saldo total</div><div class="metric-value" id="at-saldo" style="color:var(--green)">—</div><div class="metric-sub">unidades disponíveis</div></div>
+      <div class="metric"><div class="metric-label">Executado</div><div class="metric-value" id="at-exec">—</div><div class="metric-sub">unidades solicitadas</div></div>
+      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="at-vence" style="color:var(--red)">—</div><div class="metric-sub">contratos</div></div>
+    </div>
+
+    <!-- Tabela de itens das ATAs -->
+    <div class="table-card" style="margin-bottom:1.25rem">
+      <div class="table-hdr">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="sheet-toggle-btn" id="btn-toggle-atas-itens" onclick="toggleTabelaAtas('itens')">Mostrar</button>
+          <span class="table-hdr-title">Itens das Atas Rp Vigentes</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="atas-count">—</span>
+        </div>
+      </div>
+      <div class="table-wrap hidden-by-default" id="atas-itens-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-atas-cpl"></span></span><span class="hdr-filter-btn" id="hfa-cpl" onclick="openAtaFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-atas-sim"></span></span><span class="hdr-filter-btn" id="hfa-sim" onclick="openAtaFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('item')" style="cursor:pointer;user-select:none">Item <span id="sort-atas-item"></span></span><span class="hdr-filter-btn" id="hfa-item" onclick="openAtaFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('marca')" style="cursor:pointer;user-select:none">Marca/Modelo <span id="sort-atas-marca"></span></span><span class="hdr-filter-btn" id="hfa-marca" onclick="openAtaFilter(event,'marca')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('qtde_contratada')" style="cursor:pointer;user-select:none">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></span><span class="hdr-filter-btn" id="hfa-qtde_contratada" onclick="openAtaFilter(event,'qtde_contratada')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('exec')" style="cursor:pointer;user-select:none">Executado <span id="sort-atas-exec"></span></span><span class="hdr-filter-btn" id="hfa-exec" onclick="openAtaFilter(event,'exec')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('saldo')" style="cursor:pointer;user-select:none">Saldo <span id="sort-atas-saldo"></span></span><span class="hdr-filter-btn" id="hfa-saldo" onclick="openAtaFilter(event,'saldo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('valor_unit')" style="cursor:pointer;user-select:none">Valor unit. <span id="sort-atas-valor_unit"></span></span><span class="hdr-filter-btn" id="hfa-valor_unit" onclick="openAtaFilter(event,'valor_unit')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-atas-vencimento"></span></span><span class="hdr-filter-btn" id="hfa-vencimento" onclick="openAtaFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('status')" style="cursor:pointer;user-select:none">Status <span id="sort-atas-status"></span></span><span class="hdr-filter-btn" id="hfa-status" onclick="openAtaFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('empresa')" style="cursor:pointer;user-select:none">Empresa <span id="sort-atas-empresa"></span></span><span class="hdr-filter-btn" id="hfa-empresa" onclick="openAtaFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="atas-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tabela de execuções -->
+    <div class="table-card">
+      <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="sheet-toggle-btn" id="btn-toggle-atas-execs" onclick="toggleTabelaAtas('execs')">Mostrar</button>
+          <span class="table-hdr-title">Execuções / Solicitações</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="exec-busca" placeholder="🔍 empenho, unidade, NF..." oninput="filtrarExecs()" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:200px;background:var(--surface);color:var(--text)">
+          <button onclick="togglePendentes()" id="btn-pendentes" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--red);background:var(--surface);color:var(--red);cursor:pointer" title="Mostrar apenas itens aguardando entrega">⚠️ Pendentes</button>
+          <span id="sancao-selecao-resumo" style="display:none;font-size:12px;color:var(--text2)"></span>
+          <button id="btn-gerar-sancao" onclick="abrirModalSolicitacaoSancaoAta()" style="display:none;font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--amber);color:#fff;cursor:pointer;font-weight:600">⚖️ Gerar sanção</button>
+          <span class="table-hdr-count" id="exec-count">—</span>
+          <button onclick="exportarAtas()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar itens de ATA para Excel">⬇ ATAs</button>
+          <button onclick="exportarExecs()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)" title="Exportar execuções para Excel">⬇ Execuções</button>
+        </div>
+      </div>
+      <div class="table-wrap hidden-by-default" id="atas-execs-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:34px" title="Selecione solicitações pendentes da mesma empresa e CPL">Sel.</th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('qtde')" style="cursor:pointer;user-select:none">Qtde <span id="sort-exec-qtde"></span></span><span class="hdr-filter-btn" id="hfe-qtde" onclick="openExecFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('valor')" style="cursor:pointer;user-select:none">Valor total <span id="sort-exec-valor"></span></span><span class="hdr-filter-btn" id="hfe-valor" onclick="openExecFilter(event,'valor')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('empenho')" style="cursor:pointer;user-select:none">Empenho <span id="sort-exec-empenho"></span></span><span class="hdr-filter-btn" id="hfe-empenho" onclick="openExecFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('data_af')" style="cursor:pointer;user-select:none">Data AF <span id="sort-exec-data_af"></span></span><span class="hdr-filter-btn" id="hfe-data_af" onclick="openExecFilter(event,'data_af')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('prev_entrega')" style="cursor:pointer;user-select:none">Prev. entrega <span id="sort-exec-prev_entrega"></span></span><span class="hdr-filter-btn" id="hfe-prev_entrega" onclick="openExecFilter(event,'prev_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('dt_entrega')" style="cursor:pointer;user-select:none">Dt. entrega <span id="sort-exec-dt_entrega"></span></span><span class="hdr-filter-btn" id="hfe-dt_entrega" onclick="openExecFilter(event,'dt_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('dias_prazo')" style="cursor:pointer;user-select:none">Prazo <span id="sort-exec-dias_prazo"></span></span><span class="hdr-filter-btn" id="hfe-dias_prazo" onclick="openExecFilter(event,'dias_prazo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">NF<span class="hdr-filter-btn" id="hfe-nf" onclick="openExecFilter(event,'nf')" title="Filtrar">▾</span></span></th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="exec-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Novo Item de ATA -->
+    <div class="modal-overlay" id="modal-nova-ata">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">📄 Cadastrar item de ATA</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group full">
+            <div class="form-label">Contrato cadastrado como ATA *</div>
+            <select id="na-contrato" onchange="naContratoChange()"><option value="">Selecione a ATA...</option></select>
+            <div id="na-contrato-resumo" style="display:none;margin-top:6px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-size:12px;color:var(--text2)"></div>
+          </div>
+          <div class="form-group full"><div class="form-label">Item *</div><input type="text" id="na-item" placeholder="ex: AR CONDICIONADO INVERTER 24.000 BTU"></div>
+          <div class="form-group"><div class="form-label">Marca/Modelo</div><input type="text" id="na-marca" placeholder="ex: AGRATTO LCST24F"></div>
+          <div class="form-group"><div class="form-label">Qtde contratada *</div><input type="number" id="na-qtde" placeholder="ex: 46"></div>
+          <div class="form-group"><div class="form-label">Valor unitário (R$)</div><input type="number" id="na-valor" placeholder="ex: 3749.82" step="0.01"></div>
+          <div class="form-group"><div class="form-label">Prazo de entrega (dias)</div><input type="number" id="na-prazo" placeholder="ex: 30" min="0"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaAta()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-ata').classList.remove('active')">Cancelar</button>
+          <span id="na-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Nova Execução -->
+    <div class="modal-overlay" id="modal-nova-exec">
+      <div class="modal-box" style="width:560px">
+        <div class="modal-title">📦 Nova solicitação / execução</div>
+        <div class="form-grid" style="margin-top:.875rem">
+          <div class="form-group full">
+            <div class="form-label">Origem do recurso *</div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap">
+              <label style="cursor:pointer"><input type="radio" name="ne2-origem" value="emenda" checked onchange="neOrigemChange()"> Emenda parlamentar</label>
+              <label style="cursor:pointer"><input type="radio" name="ne2-origem" value="recurso_proprio" onchange="neOrigemChange()"> Recurso próprio</label>
+            </div>
+          </div>
+          <div class="form-group" id="ne2-emenda-wrap">
+            <div class="form-label">Emenda *</div>
+            <select id="ne2-emenda" onchange="neEmendaChange()"><option value="">Selecione a emenda...</option></select>
+          </div>
+          <div class="form-group" id="ne2-emenda-item-wrap">
+            <div class="form-label">Item da emenda *</div>
+            <select id="ne2-emenda-item" onchange="neEmendaItemChange()"><option value="">Selecione...</option></select>
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Item da ATA *</div>
+            <select id="ne2-item" onchange="autoPreencherCplSim()"><option value="">Selecione o item...</option></select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">CPL</div>
+            <input type="text" id="ne2-cpl" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">SIM</div>
+            <input type="text" id="ne2-sim" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          </div>
+          <div class="form-group full"><div class="form-label">Unidade *</div><input type="text" id="ne2-unidade" placeholder="ex: UBS CAJURU"><div id="ne2-unidade-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Preenchida automaticamente pela emenda.</div></div>
+          <div class="form-group"><div class="form-label">Qtde *</div><input type="number" id="ne2-qtde" placeholder="ex: 2" oninput="calcValorExec()"></div>
+          <div class="form-group"><div class="form-label">Valor total (R$)</div><input type="number" id="ne2-valor" placeholder="Calculado auto" step="0.01"></div>
+          <input type="hidden" id="ne2-data-af">
+          <input type="hidden" id="ne2-dt-entrega">
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">A solicitação fica <b>aguardando AF</b>. A <b>Autorização de Fornecimento</b> (AF), empenho, NF e prazo de entrega são emitidos depois em <b>Itens → Controle de Entregas/Prazos</b>.</div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarNovaExec()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-nova-exec').classList.remove('active')">Cancelar</button>
+          <span id="ne2-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Renovar Vigência -->
+    <div class="modal-overlay" id="modal-renovar">
+      <div class="modal-box" style="width:480px">
+        <div class="modal-title">🔄 Prorrogar vigência</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 .75rem" id="rv-info"></div>
+
+        <!-- Info de saldo -->
+        <div id="rv-saldo-info" style="background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Qtde contratada</div>
+            <div style="font-size:18px;font-weight:600" id="rv-qtde-contratada">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Executado</div>
+            <div style="font-size:18px;font-weight:600;color:var(--blue)" id="rv-executado">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Saldo atual</div>
+            <div style="font-size:18px;font-weight:600;color:var(--green)" id="rv-saldo-atual">—</div>
+          </div>
+        </div>
+
+        <!-- Pergunta sobre saldo -->
+        <div style="background:var(--blue-bg);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem">
+          <div style="font-size:13px;font-weight:500;color:var(--blue-text);margin-bottom:.625rem">Ao renovar, como fica o saldo?</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-saldo-opt" value="reiniciar" id="rv-reiniciar" style="margin-top:2px;accent-color:var(--blue)">
+              <div>
+                <div style="font-size:13px;font-weight:500">Reiniciar saldo</div>
+                <div style="font-size:11px;color:var(--text2)">Volta para a quantidade contratada original (<span id="rv-qtde-label">—</span> unidades)</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-saldo-opt" value="manter" id="rv-manter" checked style="margin-top:2px;accent-color:var(--blue)">
+              <div>
+                <div style="font-size:13px;font-weight:500">Manter saldo atual</div>
+                <div style="font-size:11px;color:var(--text2)">Continua com o saldo restante (<span id="rv-saldo-label">—</span> unidades)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Opção de valor unitário -->
+        <div style="background:var(--green-bg);border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem">
+          <div style="font-size:13px;font-weight:500;color:var(--green-text);margin-bottom:.625rem">O valor unitário será alterado?</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-valor-opt" value="manter" id="rv-valor-manter" checked onchange="toggleNovoValor()" style="accent-color:var(--green)">
+              <div>
+                <span style="font-size:13px;font-weight:500">Manter valor atual</span>
+                <span style="font-size:11px;color:var(--text2);margin-left:6px">R$ <span id="rv-valor-atual-label">—</span></span>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+              <input type="radio" name="rv-valor-opt" value="alterar" id="rv-valor-alterar" onchange="toggleNovoValor()" style="margin-top:2px;accent-color:var(--green)">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">Reajustar valor</div>
+                <div id="rv-novo-valor-wrap" style="display:none;margin-top:6px">
+                  <input type="number" id="rv-novo-valor" placeholder="Novo valor unitário (R$)" step="0.01"
+                    style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:220px;background:var(--surface);color:var(--text)">
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <div class="form-label">Vigência atual</div>
+            <input type="text" id="rv-atual" readonly style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Nova vigência *</div>
+            <input type="date" id="rv-nova" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          </div>
+          <div class="form-group full">
+            <div class="form-label">Novo status</div>
+            <input list="status-ata-opts" id="rv-status" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarRenovacao()">Salvar renovação</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-renovar').classList.remove('active')">Cancelar</button>
+          <span id="rv-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Editar Execução -->
+    <div class="modal-overlay" id="modal-edit-exec">
+      <div class="modal-box" style="width:480px">
+        <div class="modal-title">✏️ Atualizar execução</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ee-info"></div>
+        <div class="form-grid">
+          <div class="form-group"><div class="form-label">Empenho</div><input type="text" id="ee-empenho"></div>
+          <div class="form-group"><div class="form-label">Data AF</div><input type="date" id="ee-data-af"></div>
+          <div class="form-group"><div class="form-label">Prev. entrega</div><input type="date" id="ee-prev"></div>
+          <div class="form-group"><div class="form-label">Dt. entrega</div><input type="date" id="ee-dt-entrega"></div>
+          <div class="form-group full"><div class="form-label">NF</div><input type="text" id="ee-nf"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarEditExec()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-edit-exec').classList.remove('active')">Cancelar</button>
+          <span id="ee-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+    <!-- Modal Encerrar Contrato (ATAs) -->
+    <div class="modal-overlay" id="modal-encerrar">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title">⛔ Encerrar contrato</div>
+        <div style="font-size:13px;color:var(--text2);margin:.75rem 0 1rem" id="enc-info"></div>
+        <div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.75rem;font-size:13px;margin-bottom:1rem">
+          ⚠️ Este item será marcado como <strong>ENCERRADO</strong> e ficará oculto na visualização padrão. Você poderá vê-lo ativando o filtro de encerrados.
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <div class="form-label">Motivo do encerramento (opcional)</div>
+          <input type="text" id="enc-motivo" placeholder="ex: Não renovado, esgotado..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramento()">⛔ Encerrar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-encerrar').classList.remove('active')">Cancelar</button>
+          <span id="enc-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Encerrar Contrato (Contratos Supabase) -->
+    <div class="modal-overlay" id="modal-encerrar-ct">
+      <div class="modal-box" style="width:520px;max-width:95vw">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div class="modal-title" style="margin:0">⛔ Encerrar Contrato</div>
+          <button onclick="document.getElementById('modal-encerrar-ct').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);line-height:1;padding:4px">✕</button>
+        </div>
+
+        <!-- Info do contrato -->
+        <div id="ect-info" style="background:var(--surface2);border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:var(--text2);display:grid;gap:3px"></div>
+
+        <div style="background:var(--red-bg);color:var(--red-text);border-radius:var(--radius-sm);padding:.6rem .85rem;font-size:12.5px;margin-bottom:1rem">
+          ⚠️ O contrato será marcado como <strong>ENCERRADO</strong> e ficará oculto na listagem padrão. Visível apenas ao filtrar por status ENCERRADO.
+        </div>
+
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+          <div class="form-group">
+            <div class="form-label">Data de encerramento *</div>
+            <input type="date" id="ect-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Motivo *</div>
+            <select id="ect-motivo" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+              <option value="">Selecione...</option>
+              <option value="Término de vigência">Término de vigência</option>
+              <option value="Rescisão amigável">Rescisão amigável</option>
+              <option value="Rescisão unilateral pela administração">Rescisão unilateral pela administração</option>
+              <option value="Rescisão por inadimplência do contratado">Rescisão por inadimplência do contratado</option>
+              <option value="Substituído por novo contrato">Substituído por novo contrato</option>
+              <option value="Objeto concluído (entrega única)">Objeto concluído (entrega única)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:.75rem">
+          <div class="form-label">CPL substituto <span style="font-size:11px;color:var(--text3);font-weight:400">(se aplicável)</span></div>
+          <input type="text" id="ect-cpl-sub" placeholder="ex: CPL 123/2026" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;background:var(--surface);color:var(--text)">
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem">
+          <div class="form-label">Observações</div>
+          <textarea id="ect-obs" rows="3" placeholder="Detalhes adicionais sobre o encerramento..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);width:100%;resize:vertical;background:var(--surface);color:var(--text);font-family:inherit"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-primary" style="background:var(--red)" onclick="confirmarEncerramentoCt()">⛔ Encerrar contrato</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-encerrar-ct').classList.remove('active')">Cancelar</button>
+          <span id="ect-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Prorrogar Prazo de Entrega -->
+    <div class="modal-overlay" id="modal-prorrogar-prazo">
+      <div class="modal-box" style="width:420px">
+        <div class="modal-title">📅 Prorrogar prazo de entrega</div>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="pp-info"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <div class="form-label">Novo prazo de entrega *</div>
+            <input type="date" id="pp-data" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Observação</div>
+            <input type="text" id="pp-obs" placeholder="ex: Prorrogado a pedido da empresa" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="salvarProrrogarPrazo()">Salvar</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-prorrogar-prazo').classList.remove('active')">Cancelar</button>
+          <span id="pp-msg" class="fmsg"></span>
+        </div>
+      </div>
+    </div>
+
+<!-- Modal Emitir AF para item de ATA (espelha o fluxo de AF da aquisição) -->
+<div class="modal-overlay" id="modal-ata-af">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">📄 Emitir AF — Autorização de Fornecimento (ATA)</span>
+      <button onclick="document.getElementById('modal-ata-af').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
+    </div>
+    <div id="ataaf-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)"></div>
+    <input type="hidden" id="ataaf-exec-id">
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group">
+        <div class="form-label">AF número *</div>
+        <input type="text" id="ataaf-numero" placeholder="ex: AF 123/2026">
+      </div>
+      <div class="form-group">
+        <div class="form-label">AF data *</div>
+        <input type="date" id="ataaf-data">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Previsão de entrega *</div>
+        <input type="date" id="ataaf-prev">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Empenho <span style="color:var(--text3);font-weight:400">(opcional)</span></div>
+        <input type="text" id="ataaf-empenho" placeholder="ex: 2026NE000123">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ataaf-salvar" onclick="salvarAtaAF()">Emitir AF</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ata-af').classList.remove('active')">Cancelar</button>
+      <span id="ataaf-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONTRATOS (SUPABASE) ══════════════════════ -->
+<div id="panel-contratos" class="panel">
+  <div id="contratos-loading" class="loading"><span class="spinner"></span>Carregando contratos...</div>
+  <div id="contratos-main" style="display:none">
+
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('ct-busca')">✕</button></div>
+        <input type="text" id="ct-busca" placeholder="CPL, prestador, objeto..." oninput="filtrarContratos()" style="min-width:280px">
+      </div>
+      <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total contratos</div><div class="metric-value" id="ct-m-total">—</div><div class="metric-sub">cadastrados</div></div>
+      <div class="metric"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
+      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
+      <div class="metric"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Contratos em execução</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="ct-count">—</span>
+          <button id="ct-manter-status" onclick="manterStatusContratos()" disabled style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer">Manter Status</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="ct-table" class="resizable-table">
+          <thead>
+            <tr>
+              <th style="width:22px"></th>
+              <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
+              <th style="width:170px">Ações</th>
+              <th style="width:90px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('tipo_instrumento')" style="cursor:pointer;user-select:none">Tipo <span id="sort-ct-tipo_instrumento"></span></span><span class="hdr-filter-btn" id="hfc-tipo_instrumento" onclick="openContratoFilter(event,'tipo_instrumento')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:170px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('objeto')" style="width:260px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vigencia_atual')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vencimento')" style="width:100px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('dias')" style="width:70px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
+              <th style="width:150px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="width:110px;white-space:nowrap">Ação</th>
+              <th style="width:80px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('fiscalizacao')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_mensal')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor mensal <span id="sort-ct-valor_mensal"></span><span class="hdr-filter-btn" id="hfc-valor_mensal" onclick="openContratoFilter(event,'valor_mensal')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_total')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor total <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('atualizado_em')" style="width:120px;cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
+              <th style="width:90px;white-space:nowrap">Editar</th>
+            </tr>
+          </thead>
+          <tbody id="ct-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal de Vinculações do Contrato -->
+<div class="modal-overlay" id="modal-email-contrato">
+  <div class="modal-box" style="width:440px;max-width:96vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">🔗 Vinculações</span>
+      <button onclick="document.getElementById('modal-email-contrato').classList.remove('active')" title="Fechar" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div id="ct-email-info" style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:1rem"></div>
+    <div class="form-group">
+      <div class="form-label">E-mails para recebimento dos chamados</div>
+      <div id="ct-emails-lista"></div>
+      <button type="button" onclick="ctAdicionarEmail()" style="margin-top:6px;font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:none;cursor:pointer;color:var(--text2)">+ Adicionar e-mail</button>
+    </div>
+    <div class="form-group" style="margin-top:.75rem">
+      <div class="form-label">Prefixo de Chamado</div>
+      <input type="text" id="ct-prefixo-chamado" placeholder="ex: OD, ME, ARC" inputmode="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')" style="background:var(--surface);color:var(--text)">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Somente letras, sem números, espaços ou caracteres especiais.</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ct-email-salvar" onclick="salvarEmailContrato()">Salvar vinculações</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-email-contrato').classList.remove('active')">Cancelar</button>
+      <span id="ct-email-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Edição Completa do Contrato (admin) -->
+<div class="modal-overlay" id="modal-editar-contrato" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:780px;max-width:98vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">✏️ Editar contrato</span>
+      <button onclick="document.getElementById('modal-editar-contrato').classList.remove('active')" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--text2);background:var(--amber,#EF9F27)15;border:1px solid var(--amber,#EF9F27)55;border-radius:var(--radius-sm);padding:7px 10px;margin-bottom:.75rem">⚠ Edição administrativa direta. Prefira os fluxos próprios: <b>Vencimento/Vigência → Prorrogar</b>; <b>Encerramento → Encerrar</b>; <b>Fiscalizadores → Trocar fiscal</b>. Alterar esses campos aqui não gera histórico do fluxo.</div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group"><div class="form-label">Tipo de instrumento</div><select id="ec-tipo" onchange="ecTipoInstrumentoChange()"><option value="CONTRATO">CONTRATO</option><option value="ATA">ATA</option></select></div>
+      <div class="form-group"><div class="form-label">CPL</div><input id="ec-cpl" type="text"></div>
+      <div class="form-group"><div class="form-label">Nº do contrato</div><input id="ec-numero" type="text"></div>
+      <div class="form-group full"><div class="form-label">Prestador</div>
+        <div class="company-picker-row">
+          <div class="company-combobox" id="ec-fornecedor-combobox">
+            <button type="button" class="company-combobox-trigger" id="ec-fornecedor-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="ec-fornecedor-dropdown" onclick="abrirFecharFornecedorComboEc(event)" onkeydown="teclaFornecedorComboEc(event)">
+              <span id="ec-fornecedor-label" class="company-combobox-placeholder">Selecione ou pesquise a empresa...</span><span class="company-combobox-arrow">▾</span>
+            </button>
+            <div class="company-combobox-dropdown" id="ec-fornecedor-dropdown" onclick="event.stopPropagation()">
+              <input type="search" id="ec-fornecedor-busca" placeholder="Pesquisar por nome ou CNPJ..." autocomplete="off" oninput="filtrarFornecedoresContratoEc()" onkeydown="teclaBuscaFornecedorEc(event)">
+              <div class="company-combobox-options" id="ec-fornecedor-options" role="listbox"></div>
+            </div>
+          </div>
+          <button type="button" class="company-register-btn" onclick="selecionarNovaEmpresaContratoEc()">+ Cadastrar empresa</button>
+        </div>
+        <select id="ec-fornecedor" onchange="ecFornecedorChange()" tabindex="-1" aria-hidden="true" style="display:none"><option value="">Selecione a empresa...</option></select>
+        <input type="text" id="ec-prestador" placeholder="Razão social da nova empresa" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group full"><div class="form-label">Objeto</div><input id="ec-objeto" type="text"></div>
+      <div class="form-group"><div class="form-label">CNPJ</div><input id="ec-cnpj" type="text" readonly></div>
+      <div class="form-group"><div class="form-label">E-mail</div><input id="ec-email" type="email"></div>
+      <div class="form-group"><div class="form-label">Prefixo de chamado</div><input id="ec-prefixo" type="text" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"></div>
+      <div class="form-group"><div class="form-label">Seção</div><select id="ec-secao"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><div class="form-label">Status</div><select id="ec-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="CONCLUIDO">CONCLUIDO</option><option value="ENCERRADO">ENCERRADO</option></select></div>
+      <div class="form-group"><div class="form-label">Data de início</div><input id="ec-inicio" type="date"></div>
+      <div class="form-group"><div class="form-label">Data de assinatura</div><input id="ec-assinatura" type="date"></div>
+      <div class="form-group"><div class="form-label">Vigência atual</div><input id="ec-vigencia" type="text"></div>
+      <div class="form-group"><div class="form-label">Vencimento</div><input id="ec-vencimento" type="text" placeholder="dd/mm/aaaa"></div>
+      <div class="form-group"><div class="form-label">Valor inicial</div><input id="ec-valor-inicial" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor total (vigente)</div><input id="ec-valor-atual" type="number" step="0.01"></div>
+      <div class="form-group" id="ec-valor-mensal-wrap"><div class="form-label">Valor mensal</div><input id="ec-valor-mensal" type="number" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Fonte</div><input id="ec-fonte" type="text"></div>
+      <div class="form-group"><div class="form-label">Fiscalização</div><select id="ec-fiscalizacao"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><div class="form-label">Contato</div><input id="ec-contato" type="text"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><textarea id="ec-obs" rows="3" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="ec-salvar" onclick="salvarEdicaoContrato()">Salvar alterações</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-editar-contrato').classList.remove('active')">Cancelar</button>
+      <span id="ec-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Contrato -->
+<div class="modal-overlay" id="modal-novo-contrato" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto;overflow-x:hidden">
+  <div class="modal-box" style="width:min(720px,96vw);max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">➕ Novo contrato</span>
+      <button onclick="document.getElementById('modal-novo-contrato').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+      <div class="form-group full">
+        <div class="form-label">Natureza</div>
+        <input type="hidden" id="nc-tipo" value="CONTRATO">
+        <input type="text" id="nc-natureza-display" readonly placeholder="Selecione o processo para preencher automaticamente" style="background:var(--surface2);color:var(--text2);cursor:default">
+      </div>
+      <div class="form-group full"><div class="form-label">Processo / CPL *</div>
+        <select id="nc-processo" onchange="ncProcessoChange()"><option value="">Selecione o processo (licitação)...</option></select>
+        <input type="text" id="nc-processo-display" readonly style="display:none;background:var(--surface2);color:var(--text);cursor:default">
+        <input type="hidden" id="nc-cpl">
+        <label id="nc-gera-mais-wrap" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:6px;cursor:pointer"><input type="checkbox" id="nc-gera-mais" style="margin:0"> Esta CPL ainda vai gerar mais contratos (continua aparecendo na lista ao gerar contrato)</label>
+      </div>
+      <div class="form-group"><div class="form-label">Nº do contrato</div><input type="text" id="nc-numero" placeholder="sem letras ou espaços"></div>
+      <div class="form-group full"><div class="form-label">Prestador *</div>
+        <div class="company-picker-row">
+          <div class="company-combobox" id="nc-fornecedor-combobox">
+            <button type="button" class="company-combobox-trigger" id="nc-fornecedor-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="nc-fornecedor-dropdown" onclick="abrirFecharFornecedorCombo(event)" onkeydown="teclaFornecedorCombo(event)">
+              <span id="nc-fornecedor-label" class="company-combobox-placeholder">Selecione ou pesquise a empresa...</span><span class="company-combobox-arrow">▾</span>
+            </button>
+            <div class="company-combobox-dropdown" id="nc-fornecedor-dropdown" onclick="event.stopPropagation()">
+              <input type="search" id="nc-fornecedor-busca" placeholder="Pesquisar por nome ou CNPJ..." autocomplete="off" oninput="filtrarFornecedoresContrato()" onkeydown="teclaBuscaFornecedor(event)">
+              <div class="company-combobox-options" id="nc-fornecedor-options" role="listbox"></div>
+            </div>
+          </div>
+          <button type="button" class="company-register-btn" onclick="selecionarNovaEmpresaContrato()">+ Cadastrar empresa</button>
+        </div>
+        <select id="nc-fornecedor" onchange="ncFornecedorChange()" tabindex="-1" aria-hidden="true" style="display:none"><option value="">Selecione a empresa...</option></select>
+        <input type="text" id="nc-prestador" placeholder="Razão social da nova empresa" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group full" id="nc-objeto-wrap"><div class="form-label">Objeto</div><input type="text" id="nc-objeto" placeholder="herdado da licitação" readonly></div>
+      <div class="form-group"><div class="form-label">CNPJ</div><input type="text" id="nc-cnpj" placeholder="00.000.000/0000-00"></div>
+      <div class="form-group"><div class="form-label">E-mail da empresa *</div><input type="email" id="nc-email" placeholder="contato@empresa.com"></div>
+      <div class="form-group"><div class="form-label">Seção</div>
+        <select id="nc-secao" onchange="ncSecaoChange()"><option value="">Selecione a seção...</option></select>
+        <input type="text" id="nc-secao-novo" placeholder="Sigla da nova seção" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group" id="nc-status-wrap"><div class="form-label">Status</div>
+        <select id="nc-status"><option value="VIGENTE">VIGENTE</option><option value="SUSPENSO">SUSPENSO</option><option value="ENCERRADO">ENCERRADO</option></select>
+        <div id="nc-status-auto" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
+      </div>
+      <div class="form-group" id="nc-inicio-wrap"><div class="form-label">Data de início</div><input type="date" id="nc-inicio" onchange="_ncRecalcVigencia()"></div>
+      <div class="form-group" id="nc-assinatura-wrap"><div class="form-label">Data de assinatura</div><input type="date" id="nc-assinatura"></div>
+      <div class="form-group" id="nc-vigencia-wrap"><div class="form-label">Vigência atual</div><input type="text" id="nc-vigencia" placeholder="ex: 12 meses"></div>
+      <div class="form-group" id="nc-vencimento-wrap"><div class="form-label">Vencimento (dd/mm/aaaa)</div><input type="text" id="nc-vencimento" placeholder="ex: 31/12/2026"></div>
+      <div class="form-group" id="nc-valor-wrap"><div class="form-label">Valor Global (R$)</div><input type="text" id="nc-valor-inicial" placeholder="soma dos itens" title="Soma dos valores dos itens marcados para este contrato"></div>
+      <div class="form-group" id="nc-valor-mensal-wrap"><div class="form-label">Valor mensal (R$)</div><input type="text" id="nc-valor-mensal" placeholder="ex: 10000,00"></div>
+      <div class="form-group" id="nc-fonte-wrap"><div class="form-label">Fonte</div><input type="text" id="nc-fonte" placeholder="ex: Recurso próprio"></div>
+      <div class="form-group full" id="nc-fiscalizacao-wrap"><div class="form-label">Fiscalização * <span style="font-weight:400;color:var(--text3)">(pesquise e clique p/ escolher vários)</span></div>
+        <select id="nc-fiscalizacao" multiple size="4" style="min-height:88px"></select>
+        <input type="text" id="nc-fiscalizacao-novo" placeholder="adicionar fiscal não listado (separe vários por vírgula)" style="margin-top:6px">
+      </div>
+      <!-- empenhos por item: gerenciados inline em cada item da seção abaixo -->
+      <div class="form-group"><div class="form-label">Contato</div><input type="text" id="nc-contato" placeholder="Telefone / contato"></div>
+      <div class="form-group full"><div class="form-label">Observações</div><input type="text" id="nc-obs" placeholder="Observações gerais"></div>
+    </div>
+    <div id="nc-itens-wrap" style="display:none;margin-top:.5rem;border-top:1px solid var(--border);padding-top:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem">📦 Itens do processo</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem">Marque os itens deste processo que entram neste contrato. O fornecedor e o status (Contratado) serão aplicados aos itens marcados. Itens já contratados aparecem travados.</div>
+      <div id="nc-itens-lista"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarNovoContrato()">Salvar contrato</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-novo-contrato').classList.remove('active')">Cancelar</button>
+      <span id="nc-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalhes do Contrato -->
+<div class="modal-overlay" id="modal-contrato-detalhe" style="align-items:flex-start;padding:2rem 1rem;overflow-y:auto">
+  <div class="modal-box" style="width:720px;max-width:98vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+      <div class="modal-title" id="mcd-titulo">Contrato</div>
+      <button onclick="document.getElementById('modal-contrato-detalhe').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+    </div>
+    <div id="mcd-corpo"></div>
+    <div id="mcd-acoes" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.625rem">Ações</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="abrirModalContratoOp('renovar')" style="background:var(--green)">🔄 Renovar</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('reajuste')">📈 Reajuste</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('aditivo')">➕ Aditivo</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('prorrogacao')">📅 Prorrogação</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('supressao')" style="color:var(--red)">✂️ Supressão</button>
+        <button class="btn-secondary" onclick="abrirModalContratoOp('fiscal')">👤 Trocar fiscal</button>
+      </div>
+    </div>
+    <div id="mcd-valores" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Atualizar valores</div>
+      <div class="form-grid" style="margin-bottom:.75rem">
+        <div class="form-group"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="mcd-novo-mensal" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="mcd-novo-total" placeholder="0,00" step="0.01" min="0"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="salvarValoresContrato()">Salvar valores</button>
+        <span id="mcd-valores-msg" class="fmsg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Renovar Contrato -->
+<div class="modal-overlay" id="modal-ct-renovar">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-title">🔄 Renovar contrato</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctr-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nova vigência início *</div><input type="date" id="ctr-inicio"></div>
+      <div class="form-group"><div class="form-label">Nova vigência fim *</div><input type="date" id="ctr-fim"></div>
+      <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="ctr-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group" id="ctr-valor-mensal-wrap"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="ctr-valor-mensal" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctr-obs" placeholder="ex: Renovado conforme parecer jurídico..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" style="background:var(--green)" onclick="salvarOperacaoContrato('renovar')">Salvar renovação</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-renovar').classList.remove('active')">Cancelar</button>
+      <span id="ctr-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reajuste -->
+<div class="modal-overlay" id="modal-ct-reajuste">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">📈 Reajuste</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctrea-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctrea-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%) *</div><input type="number" id="ctrea-pct" placeholder="ex: 5.5" step="0.01"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctrea-obs" placeholder="ex: IPCA 2024..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('reajuste')">Salvar reajuste</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-reajuste').classList.remove('active')">Cancelar</button>
+      <span id="ctrea-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aditivo -->
+<div class="modal-overlay" id="modal-ct-aditivo">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">➕ Aditivo</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctad-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctad-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctad-pct" placeholder="ex: 25" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor acrescido (R$)</div><input type="number" id="ctad-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctad-obs" placeholder="ex: Acréscimo de serviços..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('aditivo')">Salvar aditivo</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-aditivo').classList.remove('active')">Cancelar</button>
+      <span id="ctad-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Troca de Marca/Modelo via Termo Aditivo (Fase 13) -->
+<div class="modal-overlay" id="modal-troca-marca">
+  <div class="modal-box" style="width:760px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">🔧 Troca de marca/modelo (Termo Aditivo)</span>
+      <button onclick="document.getElementById('modal-troca-marca').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <input type="hidden" id="tm-contrato-id">
+    <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Marque os itens afetados, informe o novo modelo e a quantidade alterada (parcial ou total do saldo). A alteração é registrada no histórico do contrato.</div>
+    <div class="form-group"><div class="form-label">Data do aditivo</div><input type="date" id="tm-data" style="max-width:200px"></div>
+    <div id="tm-lista" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;max-height:340px;overflow-y:auto;font-size:12px"></div>
+    <div class="form-actions">
+      <button class="btn-primary" id="tm-salvar" onclick="salvarTrocaMarcaModelo()">Registrar aditivo</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-troca-marca').classList.remove('active')">Cancelar</button>
+      <span id="tm-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Prorrogação -->
+<div class="modal-overlay" id="modal-ct-prorrogacao">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">📅 Prorrogação</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctpr-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nova data fim *</div><input type="date" id="ctpr-data-fim"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctpr-obs" placeholder="ex: Prorrogado por 12 meses..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('prorrogacao')">Salvar prorrogação</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-prorrogacao').classList.remove('active')">Cancelar</button>
+      <span id="ctpr-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Supressão -->
+<div class="modal-overlay" id="modal-ct-supressao">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-title">✂️ Supressão</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctsu-info"></div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctsu-data"></div>
+      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctsu-pct" placeholder="ex: 10" step="0.01"></div>
+      <div class="form-group"><div class="form-label">Valor reduzido (R$)</div><input type="number" id="ctsu-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctsu-obs" placeholder="ex: Redução de escopo..."></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" style="background:var(--red)" onclick="salvarOperacaoContrato('supressao')">Salvar supressão</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-supressao').classList.remove('active')">Cancelar</button>
+      <span id="ctsu-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Trocar Fiscal -->
+<div class="modal-overlay" id="modal-ct-fiscal">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-title">👤 Trocar fiscal</div>
+    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctfi-info"></div>
+    <div id="ctfi-fiscais-atuais" style="margin-bottom:1rem"></div>
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Adicionar novo fiscal</div>
+    <div class="form-grid">
+      <div class="form-group"><div class="form-label">Nome *</div>
+        <select id="ctfi-nome" onchange="selNovoToggle('ctfi-nome')"><option value="">Selecione...</option></select>
+        <input type="text" id="ctfi-nome-novo" placeholder="Nome do novo fiscal" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group"><div class="form-label">Data início *</div><input type="date" id="ctfi-inicio"></div>
+      <div class="form-group full"><div class="form-label">Cargo / Matrícula</div><input type="text" id="ctfi-cargo" placeholder="ex: Fiscal de Contrato, mat. 12345"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarOperacaoContrato('fiscal')">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-fiscal').classList.remove('active')">Cancelar</button>
+      <span id="ctfi-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Sanções Administrativas -->
+<div id="panel-sancoes" class="panel">
+  <div id="sancoes-loading" class="loading"><span class="spinner"></span>Carregando sanções...</div>
+  <div id="sancoes-main" style="display:none">
+    <div class="filters" style="margin-bottom:1rem">
+      <div class="fg">
+        <div class="fg-label">Buscar <button onclick="clearF('sa-busca')">×</button></div>
+        <input type="text" id="sa-busca" placeholder="empresa, contrato, processo..." oninput="filtrarSancoes()" style="min-width:280px">
+      </div>
+      <div class="fg">
+        <div class="fg-label">Status <button onclick="clearF('sa-status')">×</button></div>
+        <select id="sa-status" onchange="filtrarSancoes()">
+          <option value="">Todos ativos</option>
+          <option>Em análise</option>
+          <option>Notificada</option>
+          <option>Em defesa</option>
+          <option>Aplicada</option>
+          <option>Encerrada</option>
+          <option>Cancelada</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fg-label">Tipo <button onclick="clearF('sa-tipo')">×</button></div>
+        <select id="sa-tipo" onchange="filtrarSancoes()">
+          <option value="">Todos</option>
+          <option>Advertência</option>
+          <option>Multa</option>
+          <option>Suspensão</option>
+          <option>Impedimento de licitar</option>
+          <option>Declaração de inidoneidade</option>
+        </select>
+      </div>
+      <button class="clear-btn" onclick="clearAllSancoes()">× Limpar</button>
+    </div>
+
+    <div class="metrics" style="margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="sa-m-total">—</div><div class="metric-sub">registros</div></div>
+      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="sa-m-abertas" style="color:var(--amber)">—</div><div class="metric-sub">pendentes</div></div>
+      <div class="metric"><div class="metric-label">Aplicadas</div><div class="metric-value" id="sa-m-aplicadas" style="color:var(--red)">—</div><div class="metric-sub">sanções</div></div>
+      <div class="metric"><div class="metric-label">Encerradas</div><div class="metric-value" id="sa-m-encerradas" style="color:var(--green)">—</div><div class="metric-sub">concluídas</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-hdr">
+        <span class="table-hdr-title">Sanções Administrativas</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="table-hdr-count" id="sa-count">—</span>
+          <button onclick="abrirModalSancao()" style="font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">+ Nova sanção</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ações</th><th>Processo</th><th>Empresa</th><th>Contrato</th><th>Tipo</th><th>Status</th><th>Valor</th><th>Data</th><th>Prazo defesa</th><th>Observações</th>
+            </tr>
+          </thead>
+          <tbody id="sa-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-sancao">
+  <div class="modal-box" style="width:620px;max-width:96vw">
+    <div class="modal-title">⚖️ Sanção administrativa</div>
+    <div class="form-grid" style="margin-top:.875rem">
+      <div class="form-group"><div class="form-label">Processo SEI</div><input type="text" id="sa-processo" placeholder="ex: 3552205.404.00000000/2026-00"></div>
+      <div class="form-group"><div class="form-label">Contrato / CPL</div><input type="text" id="sa-contrato" placeholder="CPL ou contrato"></div>
+      <div class="form-group full"><div class="form-label">Empresa *</div><input type="text" id="sa-empresa" placeholder="Nome da empresa"></div>
+      <div class="form-group"><div class="form-label">Tipo *</div><select id="sa-modal-tipo"><option>Advertência</option><option>Multa</option><option>Suspensão</option><option>Impedimento de licitar</option><option>Declaração de inidoneidade</option></select></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="sa-modal-status"><option>Em análise</option><option>Notificada</option><option>Em defesa</option><option>Aplicada</option><option>Encerrada</option><option>Cancelada</option></select></div>
+      <div class="form-group"><div class="form-label">Valor da multa (R$)</div><input type="number" id="sa-valor" step="0.01" min="0" placeholder="0,00"></div>
+      <div class="form-group"><div class="form-label">Data</div><input type="date" id="sa-data"></div>
+      <div class="form-group"><div class="form-label">Prazo defesa</div><input type="date" id="sa-prazo"></div>
+      <div class="form-group full"><div class="form-label">Motivo / observações</div><textarea id="sa-obs" rows="4" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);resize:vertical" placeholder="Descreva o motivo, notificações e andamento"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="salvarSancao()">Salvar</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-sancao').classList.remove('active')">Cancelar</button>
+      <span id="sa-msg" class="fmsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Login -->
+<div class="modal-overlay" id="modal-login">
+  <div class="modal-box" style="width:380px">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <img src="https://zmaffeisz.github.io/dashboard-emendas/ativo-brasao-sorocaba-colorido-contorno-branco%20(1).svg" style="height:52px;width:auto;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))" alt="Brasão">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:.75rem">Entrar no sistema</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">Seção de Aquisição e Manutenção · SMS Sorocaba</div>
+    </div>
+    <div class="form-group" style="margin-bottom:.875rem">
+      <div class="form-label">E-mail</div>
+      <input type="email" id="login-email" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s" placeholder="seu@email.com" autocomplete="username" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <div class="form-group" style="margin-bottom:1.125rem">
+      <div class="form-label">Senha</div>
+      <input type="password" id="login-senha" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color .15s" placeholder="••••••••" autocomplete="current-password" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div id="login-err" style="display:none;font-size:12px;color:var(--red-text);background:var(--red-bg);padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:.875rem"></div>
+    <button class="btn-primary" onclick="fazerLogin()" id="btn-fazer-login" style="width:100%;padding:10px;font-size:14px;justify-content:center">Entrar</button>
+    <button class="btn-secondary" onclick="document.getElementById('modal-login').classList.remove('active')" style="width:100%;margin-top:8px;text-align:center;padding:9px">Cancelar</button>
+    <div style="text-align:center;margin-top:.875rem;border-top:1px solid var(--border);padding-top:.875rem">
+      <a href="cadastro.html" style="font-size:13px;color:var(--blue);text-decoration:none">Não tem conta? Criar acesso</a><br>
+      <button type="button" onclick="toggleEsqueceuSenha()" style="margin-top:8px;font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+    </div>
+    <div id="forgot-section" style="display:none;margin-top:.75rem;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Redefinir senha</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Informe o e-mail da conta. Você receberá um link para criar uma nova senha.</div>
+      <input type="email" id="forgot-email" placeholder="seu@email.com" style="width:100%;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);margin-bottom:8px" onkeydown="if(event.key==='Enter')enviarLinkRecuperacao()">
+      <button onclick="enviarLinkRecuperacao()" id="btn-enviar-link" style="width:100%;font-size:13px;padding:8px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">Enviar link por e-mail</button>
+      <div id="forgot-msg" style="margin-top:6px;font-size:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalhe / Permissões do Usuário -->
+<div class="modal-overlay" id="modal-usuario-detalhe">
+  <div class="modal-box" style="width:520px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">⚙️ Permissões do usuário</span>
+      <button onclick="fecharDetalheUsuario()" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Nome de exibicao</div>
+      <div id="ud-nome" style="display:none"></div>
+      <input id="ud-nome-input" type="text" maxlength="120" style="width:100%;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);margin-bottom:6px">
+      <div style="font-size:12px;color:var(--text3)" id="ud-email">—</div>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <div class="form-label">Papel global</div>
+      <select id="ud-papel" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+        <option value="visualizador">Usuário</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Usuário: o acesso de ver/editar é definido pelas caixinhas abaixo. Administrador: acesso total.</div>
+    </div>
+    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:.5rem">Permissões por aba</div>
+    <label style="display:flex;align-items:center;gap:8px;margin:-.25rem 0 1rem;font-size:13px;color:var(--text2)">
+      <input type="checkbox" id="ud-aprovado" style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
+      Acesso aprovado
+    </label>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Aba</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Visualizar</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase">Editar</th>
+      </tr></thead>
+      <tbody id="ud-perms-body"></tbody>
+    </table>
+    <div id="ud-msg" class="fmsg" style="margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <button class="btn-secondary" id="ud-excluir" onclick="excluirUsuario(_udUserId)" style="border-color:var(--red);color:var(--red)">Excluir conta</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-secondary" onclick="fecharDetalheUsuario()">Cancelar</button>
+        <button class="btn-primary" id="ud-salvar" onclick="salvarPermissoesUsuario()">Salvar usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- Modal Alterar / Redefinir Senha -->
+<div class="modal-overlay" id="modal-alterar-senha">
+  <div class="modal-box" style="width:400px">
+    <div class="modal-title" id="alterar-senha-title">🔑 Alterar senha</div>
+    <div id="alterar-senha-info" style="font-size:12px;color:var(--text2);margin-bottom:1rem;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
+    <div class="form-group" style="margin-bottom:.875rem">
+      <div class="form-label">Nova senha <span style="color:var(--text3);font-weight:400">(mínimo 6 caracteres)</span></div>
+      <input type="password" id="nova-senha" placeholder="••••••••" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;background:var(--surface);color:var(--text)" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="margin-bottom:1.125rem">
+      <div class="form-label">Confirmar nova senha</div>
+      <input type="password" id="confirmar-senha" placeholder="••••••••" style="width:100%;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;background:var(--surface);color:var(--text)" autocomplete="new-password" onkeydown="if(event.key==='Enter')salvarNovaSenha()">
+    </div>
+    <div id="alterar-senha-msg" class="fmsg" style="margin-bottom:.75rem"></div>
+    <div class="form-actions">
+      <button class="btn-primary" id="btn-salvar-senha" onclick="salvarNovaSenha()">Salvar nova senha</button>
+      <button class="btn-secondary" id="btn-cancelar-senha" onclick="fecharAlterarSenha()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:1.5rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem;background:var(--surface)">
+  Desenvolvido por <strong style="color:var(--text2)">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
+</div>
+
+<script>
+const AC_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNv3eDo49IS5Ouj16SK8mnxAHbN-sSIEVX-VyjwNqD0ey43C_-NYb3Ilky3zol-g/pub?gid=401272592&single=true&output=csv";
+const CHAMADOS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=1633672398&single=true&output=csv";
+const CONTROLE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2XwYGAoxuCh_A-mZOAFsaohN1Rq1czObyXFBn7T7Jv-WlppmmiCejK0zzsbOod1i9YhetzvPzWqve/pub?gid=2129580133&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMC6PshT-kTzLm36YLemi5JPSg22nGVfI6XonGkeoVyKtGlIQma-0hUOmbnnnVY6xeEIbY3gj-dl_e/pub?gid=401356519&single=true&output=csv";
+const SUPABASE_URL = "https://qpvgpfwuurqcqprnpxua.supabase.co";
+const SUPABASE_KEY = "sb_publishable_SisbCbcyd-MFrIqvYSQZ8A_eaVaepNp";
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+window._pendingApproval = false;
+
+// ═══ PERMISSÕES GRANULARES POR ABA ═══
+// Modelo de dois papéis: 'admin' (acesso total) e qualquer outro = usuário comum,
+// cujo acesso de VER/EDITAR é definido 100% pelas caixinhas de permissão por aba.
+window._userPapel = null;
+window._tabPerms = [];
+window._activeTab = 'dashboard';
+const ADMIN_ONLY_TABS = ['usuarios','cadastros']; // só admin gerencia usuários e cadastros
+const DEFAULT_HIDDEN_TABS = ['planilhas']; // usuário comum só vê se for liberado na engrenagem
+const SIDEBAR_TABS = ['dashboard','saldo-emendas','consulta','chamados','chamados-novos','fiscalizacao','inventario-ac','itens','empenhos','atas','contratos','licitacoes','sancoes','cadastros','usuarios','planilhas'];
+function _isApprovedProfile(){ return currentProfile?.aprovado !== false; }
+function _isAdmin(){ return (window._userPapel==='admin' || currentProfile?.papel==='admin') && _isApprovedProfile(); }
+function userCanView(tabKey){
+  if(tabKey==='dashboard') return true;
+  if(!_isApprovedProfile()) return false;
+  if(_isAdmin()) return true;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
+  const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
+  if(perm) return !!perm.can_view;
+  return tabKey==='dashboard'; // conta nova vê apenas Emendas; admin libera o resto nas caixinhas
+}
+function userCanEdit(tabKey){
+  if(!_isApprovedProfile()) return false;
+  if(_isAdmin()) return true;
+  if(ADMIN_ONLY_TABS.includes(tabKey)) return false;
+  const perm=(window._tabPerms||[]).find(p=>p.tab_key===tabKey);
+  if(perm) return !!perm.can_edit;
+  return false; // edição só com a caixinha marcada
+}
+function aplicarVisibilidadeAbas(){
+  SIDEBAR_TABS.forEach(n=>{
+    const el=document.getElementById("sidebar-"+n);
+    if(el) el.style.display = (n==='saldo-emendas' ? userCanEdit('dashboard') : userCanView(n)) ? "flex" : "none";
+  });
+  updateSidebarSections();
+}
+function updateSidebarSections(){
+  document.querySelectorAll('.sidebar-section').forEach(sec=>{
+    const items=[...sec.querySelectorAll('.sidebar-item')];
+    const anyVisible=items.some(it=>it.style.display!=='none');
+    sec.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+// ═══ SIDEBAR / LAYOUT ═══
+function _setTableOffset(){
+  // Mede a altura dos elementos ACIMA da tabela em cada aba ativa
+  // e define --table-offset para que a tabela ocupe o resto da tela
+  const panel=document.querySelector('.panel.active');
+  if(!panel) return;
+  const wrap=panel.querySelector('.table-wrap, #pl-table-wrap');
+  if(!wrap) return;
+  const rect=wrap.getBoundingClientRect();
+  // offset = distância do topo da viewport até o topo da tabela + padding inferior (20px)
+  const offset=Math.round(rect.top)+20;
+  document.documentElement.style.setProperty('--table-offset', offset+'px');
+}
+
+function setHeaderH(){
+  const h=document.querySelector('.header');
+  if(h) document.documentElement.style.setProperty('--header-h', h.offsetHeight+'px');
+}
+function updateSidebarOverlay(){
+  const ov=document.getElementById('sidebar-overlay');
+  if(!ov) return;
+  const open=document.body.classList.contains('sidebar-open') && window.innerWidth<=768;
+  ov.style.display=open?'block':'none';
+}
+function toggleSidebar(){ document.body.classList.toggle('sidebar-open'); updateSidebarOverlay(); }
+function fecharSidebar(){ document.body.classList.remove('sidebar-open'); updateSidebarOverlay(); }
+window.addEventListener('resize',()=>{ setHeaderH(); _setTableOffset(); updateSidebarOverlay(); });
+
+async function checkAuth(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){
+    entrarModoConvidado();
+    return false;
+  }
+  currentUser = session.user;
+  const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
+  currentProfile = profile;
+  window._userPapel = profile?.papel || 'visualizador';
+  window._pendingApproval = false;
+  if(profile && profile.aprovado === false && profile.papel !== 'admin'){
+    entrarModoPendente();
+    return false;
+  }
+  try{
+    const {data:tabPerms} = await sb.from('user_tab_permissions').select('*').eq('user_id', currentUser.id);
+    window._tabPerms = tabPerms || [];
+  }catch(e){ window._tabPerms = []; }
+
+  // Esconder banner de convidado e botão de login
+  document.getElementById("guest-banner").style.display = "none";
+  document.getElementById("btn-login-header").style.display = "none";
+
+  // Mostrar nome do usuário
+  const greetEl = document.getElementById("user-greeting");
+  if(greetEl){
+    greetEl.textContent = "Olá, " + (profile?.nome || currentUser.email);
+    greetEl.style.display = "inline";
+  }
+
+  // Mostrar abas conforme permissões (papel global + permissões por aba)
+  aplicarVisibilidadeAbas();
+
+  // Botões de editor da aba Emendas (a visibilidade real é controlada por aba em showTab)
+  const eb=document.getElementById("editor-btns");
+  if(eb) eb.style.display="flex";
+
+  // Botão de logout
+  if(!document.getElementById("btn-logout")){
+    const logoutBtn=document.createElement("button");
+    logoutBtn.className="refresh-btn";
+    logoutBtn.id="btn-logout";
+    logoutBtn.textContent="Sair";
+    logoutBtn.onclick=async()=>{ await sb.auth.signOut(); window.location.reload(); };
+    const senhaBtn=document.createElement("button");
+    senhaBtn.className="refresh-btn";
+    senhaBtn.id="btn-alterar-senha-header";
+    senhaBtn.textContent="🔑 Senha";
+    senhaBtn.title="Alterar minha senha";
+    senhaBtn.onclick=()=>abrirAlterarSenha(false);
+    const chamadosLink=document.querySelector("a[href*='chamado.html']");
+    if(chamadosLink){
+      chamadosLink.parentNode.insertBefore(logoutBtn,chamadosLink.nextSibling);
+      chamadosLink.parentNode.insertBefore(senhaBtn,logoutBtn);
+    }
+  }
+
+  // (visibilidade das abas Usuários/Planilhas já é tratada por aplicarVisibilidadeAbas)
+
+  // Controle de botões de edição por aba (modelo de permissões granulares).
+  // Quando a aba ativa não permite editar para este usuário, escondemos os botões de ação.
+  const _editStyle=document.createElement('style');
+  _editStyle.textContent=`
+    body.no-edit-tab button[onclick*="salvarNova"],
+    body.no-edit-tab button[onclick*="abrirModalNova"],
+    body.no-edit-tab button[onclick*="abrirModalNovaExec"],
+    body.no-edit-tab button[onclick*="abrirModalNovaAta"],
+    body.no-edit-tab button[onclick*="abrirModalEdicao"],
+    body.no-edit-tab button[onclick*="encerrarContrato"],
+    body.no-edit-tab button[onclick*="renovarAta"],
+    body.no-edit-tab button[onclick*="excluirExec"],
+    body.no-edit-tab button[onclick*="excluirLinhaAC"],
+    body.no-edit-tab button[onclick*="excluirLinhaChamado"],
+    body.no-edit-tab button[onclick*="adicionarLinhaAC"],
+    body.no-edit-tab button[onclick*="marcarTodosChamados"],
+    body.no-edit-tab #editor-btns,
+    body.no-edit-tab #btn-add-ac,
+    body.no-edit-tab .btn-enviar-status
+    {display:none!important}
+  `;
+  document.head.appendChild(_editStyle);
+
+  const ultimaAba=localStorage.getItem("ultima_aba");
+  if(ultimaAba) showTab(ultimaAba);
+  return true;
+}
+
+function entrarModoConvidado(){
+  window._pendingApproval = false;
+  window._userPapel = null;
+  window._tabPerms = [];
+  // Esconder todas as abas exceto Emendas
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
+  });
+  updateSidebarSections();
+  // Mostrar banner e botão de login
+  const banner=document.getElementById("guest-banner");
+  if(banner){
+    banner.style.display="flex";
+    const title=banner.querySelector("div div:first-child");
+    const sub=banner.querySelector("div div:nth-child(2)");
+    const btn=banner.querySelector("button");
+    if(title) title.textContent="Modo de visualização pública";
+    if(sub) sub.textContent="Você está vendo as emendas em modo público. Faça login para acessar todas as seções e funcionalidades.";
+    if(btn){ btn.textContent="Fazer Login"; btn.onclick=abrirModalLogin; }
+  }
+  document.getElementById("btn-login-header").style.display="inline-block";
+  showTab("dashboard");
+}
+
+function entrarModoPendente(){
+  window._pendingApproval = true;
+  window._tabPerms = [];
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.style.display = el.id==='sidebar-dashboard' ? 'flex' : 'none';
+  });
+  updateSidebarSections();
+  const banner=document.getElementById("guest-banner");
+  if(banner){
+    banner.style.display="flex";
+    const title=banner.querySelector("div div:first-child");
+    const sub=banner.querySelector("div div:nth-child(2)");
+    const btn=banner.querySelector("button");
+    if(title) title.textContent="Acesso aguardando aprovação";
+    if(sub) sub.textContent="Sua conta foi criada, mas um administrador precisa aprovar seu acesso interno. Enquanto isso, você pode consultar as emendas públicas.";
+    if(btn){ btn.textContent="Sair"; btn.onclick=async()=>{ await sb.auth.signOut(); window.location.reload(); }; }
+  }
+  document.getElementById("btn-login-header").style.display="none";
+  const greetEl=document.getElementById("user-greeting");
+  if(greetEl){
+    greetEl.textContent="Aguardando aprovação";
+    greetEl.style.display="inline";
+  }
+  document.getElementById("loading").style.display="none";
+  showTab("dashboard");
+}
+
+function abrirModalLogin(){
+  document.getElementById("modal-login").classList.add("active");
+  document.getElementById("login-email").value="";
