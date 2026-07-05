@@ -5,8 +5,9 @@
 
 /* ── LAYOUT GERAL ── */
 :root{--sidebar-expanded:220px;--sidebar-collapsed:58px;--table-min-height:620px;--table-extra-height:140px}
-.container{max-width:none;margin:0 auto;padding:1.25rem;transition:margin-left .22s ease}
+.container{max-width:none;margin:0 auto;padding:1.25rem 1.25rem 2.5rem;transition:margin-left .22s ease}
 @media(min-width:769px){.container{margin-left:var(--sidebar-collapsed)}}
+.site-footer{position:fixed;left:0;right:0;bottom:0;z-index:97;text-align:center;padding:.4rem 1rem;font-size:10px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)}
 
 /* ── HEADER ── */
 .header{background:linear-gradient(135deg,#1a5fa8 0%,#1a3a6b 100%);border-bottom:3px solid var(--sorocaba-ouro);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,63,107,.25)}

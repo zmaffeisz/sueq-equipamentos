@@ -84,16 +84,9 @@
   <div id="loading" class="loading"><span class="spinner"></span>Carregando dados do Supabase...</div>
   <div id="main" style="display:none">
     <div>
-      <div style="margin:0 0 .85rem;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--text3);font-weight:600">Mostrar municipais antigas:</span>
-        <button type="button" id="em-muni-2022" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2022,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2022" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2022</button>
-        <button type="button" id="em-muni-2023" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2023,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2023" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2023</button>
-        <button type="button" id="em-muni-2024" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2024,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2024" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2024</button>
-        <button type="button" id="em-muni-2025" data-active="false" aria-pressed="false" onclick="toggleMunicipalAno('em',2025,applyFilters)" title="Mostrar ou ocultar emendas municipais de 2025" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">2025</button>
-      </div>
       <div style="min-width:0">
 
-    <div class="metrics">
+    <div class="metrics" style="display:none">
       <div class="metric"><div class="metric-label">Emendas</div><div class="metric-value" id="m-emendas">—</div><div class="metric-sub">únicas</div></div>
       <div class="metric"><div class="metric-label">Valor cedido</div><div class="metric-value" id="m-valor">—</div><div class="metric-sub">total</div></div>
       <div class="metric"><div class="metric-label">Executado</div><div class="metric-value" id="m-exec">—</div><div class="metric-sub">itens entregues</div></div>
@@ -102,26 +95,29 @@
       <div class="metric" id="m-sem-cpl-card" onclick="toggleSemCpl()" title="Clique para filtrar itens sem CPL vinculado" style="cursor:pointer;border-left-color:var(--amber)"><div class="metric-label">Sem CPL</div><div class="metric-value" id="m-sem-cpl" style="color:var(--amber)">—</div><div class="metric-sub">itens pendentes</div></div>
     </div>
 
-    <div id="editor-btns" style="display:none;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
-      <button onclick="abrirModalEdicao('nova-emenda')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">➕ Nova emenda</button>
-      <button onclick="abrirModalEdicao('novo-item')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">📦 Novo item</button>
-      <button onclick="showTab('licitacoes')" title="O controle de status agora é em Licitações em andamento" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500">🧭 Status em Licitações em andamento →</button>
-    </div>
-
     <div class="table-card">
       <div class="table-hdr">
-        <span class="table-hdr-title">Itens detalhados</span>
+        <span class="table-hdr-title" style="font-size:17px;font-weight:700;letter-spacing:.01em;text-transform:none;color:var(--text)">EMENDAS PARLAMENTARES - SUEQ EQUIPAMENTOS</span>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
           <span class="table-hdr-count" id="table-count">—</span>
           <button onclick="exportarExcel()" style="font-size:12px;padding:4px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:5px">⬇ Exportar Excel</button>
+          <div id="editor-btns" style="display:none;gap:8px;flex-wrap:wrap">
+            <button onclick="abrirModalEdicao('nova-emenda')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">➕ Nova emenda</button>
+            <button onclick="abrirModalEdicao('novo-item')" style="font-size:13px;padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500">📦 Novo item</button>
+          </div>
         </div>
       </div>
-      <div id="em-modo-bar" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center"></div>
-      <div style="margin-bottom:.85rem;display:flex;gap:8px;align-items:center">
-        <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa: item, CPL, empenho, NF, patrimônio, unidade, parlamentar..." oninput="applyFilters()" style="flex:1;min-width:0;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+      <div id="em-modo-bar" style="display:flex;gap:6px;margin:14px 1.125rem 10px;flex-wrap:wrap;align-items:center"></div>
+      <div style="margin:0 1.125rem .85rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="f-busca" placeholder="🔎 Buscar por qualquer coisa..." oninput="applyFilters()" style="flex:1 1 220px;min-width:160px;max-width:320px;padding:10px 14px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
+        <button type="button" class="hdr-filter-btn" data-col="tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar por esfera" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Esfera ▾</button>
+        <button type="button" class="hdr-filter-btn" data-col="emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar por nº da emenda" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Nº emenda ▾</button>
+        <button type="button" class="hdr-filter-btn" data-col="parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar por parlamentar" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Parlamentar ▾</button>
+        <button type="button" class="hdr-filter-btn" data-col="unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar por unidade beneficiada" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">Unidade beneficiada ▾</button>
         <button class="clear-btn" onclick="clearAllFilters()" style="white-space:nowrap">✕ Limpar</button>
+        <button type="button" class="hdr-filter-btn" id="em-muni-antiga-btn" onclick="openMuniAntigaFilter(event,'em')" title="Escolher quais anos de emendas municipais antigas exibir" style="height:auto;min-width:auto;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin-left:auto">🗄️ Municipais antigas ▾</button>
       </div>
-      <div id="em-view-por-emenda" style="display:none"></div>
+      <div id="em-view-por-emenda" style="display:none;margin:0 1.125rem 1.125rem"></div>
       <div class="table-wrap" id="em-view-planilha">
         <table>
           <thead>
@@ -199,7 +195,7 @@
       </div>
     </div>
 
-    <div class="prog-card">
+    <div class="prog-card" style="display:none">
       <div class="prog-header">
         <span style="font-size:13px;font-weight:500">Execução financeira</span>
         <span class="prog-pct" id="prog-pct">—%</span>
@@ -208,7 +204,7 @@
       <div class="prog-labels"><span id="prog-exec">—</span><span id="prog-rest">—</span><span id="prog-total">—</span></div>
     </div>
 
-    <div class="grid2">
+    <div class="grid2" style="display:none">
       <div class="card">
         <div class="card-title">Status dos itens</div>
         <div class="status-list" id="status-list"></div>
@@ -339,6 +335,7 @@
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido GLOBAL (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000" oninput="neRecalc()"></div>
+      <div class="form-group full"><div class="form-label">Objeto geral da emenda</div><input type="text" id="ne-objeto" placeholder="ex: Aquisição de equipamentos para UBS X"></div>
     </div>
 
     <!-- ITENS DA EMENDA (inline) -->
@@ -1296,7 +1293,7 @@
       </div>
       <div class="form-group">
         <div class="form-label">Prazo de entrega (dias) <span style="color:var(--text3);font-weight:400">(herdado da licitação)</span></div>
-        <input type="number" id="af-prazo-dias" min="0" step="1" placeholder="—" readonly title="Prazo definido no item da licitação; não editável aqui" style="background:var(--surface2);opacity:.85">
+        <input type="number" id="af-prazo-dias" min="0" step="1" placeholder="—" readonly title="Prazo definido no item da licitação; não editável aqui" style="background:var(--surface2);opacity:.85" oninput="_afRecalcLimite()">
       </div>
       <div class="form-group" style="grid-column:1 / -1">
         <div class="form-label">Data limite de entrega <span style="color:var(--text3);font-weight:400">(AF data + prazo — calculada)</span></div>
@@ -1378,6 +1375,32 @@
         <input type="text" id="rec-marca-modelo" disabled placeholder="—">
       </div>
       <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Preenchimento automático de patrimônio</div>
+        <div style="background:var(--surface2);padding:8px;border-radius:var(--radius-sm)">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end">
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Patrimônio inicial</div>
+              <input type="number" id="rec-pat-inicial" min="1" step="1" placeholder="ex: 1000" oninput="_recAtualizaPatrimonioPreview()" style="font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);box-sizing:border-box;width:100%">
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Quantidade</div>
+              <input type="text" id="rec-pat-qtde" disabled style="font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);box-sizing:border-box;width:100%">
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Patrimônio final</div>
+              <input type="text" id="rec-pat-final" disabled style="font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);box-sizing:border-box;width:100%">
+            </div>
+            <div>
+              <button type="button" class="btn-secondary" onclick="_recGerarSequenciaPatrimonio()">Gerar sequência</button>
+            </div>
+          </div>
+          <div style="margin-top:6px;display:flex;gap:14px;font-size:12px;color:var(--text2)">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="rec-pat-modo" value="vazios" checked> Preencher apenas campos vazios</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="rec-pat-modo" value="todos"> Sobrescrever todos os patrimônios</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="grid-column:1 / -1">
         <div class="form-label">Unidades recebidas <span style="color:var(--text3);font-weight:400">(patrimônio e série por unidade)</span></div>
         <div id="rec-unidades" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
@@ -1390,17 +1413,17 @@
         <div class="form-label">Nota fiscal *</div>
         <select id="rec-nf-select" onchange="_recToggleNovoDoc('nf')"></select>
       </div>
-      <div id="rec-nf-novo" class="form-grid" style="grid-column:1 / -1;grid-template-columns:1fr 110px 160px;display:none">
-        <div class="form-group"><div class="form-label">Nova NF - numero</div><input type="text" id="rec-nf-numero" placeholder="ex: NF 12345"></div>
-        <div class="form-group"><div class="form-label">Serie</div><input type="text" id="rec-nf-serie"></div>
+      <div id="rec-nf-novo" class="form-grid" style="grid-column:1 / -1;grid-template-columns:1fr 160px;display:none">
+        <div class="form-group">
+          <div class="form-label">Nova NF - numero</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:var(--text2)">NF</span>
+            <input type="text" id="rec-nf-numero" placeholder="12345" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+        </div>
         <div class="form-group"><div class="form-label">Data emissao</div><input type="date" id="rec-nf-data"></div>
-        <div class="form-group" style="grid-column:1 / -1"><div class="form-label">Chave de acesso</div><input type="text" id="rec-nf-chave"></div>
         <div class="form-group"><div class="form-label">Valor total NF</div><input type="number" id="rec-nf-valor" min="0" step="any"></div>
-        <div class="form-group" style="grid-column:span 2"><div class="form-label">Observacao</div><input type="text" id="rec-nf-obs"></div>
-      </div>
-      <div class="form-group" style="grid-column:1 / -1">
-        <div class="form-label">Observacoes</div>
-        <textarea id="rec-obs" rows="2" placeholder="opcional"></textarea>
+        <div class="form-group"><div class="form-label">Observacao</div><input type="text" id="rec-nf-obs"></div>
       </div>
     </div>
     <div class="form-actions">
@@ -2512,7 +2535,7 @@
   </div>
 </div>
 
-<div style="text-align:center;padding:1.5rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem;background:var(--surface)">
+<div class="site-footer">
   Desenvolvido por <strong style="color:var(--text2)">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
 </div>
 
@@ -2608,18 +2631,22 @@ async function checkAuth(){
     return false;
   }
   currentUser = session.user;
-  const {data:profile} = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
+  // profile e permissões por aba não dependem uma da outra: buscar em paralelo
+  // (antes eram 2 chamadas em série, cada uma somando latência ao carregamento inicial).
+  console.time('checkAuth:profile+tabPerms');
+  const [{data:profile}, tabPermsResult] = await Promise.all([
+    sb.from("profiles").select("*").eq("id", currentUser.id).single(),
+    sb.from('user_tab_permissions').select('*').eq('user_id', currentUser.id).then(r=>r, e=>({data:null,error:e}))
+  ]);
+  console.timeEnd('checkAuth:profile+tabPerms');
   currentProfile = profile;
   window._userPapel = profile?.papel || 'visualizador';
   window._pendingApproval = false;
+  window._tabPerms = tabPermsResult?.data || [];
   if(profile && profile.aprovado === false && profile.papel !== 'admin'){
     entrarModoPendente();
     return false;
   }
-  try{
-    const {data:tabPerms} = await sb.from('user_tab_permissions').select('*').eq('user_id', currentUser.id);
-    window._tabPerms = tabPerms || [];
-  }catch(e){ window._tabPerms = []; }
 
   // Esconder banner de convidado e botão de login
   document.getElementById("guest-banner").style.display = "none";
@@ -6327,6 +6354,20 @@ function _afRecalcLimite(){
     document.getElementById('af-data-limite').value='';
   }
 }
+function _afSetMsg(txt,tipo='info'){
+  const msg=document.getElementById('af-msg');
+  if(!msg) return;
+  msg.textContent=txt||'';
+  msg.className='fmsg'+(tipo==='ok'?' ok':tipo==='err'?' err':'');
+  msg.style.display=txt?'inline-block':'none';
+  msg.style.color=tipo==='err'?'var(--red)':(tipo==='warn'?'var(--amber-text)':(tipo==='ok'?'var(--green-text)':'var(--text3)'));
+}
+function _afInvalid(id,txt){
+  _afSetMsg(txt,'err');
+  const el=document.getElementById(id);
+  if(el) el.focus();
+  return false;
+}
 async function _ataExecEmpenhoVinculado(exec){
   if(exec?.empenho && String(exec.empenho).trim()) return String(exec.empenho).trim();
   const emendaItemId=exec?.emenda_item_id||exec?._ataEmendaItemId||null;
@@ -6340,23 +6381,30 @@ async function _ataExecEmpenhoVinculado(exec){
 }
 async function _itemEmpenhoVinculado(row){
   if(row?.empenho && String(row.empenho).trim()) return String(row.empenho).trim();
+  const vinc=await _itemEmpenhoVinculo(row);
+  if(vinc.label) return vinc.label;
+  return '';
+}
+async function _itemEmpenhoVinculo(row){
+  if(row?.empenho && String(row.empenho).trim()) return {id:row.empenho_id||null, label:String(row.empenho).trim()};
   if(row?.item_id){
     const {data}=await sb.from('empenho_itens')
-      .select('empenhos(numero,ano)')
+      .select('empenho_id, empenhos(id,numero,ano)')
       .eq('item_id',row.item_id)
       .limit(1);
-    const emp=data?.[0]?.empenhos;
-    if(emp?.numero) return `${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+    const vinc=data?.[0];
+    const emp=vinc?.empenhos;
+    if(emp?.numero) return {id:emp.id||vinc.empenho_id||null, label:`${emp.numero}${emp.ano?('/'+emp.ano):''}`};
   }
   if(row?.contrato_id){
     const {data}=await sb.from('empenhos')
-      .select('numero,ano')
+      .select('id,numero,ano')
       .eq('contrato_id',row.contrato_id)
       .limit(1);
     const emp=data?.[0];
-    if(emp?.numero) return `${emp.numero}${emp.ano?('/'+emp.ano):''}`;
+    if(emp?.numero) return {id:emp.id||null, label:`${emp.numero}${emp.ano?('/'+emp.ano):''}`};
   }
-  return '';
+  return {id:null, label:''};
 }
 async function abrirModalAF(itemId, execId){
   if(bloquearSeVisualiz('itens')) return;
@@ -6410,6 +6458,7 @@ async function abrirModalAF(itemId, execId){
     document.getElementById('af-ja-autorizado').value='0';
   }else{
     // ── Aquisição: comportamento original ──
+    const entregaPendente=entregasRows.find(x=>String(x.item_id)===String(itemId));
     let it=itensRows.find(x=>String(x.id)===String(itemId));
     if(!it){
       const {data}=await sb.from('itens').select('id,descricao,qtde,prazo_entrega_dias,contrato_id,processos(identificador),fornecedores(razao_social)').eq('id',itemId).single();
@@ -6425,8 +6474,9 @@ async function abrirModalAF(itemId, execId){
     const {data:afs,error}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',itemId);
     let aut=0; if(!error){(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });}
     qtde=Number(it.qtde)||0; saldo=qtde-aut;
-    prazoItem=it.prazo_entrega_dias;
+    prazoItem=it.prazo_entrega_dias ?? entregaPendente?.prazo_entrega_dias ?? null;
     r=it;
+    if((r.prazo_entrega_dias==null || r.prazo_entrega_dias==='') && prazoItem!=null && prazoItem!=='') r={...r,prazo_entrega_dias:prazoItem};
     window._afItemCache=r;
     document.getElementById('af-item-id').value=itemId;
     document.getElementById('af-exec-id').value='';
@@ -6443,11 +6493,9 @@ async function abrirModalAF(itemId, execId){
   const prazoInput=document.getElementById('af-prazo-dias');
   document.getElementById('af-prazo-dias').value=(temPrazo?Number(prazoItem):'');
   document.getElementById('af-obs').value='';
-  const msgEl=document.getElementById('af-msg');
   const btnAF=document.getElementById('af-salvar');
   if(!temPrazo){
-    msgEl.textContent=isAta?'Prazo de entrega nao encontrado na ATA/licitacao. Cadastre o prazo na origem antes de emitir a AF.':'Prazo de entrega nao encontrado. Informe o numero de dias manualmente.';
-    msgEl.style.color='var(--amber-text)';
+    _afSetMsg(isAta?'Prazo de entrega nao encontrado na ATA/licitacao. Cadastre o prazo na origem antes de emitir a AF.':'Prazo de entrega nao encontrado. Informe o numero de dias manualmente.','warn');
     if(prazoInput){
       prazoInput.readOnly=!!isAta;
       prazoInput.style.background=isAta?'var(--surface2)':'';
@@ -6456,7 +6504,7 @@ async function abrirModalAF(itemId, execId){
     }
     if(btnAF) btnAF.disabled=!!isAta;
   }else{
-    msgEl.textContent=''; msgEl.style.color='';
+    _afSetMsg('');
     if(prazoInput){ prazoInput.readOnly=true; prazoInput.style.background='var(--surface2)'; prazoInput.style.opacity='.85'; }
     if(btnAF) btnAF.disabled=false;
   }
@@ -6482,24 +6530,22 @@ async function salvarAF(){
   const prazo=document.getElementById('af-prazo-dias').value;
   const limite=document.getElementById('af-data-limite').value||null;
   const obs=document.getElementById('af-obs').value.trim()||null;
-  const msg=document.getElementById('af-msg');
-  if(!numero){ msg.textContent='Informe o número da AF.'; msg.style.color='var(--red)'; return; }
-  if(!afData){ msg.textContent='Informe a data da AF.'; msg.style.color='var(--red)'; return; }
-  if(!qtdeAut||qtdeAut<=0){ msg.textContent='Quantidade autorizada deve ser maior que zero.'; msg.style.color='var(--red)'; return; }
-  if(prazo===''||isNaN(Number(prazo))){ msg.textContent='Item sem prazo de entrega. Cadastre o prazo no item antes de emitir a AF.'; msg.style.color='var(--red)'; return; }
-  if(!limite){ msg.textContent='Data limite de entrega nao calculada. Verifique a data da AF e o prazo da origem.'; msg.style.color='var(--red)'; return; }
-  msg.style.color='var(--text3)'; msg.textContent='Salvando...';
+  if(!numero) return _afInvalid('af-numero','Informe o número da AF.');
+  if(!afData) return _afInvalid('af-data','Informe a data da AF.');
+  if(!qtdeAut||qtdeAut<=0) return _afInvalid('af-qtde-autorizada','Quantidade autorizada deve ser maior que zero.');
+  if(prazo===''||isNaN(Number(prazo))) return _afInvalid('af-prazo-dias','Item sem prazo de entrega. Cadastre o prazo no item antes de emitir a AF.');
+  if(!limite) return _afInvalid('af-data-limite','Data limite de entrega nao calculada. Verifique a data da AF e o prazo da origem.');
+  _afSetMsg('Salvando...');
   if(isAta){
     const {data:execAtual}=await sb.from('atas_execucao').select('id,empenho,emenda_item_id').eq('id',execId).maybeSingle();
     const empAta=await _ataExecEmpenhoVinculado(execAtual||cache||{});
     if(!empAta){
-      msg.textContent='Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF.';
-      msg.style.color='var(--red)';
+      _afSetMsg('Nenhum empenho vinculado. Vincule um empenho antes de emitir a AF.','err');
       return;
     }
     // ── ATA: atualiza atas_execucao com dados da AF ──
     const {error}=await sb.from('atas_execucao').update({af_numero:numero, data_af:afData, prev_entrega:limite}).eq('id',execId);
-    if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
+    if(error){ _afSetMsg('Erro: '+error.message,'err'); return; }
     document.getElementById('modal-af').classList.remove('active');
     if(window.toast) toast('AF emitida','success');
     // Atualiza entregasRows in-loco: substituti o item ATA pendente
@@ -6535,11 +6581,13 @@ async function salvarAF(){
   const {data:afs}=await sb.from('itens_entregas').select('qtde_autorizada,status').eq('item_id',itemId);
   let aut=0;(afs||[]).forEach(e=>{ if((e.status||'')!=='cancelada') aut+=(Number(e.qtde_autorizada)||0); });
   const saldo=(Number(r?.qtde)||0)-aut;
-  if(qtdeAut>saldo){ msg.textContent=`Quantidade autorizada (${qtdeAut}) excede o saldo a autorizar (${saldo}).`; msg.style.color='var(--red)'; return; }
+  if(qtdeAut>saldo){ _afSetMsg(`Quantidade autorizada (${qtdeAut}) excede o saldo a autorizar (${saldo}).`,'err'); return; }
+  const empVinc=await _itemEmpenhoVinculo({item_id:itemId, contrato_id:r?.contrato_id, empenho:r?.empenho, empenho_id:r?.empenho_id});
   const reg={ item_id:itemId, af_numero:numero, af_data:afData, qtde_autorizada:qtdeAut,
-    data_limite_entrega:limite, af_obs:obs, status:'af_emitida' };
+    data_limite_entrega:limite, af_obs:obs, status:'af_emitida',
+    empenho_id:empVinc.id||null, empenho:empVinc.label||null };
   const {data:inserted,error}=await sb.from('itens_entregas').insert(reg).select('id');
-  if(error){ msg.textContent='Erro: '+error.message; msg.style.color='var(--red)'; return; }
+  if(error){ _afSetMsg('Erro: '+error.message,'err'); return; }
   const entregaId=inserted?.[0]?.id;
   if(prazo!=='' && !isNaN(Number(prazo)) && Number(prazo)!==Number(r?.prazo_entrega_dias)){
     await sb.from('itens').update({prazo_entrega_dias:Number(prazo)}).eq('id',itemId);
@@ -6557,7 +6605,7 @@ async function salvarAF(){
     qtde:qtdeAut,qtde_recebida:0,saldo_af:qtdeAut,
     limiteISO:limISO,recebido:false,cancelado:false,
     status:_prazoStatus(limISO,false,false),
-    empenho:'',nota_fiscal:'',_afRecemEmitida:true};
+    empenho_id:empVinc.id||null,empenho:empVinc.label||'',nota_fiscal:'',_afRecemEmitida:true};
   const idxP=entregasRows.findIndex(x=>x._pendente&&String(x.item_id)===String(itemId));
   if(idxP>=0) entregasRows.splice(idxP,1,rowAF); else entregasRows.unshift(rowAF);
   renderItensEntregas();
@@ -6811,6 +6859,18 @@ async function loadItensEntregas(){
     .order('af_data',{ascending:false});
   if(e1b) console.warn('AF base:',e1b.message);
   const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
+  const empAqPorItem={};
+  const aqItemIds=[...new Set([...(aqCalc||[]),(aq||[])].map(r=>r.item_id||r.itens?.id).filter(Boolean))];
+  if(aqItemIds.length){
+    const {data:eiAq}=await sb.from('empenho_itens')
+      .select('item_id,empenho_id,empenhos(id,numero,ano)')
+      .in('item_id',aqItemIds);
+    (eiAq||[]).forEach(v=>{
+      if(!v.item_id || empAqPorItem[String(v.item_id)]) return;
+      const emp=v.empenhos;
+      if(emp?.numero) empAqPorItem[String(v.item_id)]={id:emp.id||v.empenho_id||null,label:`${emp.numero}${emp.ano?('/'+emp.ano):''}`};
+    });
+  }
   const recebidoPorItem={};
   (aqCalc||[]).forEach(r=>{
     if((r.status||'')==='cancelada') return;
@@ -6844,7 +6904,7 @@ async function loadItensEntregas(){
       saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
       data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
       recebimento_tipo:r.recebimento_tipo||'', patrimonio:r.patrimonio||'',
-      empenho_id:r.empenho_id||null, empenho:r.empenhos?.numero||r.empenho||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenhos?.numero||r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
       nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
       nf_dataISO:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data),
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0,
@@ -6968,7 +7028,7 @@ async function loadItensEntregas(){
         saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
         data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
         recebimento_tipo:r.recebimento_tipo||'', patrimonio:r.patrimonio||'',
-        empenho_id:r.empenho_id||null, empenho:r.empenho||'',
+        empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
         nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.nota_fiscal||'',
         nf_dataISO:_toISODate(r.nf_data),
         valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0,
@@ -7011,14 +7071,14 @@ async function loadItensEntregas(){
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho:r.empenho||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   // RESGATE FINAL: query direta sem joins. Se RLS bloqueou o SELECT com joins
   // aninhados mas o INSERT passou, esta query resgata os registros órfãos.
   const _outIds2=new Set(out.map(r=>r.entrega_id).filter(Boolean));
   const {data:_resgate}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho,nota_fiscal,patrimonio,numero_serie')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,patrimonio,numero_serie')
     .not('af_numero','is',null).neq('status','cancelada').order('af_data',{ascending:false});
   if(_resgate) _resgate.forEach(r=>{
     if(_outIds2.has(String(r.id))) return;
@@ -7031,7 +7091,7 @@ async function loadItensEntregas(){
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho:r.empenho||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   entregasRows=out;
@@ -7484,6 +7544,75 @@ function _recRenderUnidades(){
     </div>`;
   }
   cont.innerHTML=html;
+  _recAtualizaPatrimonioPreview();
+}
+// Atualiza os campos "Quantidade" e "Patrimônio final" do bloco de preenchimento automático.
+function _recAtualizaPatrimonioPreview(){
+  const qtdeField=document.getElementById('rec-pat-qtde');
+  const finalField=document.getElementById('rec-pat-final');
+  if(!qtdeField||!finalField) return;
+  const n=document.querySelectorAll('#rec-unidades .rec-u-row').length;
+  qtdeField.value=n||'';
+  const inicialRaw=(document.getElementById('rec-pat-inicial')?.value||'').trim();
+  const inicial=parseInt(inicialRaw,10);
+  const valido=inicialRaw&&Number.isInteger(inicial)&&inicial>0&&String(inicial)===inicialRaw;
+  finalField.value=(n>0&&valido)?(inicial+n-1):'';
+}
+// Gera sequência numérica simples de patrimônio (sem prefixo, sem zeros à esquerda) para as linhas de unidades recebidas.
+async function _recGerarSequenciaPatrimonio(){
+  const rows=[...document.querySelectorAll('#rec-unidades .rec-u-row')];
+  const n=rows.length;
+  if(!n){ if(window.toast) toast('Informe a quantidade recebida antes de gerar a sequência.','error'); return; }
+  const inicialRaw=(document.getElementById('rec-pat-inicial')?.value||'').trim();
+  const inicial=parseInt(inicialRaw,10);
+  const valido=inicialRaw&&Number.isInteger(inicial)&&inicial>0&&String(inicial)===inicialRaw;
+  if(!valido){ if(window.toast) toast('Informe um patrimônio inicial válido (número inteiro positivo, sem zeros à esquerda).','error'); return; }
+  const final=inicial+n-1;
+  const modo=document.querySelector('input[name="rec-pat-modo"]:checked')?.value||'vazios';
+  const ok=await uiConfirm(`Serão preenchidos ${n} patrimônios, de ${inicial} até ${final}. Deseja continuar?`);
+  if(!ok) return;
+  const gerados=[];
+  rows.forEach((row,i)=>{
+    const patEl=row.querySelector('.rec-u-patr');
+    if(!patEl) return;
+    const valorAtual=patEl.value.trim();
+    if(modo==='todos'||!valorAtual){
+      patEl.value=String(inicial+i);
+      gerados.push(patEl.value);
+    }
+  });
+  const dup=await _recVerificarDuplicidadePatrimonio(gerados);
+  if(dup.length&&window.toast) toast('Atenção: patrimônio(s) já cadastrado(s) em outro item: '+dup.join(', '),'error');
+}
+// Verifica se algum dos patrimônios informados já está cadastrado em outra unidade (Aquisição ou ATA).
+async function _recVerificarDuplicidadePatrimonio(patrimonios){
+  const list=[...new Set((patrimonios||[]).filter(Boolean).map(String))];
+  if(!list.length) return [];
+  const origem=document.getElementById('rec-origem')?.value||'';
+  const entregaId=document.getElementById('rec-entrega-id')?.value||'';
+  const execId=document.getElementById('rec-exec-id')?.value||'';
+  const achados=new Set();
+  try{
+    const {data:d1}=await sb.from('itens_entregas_unidades').select('patrimonio,entrega_id').in('patrimonio',list);
+    (d1||[]).forEach(r=>{ if(origem==='Aquisicao'&&String(r.entrega_id)===String(entregaId)) return; if(r.patrimonio) achados.add(String(r.patrimonio)); });
+  }catch(_){}
+  try{
+    const {data:d2}=await sb.from('atas_execucao_unidades').select('patrimonio,exec_id').in('patrimonio',list);
+    (d2||[]).forEach(r=>{ if(origem==='ATA'&&String(r.exec_id)===String(execId)) return; if(r.patrimonio) achados.add(String(r.patrimonio)); });
+  }catch(_){}
+  return [...achados];
+}
+// Valida ausência de duplicidade (interna à lista e contra o banco) antes de salvar o recebimento.
+async function _recValidarPatrimoniosAntesSalvar(unidades){
+  const vals=(unidades||[]).map(u=>u.patrimonio).filter(Boolean).map(String);
+  if(!vals.length) return null;
+  const contagem={};
+  vals.forEach(v=>{ contagem[v]=(contagem[v]||0)+1; });
+  const internos=Object.keys(contagem).filter(k=>contagem[k]>1);
+  if(internos.length) return 'Patrimônio(s) repetido(s) nesta lista de unidades: '+internos.join(', ');
+  const dup=await _recVerificarDuplicidadePatrimonio(vals);
+  if(dup.length) return 'Patrimônio(s) já cadastrado(s) em outro item: '+dup.join(', ');
+  return null;
 }
 function _recPreencherUnidades(unidades){
   if(!unidades||!unidades.length) return;
@@ -7514,13 +7643,14 @@ async function abrirRecebimento(entregaId){
   document.getElementById('rec-data').value=new Date().toISOString().slice(0,10);
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'—';
-  ['rec-nf-numero','rec-nf-serie','rec-nf-data','rec-nf-chave','rec-nf-valor','rec-nf-obs','rec-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   // offset: unidades já registradas nesta AF (numeração continua em recebimentos parciais)
   let off=0;
   try{ const {count}=await sb.from('itens_entregas_unidades').select('id',{count:'exact',head:true}).eq('entrega_id',row.entrega_id); off=Number(count)||0; }catch(_){}
   window._recUnidadeOffset=off;
+  document.getElementById('rec-pat-inicial').value='';
   _recRenderUnidades();
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
   catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
@@ -7555,10 +7685,11 @@ async function abrirRecebimentoAta(execId){
   document.getElementById('rec-data').value=row.entregaISO||new Date().toISOString().slice(0,10);
   document.getElementById('rec-recebido-por').value=row.recebido_por||'';
   document.getElementById('rec-marca-modelo').value=[row.marca,row.modelo].filter(Boolean).join(' ')||'â€”';
-  ['rec-nf-numero','rec-nf-serie','rec-nf-data','rec-nf-chave','rec-nf-valor','rec-nf-obs','rec-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['rec-nf-numero','rec-nf-data','rec-nf-valor','rec-nf-obs'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.getElementById('rec-nf-data').value=document.getElementById('rec-data').value;
   _recSetMsg('');
   window._recUnidadeOffset=0;
+  document.getElementById('rec-pat-inicial').value='';
   _recRenderUnidades();
   _recPreencherUnidades(unidadesExistentes);
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
@@ -7574,20 +7705,19 @@ async function _recObterOuCriarEmpenho(row){
 async function _recObterOuCriarNF(row){
   const sel=document.getElementById('rec-nf-select').value;
   if(sel&&sel!=='__novo') return _recNFsRows.find(n=>String(n.id)===String(sel))||{id:sel,numero:''};
-  const numero=document.getElementById('rec-nf-numero').value.trim();
-  if(!numero) throw new Error('Informe o numero da nova NF ou selecione uma existente.');
-  const serie=document.getElementById('rec-nf-serie').value.trim()||null;
-  const chave=document.getElementById('rec-nf-chave').value.trim()||null;
+  const digitos=document.getElementById('rec-nf-numero').value.trim();
+  if(!digitos) throw new Error('Informe o numero da nova NF ou selecione uma existente.');
+  const numero='NF '+digitos;
   const norm=normalizarNumeroDocumento(numero);
-  const dup=_recNFsRows.find(n=>(chave&&n.chave_acesso===chave)||(!chave&&normalizarNumeroDocumento(n.numero)===norm&&String(n.serie||'')===String(serie||'')));
+  const dup=_recNFsRows.find(n=>normalizarNumeroDocumento(n.numero)===norm);
   if(dup){
-    const usar=await uiConfirm(`Possivel NF duplicada encontrada: ${dup.numero}${dup.serie?(' serie '+dup.serie):''}.\n\nUsar a nota existente?`);
+    const usar=await uiConfirm(`Possivel NF duplicada encontrada: ${dup.numero}.\n\nUsar a nota existente?`);
     if(!usar) throw new Error('Cadastro de NF cancelado para evitar duplicidade.');
     return dup;
   }
   const dataEmissao=document.getElementById('rec-nf-data').value||document.getElementById('rec-data').value||null;
   const payload={
-    numero, numero_normalizado:norm, serie, chave_acesso:chave,
+    numero, numero_normalizado:norm,
     fornecedor_id:row.fornecedor_id, contrato_id:row.contrato_id, processo_id:row.processo_id, emenda_id:row.emenda_id,
     data_emissao:dataEmissao, data_recebimento:document.getElementById('rec-data').value||null,
     valor_total:_recNum('rec-nf-valor'), observacoes:document.getElementById('rec-nf-obs').value.trim()||null,
@@ -7668,6 +7798,8 @@ async function salvarRecebimentoAta(){
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
     }));
+    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades);
+    if(erroPat) throw new Error(erroPat);
     const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
@@ -7734,7 +7866,6 @@ async function salvarRecebimento(){
     const totalRecebido=(Number(row.qtde_recebida)||0)+qtde;
     const totalAut=Number(row.qtde)||0;
     const tipo=totalRecebido>=totalAut?'total':document.getElementById('rec-tipo').value;
-    const obs=document.getElementById('rec-obs').value.trim();
     const recPor=document.getElementById('rec-recebido-por').value.trim()||null;
     // coleta as unidades recebidas agora (patrimônio/série por unidade)
     const off=Number(window._recUnidadeOffset)||0;
@@ -7744,13 +7875,14 @@ async function salvarRecebimento(){
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()||null,
       nota_fiscal_id:nf.id||null, recebido_em:dataRec, recebido_por:recPor
     }));
+    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades);
+    if(erroPat) throw new Error(erroPat);
     const patch={
       empenho_id:empenho.id, empenho:empenho.numero||null,
       nota_fiscal_id:nf.id, nota_fiscal:nf.numero||null, nf_data:nf.data_emissao||document.getElementById('rec-nf-data').value||null,
       qtde_recebida:totalRecebido, data_recebimento:dataRec,
       recebido_por:recPor,
-      recebimento_tipo:tipo, status:tipo==='total'?'recebido':'recebido_parcial',
-      confirmacao_obs:obs||null
+      recebimento_tipo:tipo, status:tipo==='total'?'recebido':'recebido_parcial'
     };
     const {error}=await sb.from('itens_entregas').update(patch).eq('id',entregaId);
     if(error) throw error;
@@ -9276,40 +9408,37 @@ function bloquearSeVisualiz(tabKey){
 }
 
 // ── Carrega o estado do fluxo (licitação/contrato/AF/recebimento) por emenda_item_id ──
-async function _carregarFluxoEmendaItens(eiIds){
-  const flow={};
-  if(!eiIds||!eiIds.length) return flow;
-  const itensFlow=[];
-  for(let k=0;k<eiIds.length;k+=200){
-    const slice=eiIds.slice(k,k+200);
-    const {data:itf}=await sb.from("itens")
+const _flowAddUnique=(map,key,val)=>{
+  if(!key||!val) return;
+  const s=map[key]=map[key]||new Set();
+  String(val).split(/[;,]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>s.add(x));
+};
+const _flowLatestDate=(a,b)=>{
+  const da=_toISODate(a), db=_toISODate(b);
+  if(!da) return db||"";
+  if(!db) return da;
+  return db>da?db:da;
+};
+// Busca itens contratados/estimados vinculados às emenda_itens e, em seguida
+// (dependente do resultado anterior), o detalhamento de entregas/empenhos/NF por item.
+// Os chunks de 200 ids são disparados em paralelo (antes eram sequenciais).
+async function _fetchItensFlowData(eiIds){
+  const itensFlow=(await Promise.all(_chunkArray(eiIds,200).map(slice=>
+    sb.from("itens")
       .select("id,emenda_item_id,qtde,valor_contratado,valor_estimado,processo_id,contrato_id,processos(identificador),contratos(cpl,numero_contrato),fornecedores(razao_social),unidades(nome)")
-      .in("emenda_item_id",slice);
-    if(itf) itensFlow.push(...itf);
-  }
+      .in("emenda_item_id",slice)
+  ))).flatMap(r=>r.data||[]);
   const itemIds=itensFlow.map(x=>x.id);
   const afByItem={}, empByItem={}, nfByItem={}, unidadeByItem={};
-  const addUnique=(map,key,val)=>{
-    if(!key||!val) return;
-    const s=map[key]=map[key]||new Set();
-    String(val).split(/[;,]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>s.add(x));
-  };
-  const latestDate=(a,b)=>{
-    const da=_toISODate(a), db=_toISODate(b);
-    if(!da) return db||"";
-    if(!db) return da;
-    return db>da?db:da;
-  };
-  for(let k=0;k<itemIds.length;k+=200){
-    const slice=itemIds.slice(k,k+200); if(!slice.length) break;
-    const [{data:afs},{data:emps},{data:nfs},{data:uns}]=await Promise.all([
-      sb.from("itens_entregas")
-        .select("item_id,qtde_autorizada,qtde_recebida,status,af_numero,af_data,data_recebimento,data_entrega_unidade,empenho,nota_fiscal,patrimonio,numero_serie,empenhos(numero),notas_fiscais(numero)")
-        .in("item_id",slice),
-      sb.from("empenho_itens").select("item_id,empenhos(numero)").in("item_id",slice),
-      sb.from("nota_fiscal_itens").select("item_id,notas_fiscais(numero)").in("item_id",slice),
-      sb.from("itens_entregas_unidades").select("id,item_id,patrimonio,numero_serie,unidade_seq,recebido_em,notas_fiscais(numero)").in("item_id",slice)
-    ]);
+  const chunkResults=await Promise.all(_chunkArray(itemIds,200).map(slice=>Promise.all([
+    sb.from("itens_entregas")
+      .select("item_id,qtde_autorizada,qtde_recebida,status,af_numero,af_data,data_recebimento,data_entrega_unidade,empenho,nota_fiscal,patrimonio,numero_serie,empenhos(numero),notas_fiscais(numero)")
+      .in("item_id",slice),
+    sb.from("empenho_itens").select("item_id,empenhos(numero)").in("item_id",slice),
+    sb.from("nota_fiscal_itens").select("item_id,notas_fiscais(numero)").in("item_id",slice),
+    sb.from("itens_entregas_unidades").select("id,item_id,patrimonio,numero_serie,unidade_seq,recebido_em,notas_fiscais(numero)").in("item_id",slice)
+  ])));
+  chunkResults.forEach(([{data:afs},{data:emps},{data:nfs},{data:uns}])=>{
     (afs||[]).forEach(a=>{
       if((a.status||"").toLowerCase()==="cancelada") return;
       const m=afByItem[a.item_id]=afByItem[a.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set(),unidades:[]};
@@ -9319,55 +9448,79 @@ async function _carregarFluxoEmendaItens(eiIds){
       m.rec+=rec;
       if(a.data_entrega_unidade) m.conf+=(rec||aut||1);
       if(!m.afNumero&&a.af_numero) m.afNumero=a.af_numero;
-      m.afData=latestDate(m.afData,a.af_data);
-      m.dataRecebimento=latestDate(m.dataRecebimento,a.data_recebimento);
-      m.dataEntregaUnidade=latestDate(m.dataEntregaUnidade,a.data_entrega_unidade);
+      m.afData=_flowLatestDate(m.afData,a.af_data);
+      m.dataRecebimento=_flowLatestDate(m.dataRecebimento,a.data_recebimento);
+      m.dataEntregaUnidade=_flowLatestDate(m.dataEntregaUnidade,a.data_entrega_unidade);
       if(a.patrimonio) m.patrimonios.add(a.patrimonio);
       if(a.numero_serie) m.series.add(a.numero_serie);
-      addUnique(empByItem,a.item_id,a.empenhos?.numero||a.empenho);
-      addUnique(nfByItem,a.item_id,a.notas_fiscais?.numero||a.nota_fiscal);
+      _flowAddUnique(empByItem,a.item_id,a.empenhos?.numero||a.empenho);
+      _flowAddUnique(nfByItem,a.item_id,a.notas_fiscais?.numero||a.nota_fiscal);
     });
-    (emps||[]).forEach(e=>addUnique(empByItem,e.item_id,e.empenhos?.numero));
-    (nfs||[]).forEach(n=>addUnique(nfByItem,n.item_id,n.notas_fiscais?.numero));
+    (emps||[]).forEach(e=>_flowAddUnique(empByItem,e.item_id,e.empenhos?.numero));
+    (nfs||[]).forEach(n=>_flowAddUnique(nfByItem,n.item_id,n.notas_fiscais?.numero));
     (uns||[]).forEach(u=>{
       const m=afByItem[u.item_id]=afByItem[u.item_id]||{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:"",patrimonios:new Set(),series:new Set(),unidades:[]};
       if(u.patrimonio) m.patrimonios.add(u.patrimonio);
       if(u.numero_serie) m.series.add(u.numero_serie);
       if(_unidadeFisicaTemId(u)) m.unidades.push({id:u.id,origem:'aquisicao',patrimonio:u.patrimonio||'',numero_serie:u.numero_serie||'',nota_fiscal:u.notas_fiscais?.numero||'',data_recebimento:_toISODate(u.recebido_em),seq:u.unidade_seq||null});
-      addUnique(nfByItem,u.item_id,u.notas_fiscais?.numero);
+      _flowAddUnique(nfByItem,u.item_id,u.notas_fiscais?.numero);
       unidadeByItem[u.item_id]=(unidadeByItem[u.item_id]||0)+1;
     });
-  }
-  // Integração ATA RP: atas_execucao → fluxo da Emenda
-  try {
+  });
+  return {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem};
+}
+// Integração ATA RP: atas_execucao → fluxo da Emenda (independente da busca de itens acima).
+async function _fetchAtaFlowData(eiIds){
   const _ataExecByEiid={}, _ataItemPlaceholder={};
-  for(let k=0;k<eiIds.length;k+=200){
-    const slice=eiIds.slice(k,k+200);
-    const {data:aex}=await sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf").in("emenda_item_id",slice);
+  const execChunks=await Promise.all(_chunkArray(eiIds,200).map(slice=>
+    sb.from("atas_execucao").select("id,ata_item_id,emenda_item_id,qtde,valor,unidade,af_numero,data_af,prev_entrega,dt_entrega,data_entrega_unidade,empenho,nf").in("emenda_item_id",slice)
+  ));
+  execChunks.forEach(({data:aex})=>{
     if(aex) aex.forEach(r=>{
       const eid=r.emenda_item_id; if(!eid) return;
       (_ataExecByEiid[eid]=_ataExecByEiid[eid]||[]).push(r);
       if(r.ata_item_id) _ataItemPlaceholder[r.ata_item_id]=null;
     });
-  }
-  const _ataItemInf={};
+  });
   const _ataIds=Object.keys(_ataItemPlaceholder);
-  if(_ataIds.length){
-    for(let k=0;k<_ataIds.length;k+=200){
-      const slice=_ataIds.slice(k,k+200);
-      const {data:ait}=await sb.from("atas_itens").select("id,cpl,sim,item,contrato_id,contratos(cpl,numero_contrato)").in("id",slice);
-      (ait||[]).forEach(i=>{ _ataItemInf[i.id]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||''}; });
-    }
-  }
-  const _ataUnidadesByExec={};
   const _ataExecIds=Object.values(_ataExecByEiid).flat().map(r=>r.id).filter(Boolean);
-  for(const ids of _chunkArray(_ataExecIds,200)){
-    const {data:unsAta}=await sb.from("atas_execucao_unidades")
-      .select("id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,notas_fiscais(numero)")
-      .in("exec_id",ids)
-      .order("unidade_seq",{ascending:true});
+  // atas_itens e atas_execucao_unidades dependem só do que foi apurado acima entre si,
+  // não uma da outra: buscar as duas em paralelo.
+  const [_ataItemChunks,_ataUnidadesChunks]=await Promise.all([
+    Promise.all(_chunkArray(_ataIds,200).map(slice=>
+      sb.from("atas_itens").select("id,cpl,sim,item,contrato_id,contratos(cpl,numero_contrato)").in("id",slice)
+    )),
+    Promise.all(_chunkArray(_ataExecIds,200).map(ids=>
+      sb.from("atas_execucao_unidades")
+        .select("id,exec_id,patrimonio,numero_serie,unidade_seq,recebido_em,notas_fiscais(numero)")
+        .in("exec_id",ids)
+        .order("unidade_seq",{ascending:true})
+    ))
+  ]);
+  const _ataItemInf={};
+  _ataItemChunks.forEach(({data:ait})=>{
+    (ait||[]).forEach(i=>{ _ataItemInf[i.id]={cpl:i.cpl||i.contratos?.cpl||'',sim:i.sim||i.contratos?.numero_contrato||'',item:i.item||''}; });
+  });
+  const _ataUnidadesByExec={};
+  _ataUnidadesChunks.forEach(({data:unsAta})=>{
     (unsAta||[]).forEach(u=>{ (_ataUnidadesByExec[String(u.exec_id)]=_ataUnidadesByExec[String(u.exec_id)]||[]).push(u); });
-  }
+  });
+  return {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec};
+}
+async function _carregarFluxoEmendaItens(eiIds){
+  const flow={};
+  if(!eiIds||!eiIds.length) return flow;
+  // As duas trilhas (itens→entregas/empenhos/NF e atas_execucao→atas_itens/unidades) são
+  // independentes entre si: buscar em paralelo em vez de encadeadas em série.
+  console.time('fluxo:itens+atas (paralelo)');
+  const [itensData,ataData]=await Promise.all([
+    _fetchItensFlowData(eiIds),
+    _fetchAtaFlowData(eiIds).catch(e=>{ console.error('_carregarFluxoEmendaItens ATA:', e); return null; })
+  ]);
+  console.timeEnd('fluxo:itens+atas (paralelo)');
+  const {itensFlow,afByItem,empByItem,nfByItem,unidadeByItem}=itensData;
+  if(ataData){
+  const {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec}=ataData;
   Object.entries(_ataExecByEiid).forEach(([eid,execs])=>{
     const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
     let qAta=0, vAta=0;
@@ -9382,12 +9535,12 @@ async function _carregarFluxoEmendaItens(eiIds){
       if(r.af_numero||r.data_af){
         f.af.aut+=q;
         if(!f.af.afNumero&&r.af_numero) f.af.afNumero=r.af_numero;
-        f.af.afData=latestDate(f.af.afData,r.data_af);
+        f.af.afData=_flowLatestDate(f.af.afData,r.data_af);
       }
       if(r.dt_entrega) f.af.rec+=q;
       if(r.data_entrega_unidade) f.af.conf+=q;
-      f.af.dataRecebimento=latestDate(f.af.dataRecebimento,r.dt_entrega);
-      f.af.dataEntregaUnidade=latestDate(f.af.dataEntregaUnidade,r.data_entrega_unidade);
+      f.af.dataRecebimento=_flowLatestDate(f.af.dataRecebimento,r.dt_entrega);
+      f.af.dataEntregaUnidade=_flowLatestDate(f.af.dataEntregaUnidade,r.data_entrega_unidade);
       if(r.empenho) f.empenhos.add(r.empenho);
       if(r.nf) f.notas.add(r.nf);
       (_ataUnidadesByExec[String(r.id)]||[]).forEach(u=>{
@@ -9407,7 +9560,7 @@ async function _carregarFluxoEmendaItens(eiIds){
     f.temContrato=true;
     f._ataSolicitada=true;
   });
-  } catch(e){ console.error('_carregarFluxoEmendaItens ATA:', e); }
+  }
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
     const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
@@ -9433,9 +9586,9 @@ async function _carregarFluxoEmendaItens(eiIds){
     if(a){
       f.af.aut+=a.aut; f.af.rec+=a.rec; f.af.conf+=a.conf;
       if(!f.af.afNumero&&a.afNumero) f.af.afNumero=a.afNumero;
-      f.af.afData=latestDate(f.af.afData,a.afData);
-      f.af.dataRecebimento=latestDate(f.af.dataRecebimento,a.dataRecebimento);
-      f.af.dataEntregaUnidade=latestDate(f.af.dataEntregaUnidade,a.dataEntregaUnidade);
+      f.af.afData=_flowLatestDate(f.af.afData,a.afData);
+      f.af.dataRecebimento=_flowLatestDate(f.af.dataRecebimento,a.dataRecebimento);
+      f.af.dataEntregaUnidade=_flowLatestDate(f.af.dataEntregaUnidade,a.dataEntregaUnidade);
       (a.patrimonios||new Set()).forEach(v=>f.patrimonios.add(v));
       (a.series||new Set()).forEach(v=>f.series.add(v));
       (a.unidades||[]).forEach(u=>f.unidades.push(u));
@@ -9485,9 +9638,16 @@ function _expandirLinhaEmendaPorUnidades(base, unidades){
   }));
 }
 async function loadData(){
-  document.getElementById("loading").style.display="block";
-  document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando dados do Supabase...';
-  document.getElementById("main").style.display="none";
+  console.time('loadData:total');
+  // O overlay de "Carregando..." que apaga a tela só faz sentido na primeira carga.
+  // Em recargas (após salvar em Atas/Empenhos/Notas fiscais etc.) mantemos a tabela
+  // visível e só sinalizamos a atualização no pill de conexão, para evitar o flicker.
+  const _isFirstLoad = !window._dashboardFirstLoadDone;
+  if(_isFirstLoad){
+    document.getElementById("loading").style.display="block";
+    document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando dados do Supabase...';
+    document.getElementById("main").style.display="none";
+  }
   document.getElementById("conn-pill").textContent="⏳ Conectando";
   document.getElementById("conn-pill").className="pill pill-loading";
   try{
@@ -9497,12 +9657,13 @@ async function loadData(){
       const {data:_so}=await sb.from("status_opcoes").select("id,nome,ordem").eq("contexto","emenda_item").order("ordem");
       window._catEmendaItem=_so||[]; window._catById={}; (_so||[]).forEach(o=>{window._catById[o.id]=o.nome;});
     }
+    console.time('loadData:emenda_itens');
     let raw=[], desde=0; const PAG=1000;
     while(true){
-      document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando itens das emendas...';
+      if(_isFirstLoad) document.getElementById("loading").innerHTML='<span class="spinner"></span>Carregando itens das emendas...';
       const {data,error}=await sb
         .from("emenda_itens")
-        .select("*, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano)")
+        .select("id,emenda_id,unidade_beneficiada,item,qtde,vl_unitario,vl_total,item_cadastrado,qtde_cadastrada,vl_unitario_cadastrado,vl_total_cadastrado,cpl,status,status_id,nota_fiscal,empenho,patrimonio,unidade_entrega,data_entrega,ordem_pagamento,data_atualizacao,emenda, emendas(tipo,emenda,parlamentar,sei_emenda,valor_cedido,unidade,ano,objeto)")
         .order("emenda",{ascending:true})
         .range(desde,desde+PAG-1);
       if(error) throw new Error(error.message);
@@ -9510,12 +9671,15 @@ async function loadData(){
       if(!data||data.length<PAG) break;
       desde+=PAG;
     }
+    console.timeEnd('loadData:emenda_itens');
     const num=v=>v==null||v===""?0:Number(v);
     // ── Fonte única da verdade: deriva CPL/contrato/unidade/valor/status do fluxo real
     //    (itens → processos/contratos/itens_entregas) por emenda_item_id, sem gravar no banco.
-    document.getElementById("loading").innerHTML='<span class="spinner"></span>Consolidando AF, empenhos, notas e entregas...';
+    if(_isFirstLoad) document.getElementById("loading").innerHTML='<span class="spinner"></span>Consolidando AF, empenhos, notas e entregas...';
+    console.time('loadData:fluxoEmendaItens');
     const _flow=await _carregarFluxoEmendaItens([...new Set(raw.map(i=>i.id).filter(Boolean))]);
-    document.getElementById("loading").innerHTML='<span class="spinner"></span>Montando painel de emendas...';
+    console.timeEnd('loadData:fluxoEmendaItens');
+    if(_isFirstLoad) document.getElementById("loading").innerHTML='<span class="spinner"></span>Montando painel de emendas...';
     allRows=raw.flatMap(i=>{
       const e=i.emendas||{};
       const f=_flow[i.id]||null;
@@ -9547,6 +9711,7 @@ async function loadData(){
         sei_emenda:(e.sei_emenda||"").trim(),
         valor_cedido:num(e.valor_cedido),
         ano:(e.ano!=null?e.ano:"").toString().trim(),
+        objeto:(e.objeto||"").trim(),
         unidade:((i.unidade_beneficiada||e.unidade)||"").toString().trim(),
         // ── executado ──
         item:(i.item||"").toString().trim(),
@@ -9574,9 +9739,9 @@ async function loadData(){
       };
       return _expandirLinhaEmendaPorUnidades(base,(f&&f.unidades)||[]);
     }).map(r=>({...r,status_cat:(!r._status_derivado&&r.status_id!=null&&window._catById&&window._catById[r.status_id])?window._catById[r.status_id]:catStatus(r.status_raw)}));
-    const [{data:eData},{data:uData},{data:pData}]=await Promise.all([
+    const [{data:eData},uData,{data:pData}]=await Promise.all([
       sb.from("emendas").select("id,emenda,tipo,parlamentar,ano,valor_cedido,unidade,unidade_id").order("emenda",{ascending:true}),
-      sb.from("unidades").select("id,nome").eq("ativo",true).order("nome"),
+      _getUnidadesAtivasCache(),
       sb.from("processos").select("id,identificador").order("identificador")
     ]);
     cachedEmendas=eData||[];
@@ -9590,12 +9755,31 @@ async function loadData(){
     const lu=document.getElementById("last-update"); if(lu) lu.textContent="Atualizado em "+new Date().toLocaleString("pt-BR");
     document.getElementById("loading").style.display="none";
     document.getElementById("main").style.display="block";
+    window._dashboardFirstLoadDone=true;
     setTimeout(_setTableOffset,50);
+    console.timeEnd('loadData:total');
   }catch(e){
+    console.timeEnd('loadData:total');
     document.getElementById("conn-pill").textContent="✗ Erro";
     document.getElementById("conn-pill").className="pill pill-err";
-    document.getElementById("loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro: ${e.message}<br><small>Abra o Chrome com --disable-web-security</small><br><button onclick="loadData()" style="margin-top:12px;padding:6px 16px;border-radius:6px;border:1px solid #ddd;cursor:pointer">Tentar novamente</button></div>`;
+    if(_isFirstLoad){
+      document.getElementById("loading").innerHTML=`<div style="color:var(--red)">⚠️ Erro: ${e.message}<br><small>Abra o Chrome com --disable-web-security</small><br><button onclick="loadData()" style="margin-top:12px;padding:6px 16px;border-radius:6px;border:1px solid #ddd;cursor:pointer">Tentar novamente</button></div>`;
+    } else if(window.toast){
+      toast('Erro ao atualizar dados: '+(e.message||e),'error');
+    }
   }
+}
+// Cache em memória de unidades ativas: reaproveitado por loadData() e pelos selects
+// de unidade em outros pontos da tela, evitando repetir a mesma consulta na sessão.
+let _unidadesAtivasCache=null, _unidadesAtivasPromise=null;
+function _getUnidadesAtivasCache(force){
+  if(force) _unidadesAtivasCache=null;
+  if(_unidadesAtivasCache) return Promise.resolve(_unidadesAtivasCache);
+  if(_unidadesAtivasPromise) return _unidadesAtivasPromise;
+  _unidadesAtivasPromise=sb.from("unidades").select("id,nome").eq("ativo",true).order("nome")
+    .then(({data})=>{ _unidadesAtivasCache=data||[]; _unidadesAtivasPromise=null; return _unidadesAtivasCache; })
+    .catch(e=>{ _unidadesAtivasPromise=null; throw e; });
+  return _unidadesAtivasPromise;
 }
 
 // ═══ FILTROS ═══
@@ -9738,9 +9922,10 @@ function hdrSort(asc){
 
 function updateHeaderFilterIndicators(){
   Object.keys(HDR_FILTER_COLS).forEach(col=>{
+    const ativo=(headerFilters[col]||[]).length>0;
     const btn=document.getElementById('hf-'+col);
-    if(!btn) return;
-    btn.classList.toggle('active',(headerFilters[col]||[]).length>0);
+    if(btn) btn.classList.toggle('active',ativo);
+    document.querySelectorAll(`.hdr-filter-btn[data-col="${col}"]`).forEach(b=>b.classList.toggle('active',ativo));
   });
 }
 
@@ -9840,11 +10025,17 @@ function clearF(id){
   applyFilters();
 }
 const MUNICIPAL_ANTIGA_ANOS=[2022,2023,2024,2025];
+function _currentYear(){ return new Date().getFullYear(); }
+// Anos de emendas municipais "antigas" ficam ocultos por padrão; o corte é sempre
+// o ano vigente, então ao virar o ano o ano anterior passa a entrar automaticamente
+// nesta lista (já desmarcado), sem precisar mexer em código.
+const _muniAntigaShown={em:new Set()};
 function _municipalAnoAtivo(prefix,ano){
+  if(prefix==='em') return _muniAntigaShown.em.has(Number(ano));
   return document.getElementById(`${prefix}-muni-${ano}`)?.dataset.active==='true';
 }
 function _ehMunicipalAntiga(r){
-  return String(r?.tipo||'').toUpperCase()==='MUNICIPAL' && Number(r?.ano)>0 && Number(r?.ano)<2026;
+  return String(r?.tipo||'').toUpperCase()==='MUNICIPAL' && Number(r?.ano)>0 && Number(r?.ano)<_currentYear();
 }
 function _municipalAntigaVisivel(prefix,r){
   if(!_ehMunicipalAntiga(r)) return true;
@@ -9870,12 +10061,91 @@ function toggleMunicipalAno(prefix,ano,callback){
   if(typeof callback==='function') callback();
 }
 function resetMunicipalAnos(prefix){
+  if(prefix==='em'){ _muniAntigaShown.em.clear(); _updateMuniAntigaButtonState('em'); return; }
   MUNICIPAL_ANTIGA_ANOS.forEach(ano=>{
     const btn=document.getElementById(`${prefix}-muni-${ano}`);
     if(btn) btn.dataset.active='false';
   });
   _updateMunicipalAnoButtons(prefix);
 }
+
+// ═══ FILTRO "MUNICIPAIS ANTIGAS" (botão único, estilo Sheets) ═══
+let _muniAntigaPrefix=null;
+let _muniAntigaPending=new Set();
+function _updateMuniAntigaButtonState(prefix){
+  const btn=document.getElementById(`${prefix}-muni-antiga-btn`);
+  if(!btn) return;
+  btn.classList.toggle('active',_muniAntigaShown[prefix].size>0);
+}
+function _ensureMuniAntigaDropdown(){
+  let dd=document.getElementById('muni-antiga-dropdown');
+  if(dd) return dd;
+  dd=document.createElement('div');
+  dd.id='muni-antiga-dropdown';
+  dd.style.cssText='display:none;position:fixed;z-index:9999;background:var(--dropdown-bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:220px;padding:.625rem';
+  dd.innerHTML=`
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4">Marque os anos de emendas municipais antigas (anteriores a ${_currentYear()}) que deseja exibir:</div>
+    <div id="muni-antiga-list" style="display:flex;flex-direction:column;gap:1px;margin-bottom:.5rem;max-height:220px;overflow-y:auto"></div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="closeMuniAntigaFilter()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;color:var(--text2)">Cancelar</button>
+      <button onclick="confirmMuniAntigaFilter()" style="font-size:12px;padding:5px 16px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">OK</button>
+    </div>`;
+  document.body.appendChild(dd);
+  return dd;
+}
+function _muniAntigaAnosDisponiveis(prefix){
+  const linhas=prefix==='se'?(saldoEmendasRows||[]):(allRows||[]);
+  return [...new Set(linhas.filter(_ehMunicipalAntiga).map(r=>Number(r.ano)))].sort((a,b)=>b-a);
+}
+function _muniAntigaRenderList(){
+  const anos=_muniAntigaAnosDisponiveis(_muniAntigaPrefix);
+  const list=document.getElementById('muni-antiga-list');
+  if(!anos.length){ list.innerHTML='<div style="padding:8px;font-size:12px;color:var(--text3);text-align:center">Nenhuma emenda municipal antiga encontrada</div>'; return; }
+  list.innerHTML=anos.map(ano=>{
+    const checked=_muniAntigaPending.has(ano)?'checked':'';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font-size:13px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><input type="checkbox" value="${ano}" ${checked} onchange="_muniAntigaTogglePending(this)" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0"> ${ano}</label>`;
+  }).join('');
+}
+function _muniAntigaTogglePending(cb){
+  const ano=Number(cb.value);
+  if(cb.checked) _muniAntigaPending.add(ano); else _muniAntigaPending.delete(ano);
+}
+function openMuniAntigaFilter(e,prefix){
+  e.stopPropagation();
+  const dd=_ensureMuniAntigaDropdown();
+  if(_muniAntigaPrefix===prefix && dd.style.display==='block'){ dd.style.display='none'; _muniAntigaPrefix=null; return; }
+  _muniAntigaPrefix=prefix;
+  _muniAntigaPending=new Set(_muniAntigaShown[prefix]);
+  _muniAntigaRenderList();
+  const btn=e.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  dd.style.display='block';
+  const ddW=dd.offsetWidth||220;
+  let left=rect.left+window.scrollX;
+  if(left+ddW>window.scrollX+window.innerWidth-8) left=window.scrollX+window.innerWidth-ddW-8;
+  dd.style.top=(rect.bottom+window.scrollY+4)+'px';
+  dd.style.left=Math.max(8,left)+'px';
+}
+function confirmMuniAntigaFilter(){
+  const prefix=_muniAntigaPrefix; if(!prefix) return;
+  _muniAntigaShown[prefix]=new Set(_muniAntigaPending);
+  document.getElementById('muni-antiga-dropdown').style.display='none';
+  _muniAntigaPrefix=null;
+  _updateMuniAntigaButtonState(prefix);
+  if(prefix==='em') applyFilters();
+  else if(prefix==='se') renderSaldoEmendas();
+}
+function closeMuniAntigaFilter(){
+  const dd=document.getElementById('muni-antiga-dropdown');
+  if(dd) dd.style.display='none';
+  _muniAntigaPrefix=null;
+}
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('muni-antiga-dropdown');
+  if(dd && dd.style.display==='block'){
+    if(!dd.contains(e.target) && !(e.target.closest && e.target.closest('#em-muni-antiga-btn,#se-muni-antiga-btn'))){ dd.style.display='none'; _muniAntigaPrefix=null; }
+  }
+});
 function clearAllFilters(){
   ["f-cpl","f-empenho","f-patrimonio","f-nf","f-busca"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   resetMunicipalAnos('em');
@@ -9890,7 +10160,7 @@ function applyFilters(){
   const get=id=>document.getElementById(id)?.value||"";
   const cpl=get("f-cpl").toLowerCase(),busca=get("f-busca").toLowerCase();
   const empenho=get("f-empenho").toLowerCase(),patrimonio=get("f-patrimonio").toLowerCase(),nf=get("f-nf").toLowerCase();
-  _updateMunicipalAnoButtons('em');
+  _updateMuniAntigaButtonState('em');
   filtered=allRows.filter(r=>{
     if(!_municipalAntigaVisivel('em',r)) return false;
     for(const col in headerFilters){
@@ -9914,7 +10184,7 @@ function applyFilters(){
 
 // ═══ MODOS DE VISUALIZAÇÃO DAS EMENDAS ═══
 const EM_MODOS=[
-  ['por-emenda','📂 Por emenda'],
+  ['por-emenda','📂 Emendas'],
   ['planilha','📋 Planilha'],
   ['cards','🪪 Visão parlamentar'],
   ['status','🗂️ Por status'],
@@ -9935,7 +10205,7 @@ function renderEmModoBar(){
   const modosPermitidos=new Set(['planilha','por-emenda']);
   const disp=EM_MODOS.filter(([k])=>modosPermitidos.has(k));
   if(!disp.some(([k])=>k===_emModo)) _emModo=disp[0]?.[0]||'planilha';
-  bar.innerHTML='<span style="font-size:11px;color:var(--text3);margin-right:4px">Visualizar:</span>'+
+  bar.innerHTML=''+
     disp.map(([k,l])=>`<button onclick="emSetModo('${k}')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:${_emModo===k?'var(--blue)':'var(--surface)'};color:${_emModo===k?'#fff':'var(--text2)'}">${l}${k===_emConfig.principal?' ★':''}</button>`).join('')+
     (_isAdmin()?`<button onclick="emAbrirConfig()" title="Configurar modos (admin)" style="font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text2);margin-left:6px">⚙️</button>`:'');
 }
@@ -10052,11 +10322,11 @@ function renderEmPorEmenda(){
     const r0=items[0]||{};
     const aberto=!!_emExpand[em];
     const emEnc=encodeURIComponent(em);
-    let h=`<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
+    let h=`<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:.85rem;overflow:hidden;background:var(--surface)">
       <div onclick="emTogglePorEmenda(decodeURIComponent('${emEnc}'))" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:var(--surface2)">
         <span style="font-size:13px;color:var(--text3);transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:14px">${_sanEsc(em)} <span style="font-weight:400;color:var(--text3)">· ${_sanEsc(r0.parlamentar||'')}</span></div>
+          <div style="font-weight:600;font-size:14px">${_sanEsc(r0.tipo||'—')} - ${_sanEsc(em)}${r0.ano?('/'+_sanEsc(r0.ano)):''} - ${_sanEsc(r0.parlamentar||'—')} - ${fmtFull(r0.valor_cedido||0)} - ${_sanEsc(r0.objeto||'—')}</div>
           <div style="font-size:11px;color:var(--text3)">${total} ${total===1?'item':'itens'} · ${entregues} entregue${entregues!==1?'s':''}</div>
         </div>
         <div style="width:170px;flex-shrink:0">
@@ -10973,7 +11243,7 @@ async function obterOuCriarParlamentar(nome){
 
 async function preencherSelectUnidades(selId, comNovo){
   const sel=document.getElementById(selId); if(!sel) return;
-  const {data}=await sb.from('unidades').select('id,nome').eq('ativo',true).order('nome');
+  const data=await _getUnidadesAtivasCache();
   const placeholder=sel.multiple?'':'<option value="">Selecione...</option>';
   sel.innerHTML=placeholder
     + (data||[]).map(u=>`<option value="${u.id}">${_sanEsc(u.nome)}</option>`).join('')
@@ -10996,6 +11266,7 @@ async function obterOuCriarUnidade(nome){
   if(ex&&ex.length) return ex[0].id;
   const {data:novo,error}=await sb.from('unidades').insert({nome}).select('id').single();
   if(error) throw error;
+  _neUnidadesCache=null; _getUnidadesAtivasCache(true); // nova unidade: invalida caches em memória
   return novo.id;
 }
 
@@ -11006,8 +11277,7 @@ async function obterOuCriarUnidade(nome){
 let _neUnidadesCache=null;
 async function _neEnsureUnidades(){
   if(_neUnidadesCache) return _neUnidadesCache;
-  const {data}=await sb.from('unidades').select('id,nome').eq('ativo',true).order('nome');
-  _neUnidadesCache=data||[];
+  _neUnidadesCache=await _getUnidadesAtivasCache();
   return _neUnidadesCache;
 }
 function _neUnidadeOptions(){
@@ -11037,7 +11307,7 @@ function neAddItem(){
     <div style="margin-top:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-size:11px;color:var(--text3)">Unidades que recebem este item (uma linha por unidade):</span>
-        <button type="button" class="btn-secondary" onclick="neAddUnidade(this)" style="font-size:11px;padding:3px 8px">+ unidade</button>
+        <button type="button" class="btn-secondary" onclick="neAddUnidade(this)" style="white-space:nowrap">+ unidade</button>
       </div>
       <div class="ne-it-unidades"></div>
     </div>`;
@@ -11051,12 +11321,11 @@ function _neAddUnidadeRow(itemDiv){
   const wrap=itemDiv.querySelector('.ne-it-unidades'); if(!wrap) return;
   const row=document.createElement('div');
   row.className='ne-u-row';
-  row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px';
   row.innerHTML=`
-    <select class="ne-u-sel" style="flex:2;min-width:160px" onchange="neRecalc()">${_neUnidadeOptions()}</select>
-    <input type="number" class="ne-u-qtde" placeholder="qtde" style="flex:1;min-width:80px" oninput="neRecalc()">
-    <span class="ne-u-total" style="flex:1;min-width:110px;font-size:12px;color:var(--text2);text-align:right">—</span>
-    <button type="button" onclick="neRemoveUnidade(this)" title="Remover unidade" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer;padding:4px 8px">✕</button>`;
+    <select class="ne-u-sel" onchange="neRecalc()">${_neUnidadeOptions()}</select>
+    <input type="number" class="ne-u-qtde" placeholder="qtde" oninput="neRecalc()">
+    <span class="ne-u-total">—</span>
+    <button type="button" class="ne-u-remove" onclick="neRemoveUnidade(this)" title="Remover unidade" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);cursor:pointer">✕</button>`;
   wrap.appendChild(row);
   neRecalc();
 }
@@ -11125,6 +11394,7 @@ async function salvarNovaEmenda(){
     const {data:em,error:e1}=await sb.from("emendas").insert({
       tipo, emenda, parlamentar:parlamentarNome,
       sei_emenda:document.getElementById("ne-sei").value.trim()||null,
+      objeto:document.getElementById("ne-objeto").value.trim()||null,
       valor_cedido:valorGlobal,
       ano: anoStr?parseInt(anoStr):null,
       unidade: nomesUnid.length===1?nomesUnid[0]:('Várias ('+nomesUnid.length+')'),

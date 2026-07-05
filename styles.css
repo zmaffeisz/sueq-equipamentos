@@ -119,6 +119,21 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 
+/* selects estilizados (form-group / ne-item): remove o widget nativo (que no Windows em
+   modo escuro ignora parte do background do autor) e desenha uma seta própria */
+.form-group select,.ne-item select{-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%238896a8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:10px 7px;padding-right:28px;height:34px;box-sizing:border-box}
+/* option vazia ("Selecione...") deve pesar visualmente igual ao placeholder de um input */
+.form-group select:has(option:checked[value=""]),.ne-item select:has(option:checked[value=""]){color:var(--text3);font-weight:400}
+
+/* ── ITENS INLINE (ex.: cadastro de emenda) ── */
+.ne-item input,.ne-item select{font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background-color:var(--surface);color:var(--text);height:34px;box-sizing:border-box;width:100%}
+.ne-item input:focus,.ne-item select:focus{outline:none;border-color:var(--blue)}
+/* linha unidade+qtde+total+remover em grid: larguras fixas e alinhadas, sem "sobra" de flex desbalanceado */
+.ne-item .ne-u-row{display:grid;grid-template-columns:2fr 90px 110px 34px;gap:8px;align-items:center;margin-bottom:6px}
+.ne-item .ne-u-row select,.ne-item .ne-u-row input{width:100%;min-width:0}
+.ne-item .ne-u-total{height:34px;display:flex;align-items:center;justify-content:flex-end;font-size:12px;color:var(--text2)}
+.ne-item .ne-u-row .ne-u-remove{width:34px;height:34px;box-sizing:border-box;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
 /* ── SELECT PESQUISÁVEL (s2) ── */
 .s2-outer{position:relative}
 .s2-wrap{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;min-height:34px;user-select:none}
