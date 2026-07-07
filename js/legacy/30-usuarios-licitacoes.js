@@ -594,7 +594,7 @@ function procTipoServicoChange(){
     if(lista) lista.innerHTML='';
   }
   const itensSec=document.getElementById('proc-itens-section');
-  if(demanda&&itensSec) itensSec.style.display='block';
+  if(itensSec&&document.getElementById('proc-natureza')?.value==='SERVIÇO') itensSec.style.display=demanda?'block':'none';
   _procAplicarModoAta();
 }
 
