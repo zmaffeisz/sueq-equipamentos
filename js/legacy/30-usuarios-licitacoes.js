@@ -204,28 +204,31 @@ function renderLicitacoes(){
     const p=x.p;
     if(fTipo && (p.tipo||'')!==fTipo) return false;
     if(fOrg){ const orgs=x.naLic.map(i=>_cpStatusById[i.status_lic_id]?.orgao).filter(Boolean); if(!orgs.includes(fOrg)) return false; }
-    if(busca){ const hay=[p.identificador,p.objeto,p.tipo].concat(x.naLic.map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
+    if(busca){ const hay=[p.identificador,p.objeto,p.tipo,p.tipo_servico].concat(x.naLic.map(i=>i.descricao)).concat(_procServicoMensalItensFromValor(p.servico_mensal_itens).map(i=>i.descricao)).filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(busca)) return false; }
     return true;
   });
   const _ocultos=incluirContratados?0:ocultos;
   const html=base.map(x=>{
     const p=x.p; mostrados++;
     const items=x.naLic;
-    const roll=items.length?_cpRollup(items):{nome:'sem itens',orgao:null,auto:false};
+    const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
+    const totalItensExibidos=items.length||itensServico.length;
+    const roll=items.length?_cpRollup(items):(itensServico.length?{nome:'Serviço mensal',orgao:null,auto:false}:{nome:'sem itens',orgao:null,auto:false});
     const aberto=!!_cpExpanded[p.id];
+    const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     let bloco=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
       <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
         <span onclick="cpToggle(${p.id})" style="font-size:13px;color:var(--text3);cursor:pointer;transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
           <div style="font-weight:600;font-size:13px">${_sanEsc(p.identificador||('#'+p.id))} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
-          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${items.length} ${items.length===1?'item':'itens'}</div>
+          <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>
         </div>
         ${_cpStatusBadge(roll)}
         <button onclick="abrirEditarProcesso(${p.id})" title="Editar processo" style="font-size:11px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer">✏️</button>
         ${podeEd?`<button onclick="gerarContratoDoProcesso(${p.id})" style="font-size:11px;padding:4px 8px;border-radius:4px;border:none;background:var(--green);color:#fff;cursor:pointer">📄 Gerar contrato</button>`:''}
       </div>`;
     if(aberto){
-      if(podeEd){
+      if(podeEd&&items.length){
         const opts=manuais.map(s=>`<option value="${s.id}">${_sanEsc(s.nome)}</option>`).join('');
         bloco+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;background:rgba(55,138,221,.08);border-top:1px solid var(--border)">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap">Aplicar a todos:</span>
@@ -234,6 +237,19 @@ function renderLicitacoes(){
         </div>`;
       }
       bloco+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
+      if(!items.length&&itensServico.length){
+        itensServico.forEach(it=>{
+          const qtd=Number(it.quantidade||0);
+          const unit=Number(it.valor_unitario||0);
+          const mensal=Number(it.valor_mensal||(qtd*unit)||0);
+          bloco+=`<tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 13px">${_sanEsc(it.descricao||'—')} <span style="font-size:10px;color:var(--blue);border:1px solid var(--blue);border-radius:3px;padding:0 4px">serviço mensal</span></td>
+            <td style="padding:8px 6px;color:var(--text3);width:70px;text-align:center">${qtd||''}</td>
+            <td style="padding:8px 8px;color:var(--text3)">Unit. ${unit?fmtFull(unit):'—'} · Mensal ${mensal?fmtFull(mensal):'—'}</td>
+            <td style="padding:8px 13px;color:var(--text3);width:70px;text-align:right;white-space:nowrap">—</td>
+          </tr>`;
+        });
+      }
       items.forEach(it=>{
         const cur=_cpStatusById[it.status_lic_id];
         const exc=['fracassado','cancelado','suspenso','transferido'].includes((it.status||'').toLowerCase())?it.status:'';
@@ -333,8 +349,11 @@ async function abrirNovoProcesso(){
   _procEditId=null;
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
   ['proc-identificador','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
+  _procServicoMensalIds().forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('proc-serv-mensal-itens-lista').innerHTML='';
   document.getElementById('proc-tipo').value='';
   document.getElementById('proc-natureza').value='';
+  document.getElementById('proc-tipo-servico').value='';
   await preencherSelectStatusProcesso();
   await preencherSelectSecoes('proc-secao', false);
   _procItensLoaded=[];
@@ -352,6 +371,11 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-identificador').value=p.identificador||'';
   document.getElementById('proc-tipo').value=p.tipo||'';
   document.getElementById('proc-natureza').value=p.natureza||'';
+  document.getElementById('proc-tipo-servico').value=p.tipo_servico||'';
+  _procCarregarServicoMensalItens(p);
+  document.getElementById('proc-serv-mensal-meses').value=p.servico_mensal_meses??'';
+  document.getElementById('proc-serv-mensal-valor-mensal').value=p.servico_mensal_valor_mensal??'';
+  document.getElementById('proc-serv-mensal-valor-global').value=p.servico_mensal_valor_global??'';
   document.getElementById('proc-objeto').value=p.objeto||'';
   document.getElementById('proc-modalidade').value=p.modalidade||'';
   document.getElementById('proc-valor').value=p.valor_estimado??'';
@@ -360,6 +384,7 @@ function abrirEditarProcesso(id){
   preencherSelectSecoes('proc-secao', false, p.secao).then(()=>{document.getElementById('proc-secao').value=p.secao||'';});
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
   procNaturezaChange();
+  procRecalcServicoMensal();
   _carregarProcItens(p.id);
   document.getElementById('proc-msg').className='fmsg';
   document.getElementById('modal-processo').classList.add('active');
@@ -378,19 +403,28 @@ async function salvarProcesso(){
   const tipo=document.getElementById('proc-tipo').value;
   const status=document.getElementById('proc-status')?.value||null;
   const natureza=document.getElementById('proc-natureza').value;
+  const tipoServico=document.getElementById('proc-tipo-servico')?.value||'';
+  const servicoMensal=_procLerServicoMensal();
   const secao=document.getElementById('proc-secao').value;
   const objeto=document.getElementById('proc-objeto').value.trim();
   if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
+  if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
+  if(_procEhServicoMensalFixo()&&!_procServicoMensalValido(servicoMensal)){showMsg('proc','Preencha todos os campos obrigatórios do Serviço mensal valor fixo.','err');return;}
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
   const dados={
     identificador:ident,
     tipo,
     natureza,
+    tipo_servico:natureza==='SERVIÇO'?tipoServico:null,
     objeto,
     modalidade:document.getElementById('proc-modalidade').value.trim()||null,
     status,
     secao,
-    valor_estimado:document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null,
+    valor_estimado:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:(document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null),
+    servico_mensal_itens:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_itens:null,
+    servico_mensal_meses:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_meses:null,
+    servico_mensal_valor_mensal:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_mensal:null,
+    servico_mensal_valor_global:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:null,
     observacao:document.getElementById('proc-obs').value.trim()||null,
   };
   const btn=document.querySelector('#modal-processo .btn-primary'); btn.disabled=true;
@@ -411,10 +445,148 @@ async function salvarProcesso(){
 // ═══ ITENS PREVISTOS DO PROCESSO (Fase 1) ═══
 let _procItensLoaded=[];
 const PROC_FONTES=[['emenda','Emenda'],['sem_emenda','Não há emenda'],['recurso_proprio','Recurso próprio'],['municipal','Fonte municipal'],['outra','Outra']];
+const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
+function _procServicoMensalIds(){
+  return ['proc-serv-mensal-meses','proc-serv-mensal-valor-mensal','proc-serv-mensal-valor-global'];
+}
+function _procEhServicoMensalFixo(){
+  return document.getElementById('proc-natureza')?.value==='SERVIÇO' && document.getElementById('proc-tipo-servico')?.value===PROC_TIPO_SERVICO_MENSAL_FIXO;
+}
+function _procSetValorEstimadoServicoMensal(readOnly){
+  const valEl=document.getElementById('proc-valor');
+  if(!valEl) return;
+  if(readOnly){
+    valEl.readOnly=true;
+    valEl.placeholder='calculado pelo serviço mensal';
+    valEl.style.background='var(--surface2)';
+    valEl.style.opacity='.85';
+  }else{
+    valEl.readOnly=false;
+    valEl.placeholder='ex: 50000';
+    valEl.style.background='';
+    valEl.style.opacity='';
+  }
+}
+function _procServicoMensalItensFromValor(valor){
+  if(Array.isArray(valor)) return valor;
+  if(!valor) return [];
+  if(typeof valor==='string'){
+    try{
+      const parsed=JSON.parse(valor);
+      if(Array.isArray(parsed)) return parsed;
+    }catch(_){}
+    return [{descricao:valor, quantidade:null, valor_unitario:null}];
+  }
+  return [];
+}
+function _procCarregarServicoMensalItens(p){
+  const lista=document.getElementById('proc-serv-mensal-itens-lista');
+  if(!lista) return;
+  lista.innerHTML='';
+  const itens=_procServicoMensalItensFromValor(p.servico_mensal_itens);
+  if(itens.length){
+    itens.forEach(item=>procAddServicoMensalItemRow({
+      descricao:item.descricao||item.item||'',
+      quantidade:item.quantidade??item.qtde??p.servico_mensal_qtd_itens??'',
+      valor_unitario:item.valor_unitario??item.valorItem??p.servico_mensal_valor_item??''
+    }));
+  }else if(p.servico_mensal_qtd_itens||p.servico_mensal_valor_item){
+    procAddServicoMensalItemRow({descricao:'', quantidade:p.servico_mensal_qtd_itens??'', valor_unitario:p.servico_mensal_valor_item??''});
+  }
+}
+function procAddServicoMensalItemRow(item={}){
+  const lista=document.getElementById('proc-serv-mensal-itens-lista');
+  if(!lista) return;
+  const row=document.createElement('div');
+  row.className='proc-serv-mensal-item';
+  row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);min-width:0;max-width:100%;box-sizing:border-box;width:100%';
+  row.innerHTML=`<div><div class="form-label">Item *</div><input type="text" class="smi-desc" placeholder="Descreva o item" value="${_sanEsc(String(item.descricao||'')).replace(/"/g,'&quot;')}" oninput="procRecalcServicoMensal()"></div>
+    <div><div class="form-label">Quantidade *</div><input type="number" class="smi-qtd" min="0" step="1" placeholder="ex: 2" value="${item.quantidade??''}" oninput="procRecalcServicoMensal()"></div>
+    <div><div class="form-label">Valor unitário *</div><input type="number" class="smi-valor" min="0" step="0.01" placeholder="ex: 1500" value="${item.valor_unitario??''}" oninput="procRecalcServicoMensal()"></div>
+    <button type="button" class="btn-secondary" onclick="procRemoveServicoMensalItemRow(this)" title="Remover item" style="font-size:12px;padding:7px 10px;width:100%">Remover</button>`;
+  lista.appendChild(row);
+  procRecalcServicoMensal();
+}
+function procRemoveServicoMensalItemRow(btn){
+  btn.closest('.proc-serv-mensal-item')?.remove();
+  procRecalcServicoMensal();
+}
+function _procEnsureServicoMensalItemRow(){
+  const lista=document.getElementById('proc-serv-mensal-itens-lista');
+  if(lista&&!lista.querySelector('.proc-serv-mensal-item')) procAddServicoMensalItemRow();
+}
+function _procLerServicoMensal(){
+  const itens=[...document.querySelectorAll('#proc-serv-mensal-itens-lista .proc-serv-mensal-item')].map(row=>{
+    const quantidade=Number(row.querySelector('.smi-qtd')?.value||0);
+    const valorUnitario=Number(row.querySelector('.smi-valor')?.value||0);
+    return {
+      descricao:(row.querySelector('.smi-desc')?.value||'').trim(),
+      quantidade:quantidade||null,
+      valor_unitario:valorUnitario||null,
+      valor_mensal:(quantidade&&valorUnitario)?quantidade*valorUnitario:null
+    };
+  });
+  const meses=Number(document.getElementById('proc-serv-mensal-meses')?.value||0);
+  const mensal=itens.reduce((s,item)=>s+(item.valor_mensal||0),0);
+  const global=mensal*meses;
+  return {
+    servico_mensal_itens:itens,
+    servico_mensal_meses:meses||null,
+    servico_mensal_valor_mensal:mensal||null,
+    servico_mensal_valor_global:global||null
+  };
+}
+function _procServicoMensalValido(d){
+  return !!(d.servico_mensal_itens.length && d.servico_mensal_itens.every(item=>item.descricao && item.quantidade>0 && item.valor_unitario>0 && item.valor_mensal>0) && d.servico_mensal_meses>0 && d.servico_mensal_valor_mensal>0 && d.servico_mensal_valor_global>0);
+}
+function procRecalcServicoMensal(){
+  const d=_procLerServicoMensal();
+  const mensalEl=document.getElementById('proc-serv-mensal-valor-mensal');
+  const globalEl=document.getElementById('proc-serv-mensal-valor-global');
+  if(mensalEl) mensalEl.value=d.servico_mensal_valor_mensal?d.servico_mensal_valor_mensal.toFixed(2):'';
+  if(globalEl) globalEl.value=d.servico_mensal_valor_global?d.servico_mensal_valor_global.toFixed(2):'';
+  if(_procEhServicoMensalFixo()){
+    const valEl=document.getElementById('proc-valor');
+    if(valEl) valEl.value=d.servico_mensal_valor_global?d.servico_mensal_valor_global.toFixed(2):'';
+  }
+}
+function procTipoServicoChange(){
+  const mensal=_procEhServicoMensalFixo();
+  const wrap=document.getElementById('proc-servico-mensal-wrap');
+  if(wrap) wrap.style.display=mensal?'block':'none';
+  _procServicoMensalIds().forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.required=mensal;
+    if(!mensal) el.value='';
+  });
+  if(mensal){
+    _procEnsureServicoMensalItemRow();
+    _procSetValorEstimadoServicoMensal(true);
+    procRecalcServicoMensal();
+  }else if(document.getElementById('proc-natureza')?.value==='SERVIÇO'){
+    const lista=document.getElementById('proc-serv-mensal-itens-lista');
+    if(lista) lista.innerHTML='';
+    const valEl=document.getElementById('proc-valor');
+    if(valEl?.readOnly) valEl.value='';
+    _procSetValorEstimadoServicoMensal(false);
+  }else{
+    const lista=document.getElementById('proc-serv-mensal-itens-lista');
+    if(lista) lista.innerHTML='';
+  }
+}
 
 function procNaturezaChange(){
   const nat=document.getElementById('proc-natureza').value;
   const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP');
+  const showServico=(nat==='SERVIÇO');
+  const tipoServicoWrap=document.getElementById('proc-tipo-servico-wrap');
+  const tipoServico=document.getElementById('proc-tipo-servico');
+  if(tipoServicoWrap) tipoServicoWrap.style.display=showServico?'block':'none';
+  if(tipoServico){
+    tipoServico.required=showServico;
+    if(!showServico) tipoServico.value='';
+  }
   const sec=document.getElementById('proc-itens-section');
   if(sec) sec.style.display=show?'block':'none';
   _procAplicarModoAta();
@@ -423,6 +595,7 @@ function procNaturezaChange(){
     if(show){ valEl.readOnly=true; valEl.placeholder='soma automática dos itens'; valEl.style.background='var(--surface2)'; valEl.style.opacity='.85'; _recalcProcValorEstimado(); }
     else { valEl.readOnly=false; valEl.placeholder='ex: 50000'; valEl.style.background=''; valEl.style.opacity=''; }
   }
+  procTipoServicoChange();
 }
 function _recalcProcValorEstimado(){
   const nat=document.getElementById('proc-natureza').value;

@@ -18,6 +18,11 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   `js/components/` para as próximas extrações sem alterar regra de negócio.
 
 ### Corrigido
+- **Gerar contrato para serviço mensal fixo não herdava/calculava corretamente os dados da
+  licitação**: no modal "Gerar contrato", a vigência e o vencimento agora ficam
+  somente leitura para serviço mensal valor fixo, usando os meses cadastrados na licitação
+  e recalculando o vencimento pela data de início. Valor mensal e valor global também
+  passam a ser calculados automaticamente pelos itens marcados no contrato.
 - **Atas Rp Vigentes "perdia" atas encerradas e suas execuções**: `loadAtas` descartava
   contratos/itens/execuções com `status=ENCERRADO` já na busca dos dados (não só na
   exibição), e o filtro de Status do topo só listava valores presentes nesses dados — como
@@ -49,6 +54,17 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   contrato" para casos excepcionais.
 
 ### Adicionado
+- **Tipo de serviço em Licitações/processos**: ao selecionar Natureza = `SERVIÇO`, o modal
+  de processo exibe o campo obrigatório "Tipo do serviço" com as opções iniciais de
+  contrato de serviço. O valor é salvo em `processos.tipo_servico` e aparece no resumo da
+  licitação para preparar as próximas regras específicas por subtipo.
+- **Serviço mensal valor fixo**: o subtipo ganhou uma lista obrigatória de itens no cadastro
+  da licitação, permitindo vários itens por contrato. Cada item tem descrição, quantidade e
+  valor unitário; a quantidade de meses fica no contrato, e os valores mensal/global são
+  calculados automaticamente. O global alimenta `processos.valor_estimado`.
+- **Itens de serviço mensal na licitação e geração de contrato**: a aba Licitações agora
+  conta e exibe os itens salvos em `processos.servico_mensal_itens`. Ao gerar contrato, os
+  itens mensais aparecem para marcação e viram registros em `itens` vinculados ao contrato.
 - **Filtro "Mostrar municipais antigas"** na aba de Saldo de Emendas: emendas `MUNICIPAL`
   de exercícios anteriores a 2026 (histórico importado das atas encerradas) ficam **ocultas
   por padrão** e só aparecem ao marcar a caixinha, evitando confusão com as municipais

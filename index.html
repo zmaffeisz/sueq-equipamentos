@@ -988,7 +988,7 @@
     </div>
 
     <div id="pl-loading" style="text-align:center;padding:2rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>
-    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;height:max(var(--table-min-height,620px),calc(100vh - var(--table-offset,300px) + var(--table-extra-height,140px)))">
+    <div id="pl-table-wrap" style="display:none;overflow-x:auto;overflow-y:auto;max-height:max(var(--table-min-height,620px),calc(100vh - var(--table-offset,300px) + var(--table-extra-height,140px)))">
       <table id="pl-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px">
         <thead id="pl-thead" style="position:sticky;top:0;z-index:1"></thead>
         <tbody id="pl-tbody"></tbody>
@@ -1504,13 +1504,26 @@
       <span id="proc-titulo" style="font-size:15px;font-weight:700">➕ Novo processo</span>
       <button onclick="document.getElementById('modal-processo').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
     </div>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
       <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
       <div class="form-group"><div class="form-label">Tipo * <span style="font-size:10px;color:var(--text3);font-weight:400">(origem do processo)</span></div><select id="proc-tipo" onchange="_procIdentFiltrar()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
+      <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço por escopo fechado</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
       <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
+      <div class="form-group full" id="proc-servico-mensal-wrap" style="display:none;min-width:0;max-width:100%;box-sizing:border-box">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div class="form-label" style="margin:0">Itens do contrato *</div>
+          <button type="button" class="btn-secondary" onclick="procAddServicoMensalItemRow()" style="font-size:12px;padding:5px 10px">+ Adicionar item</button>
+        </div>
+        <div id="proc-serv-mensal-itens-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;min-width:0;max-width:100%"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+          <div class="form-group"><div class="form-label">Quantidade de meses do contrato *</div><input type="number" id="proc-serv-mensal-meses" min="1" step="1" placeholder="ex: 12" oninput="procRecalcServicoMensal()"></div>
+          <div class="form-group"><div class="form-label">Valor Estimado Mensal *</div><input type="number" id="proc-serv-mensal-valor-mensal" step="0.01" readonly placeholder="calculado automaticamente" style="background:var(--surface2);opacity:.85"></div>
+          <div class="form-group"><div class="form-label">Valor Estimado Global *</div><input type="number" id="proc-serv-mensal-valor-global" step="0.01" readonly placeholder="calculado automaticamente" style="background:var(--surface2);opacity:.85"></div>
+        </div>
+      </div>
       <div class="form-group full"><div class="form-label">Objeto *</div><input type="text" id="proc-objeto" placeholder="Objeto do processo"></div>
       <div class="form-group"><div class="form-label">Modalidade</div><input type="text" id="proc-modalidade" placeholder="ex: Pregão Eletrônico"></div>
       <div class="form-group"><div class="form-label">Valor estimado (R$)</div><input type="number" id="proc-valor" step="0.01" placeholder="ex: 50000"></div>
@@ -2424,46 +2437,70 @@
   </div>
 </div>
 
-<!-- Modal Reajuste -->
-<div class="modal-overlay" id="modal-ct-reajuste">
-  <div class="modal-box" style="width:420px">
-    <div class="modal-title">📈 Reajuste</div>
-    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctrea-info"></div>
-    <div class="form-grid">
-      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctrea-data"></div>
-      <div class="form-group"><div class="form-label">Status *</div><select id="ctrea-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
-      <div class="form-group"><div class="form-label">Percentual (%) *</div><input type="number" id="ctrea-pct" placeholder="ex: 5.5" step="0.01"></div>
-      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctrea-obs" placeholder="ex: IPCA 2024..."></div>
+<!-- Modal Ajustes por item (Reajuste/Aditivo/Supressão) -->
+<div class="modal-overlay" id="modal-ct-itens-eventos">
+  <div class="modal-box" style="width:1080px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px;font-weight:700">🧮 Ajustes por item (Reajuste / Aditivo / Supressão)</span>
+      <button onclick="document.getElementById('modal-ct-itens-eventos').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">x</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="cie-info"></div>
+    <div class="form-grid" style="margin-bottom:.75rem">
+      <div class="form-group"><div class="form-label">Data de início do efeito *</div><input type="date" id="cie-data" onchange="_cieRecalcularMeses()"></div>
+      <div class="form-group"><div class="form-label">Status *</div><select id="cie-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
+      <div class="form-group" id="cie-meses-wrap"><div class="form-label">Fim da vigência / meses considerados</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="cie-vigencia-fim" disabled style="width:110px"><input type="number" id="cie-meses" step="1" min="0" title="Meses restantes considerados no cálculo (editável se precisar ajustar)" oninput="_cieAtualizarTotais()" style="width:70px"></div></div>
+      <div class="form-group full"><div class="form-label">Observação (aplicada a todos os itens marcados)</div><input type="text" id="cie-obs" placeholder="ex: Acréscimo de escopo aprovado em..."></div>
+    </div>
+    <div id="cie-tabela-wrap" style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:auto;max-height:50vh">
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead>
+          <tr style="color:var(--text2);text-align:left;background:var(--surface2)">
+            <th rowspan="2" style="padding:6px 10px;border-right:1px solid var(--border);vertical-align:bottom">Item</th>
+            <th colspan="3" style="padding:6px 10px;text-align:center;border-right:1px solid var(--border)">➕ Aditivo (quantidade)</th>
+            <th colspan="2" style="padding:6px 10px;text-align:center;border-right:1px solid var(--border)">📈 Reajuste (valor unit.)</th>
+            <th colspan="3" style="padding:6px 10px;text-align:center;color:var(--red)">✂️ Supressão (quantidade)</th>
+          </tr>
+          <tr style="color:var(--text3);text-align:right;background:var(--surface2)">
+            <th style="padding:4px 10px">Qtde acrescida</th><th style="padding:4px 10px">Valor unit. vigente</th><th style="padding:4px 10px;border-right:1px solid var(--border)">Impacto</th>
+            <th style="padding:4px 10px">%</th><th style="padding:4px 10px;border-right:1px solid var(--border)">Novo valor unit. / Impacto</th>
+            <th style="padding:4px 10px">Qtde suprimida</th><th style="padding:4px 10px">Valor unit. vigente</th><th style="padding:4px 10px">Impacto</th>
+          </tr>
+        </thead>
+        <tbody id="cie-tbody"></tbody>
+      </table>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:.625rem .75rem;margin-top:.75rem;background:var(--surface2)">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Valor inicial do contrato (reajustado, se houver): <strong id="cie-lim-base">—</strong></div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem">Limite de aditivo (25% — independente da supressão)</div>
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-bottom:.625rem">
+        <span>Limite: <strong id="cie-ad-lim-limite">—</strong></span>
+        <span>Já formalizado: <strong id="cie-ad-lim-anteriores">—</strong></span>
+        <span>Deste ajuste: <strong id="cie-ad-lim-novo">—</strong></span>
+        <span>% consumido: <strong id="cie-ad-lim-pct">—</strong></span>
+        <span>Saldo restante: <strong id="cie-ad-lim-saldo">—</strong></span>
+        <span id="cie-ad-lim-badge" class="badge">OK</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem">Limite de supressão (25% — independente do aditivo)</div>
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap;font-size:12px;color:var(--text2)">
+        <span>Limite: <strong id="cie-su-lim-limite">—</strong></span>
+        <span>Já formalizada: <strong id="cie-su-lim-anteriores">—</strong></span>
+        <span>Desta supressão: <strong id="cie-su-lim-novo">—</strong></span>
+        <span>% consumido: <strong id="cie-su-lim-pct">—</strong></span>
+        <span>Saldo restante: <strong id="cie-su-lim-saldo">—</strong></span>
+        <span id="cie-su-lim-badge" class="badge">OK</span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:1.5rem;margin-top:.5rem;font-size:12px;color:var(--text2)">
+      <span>Aditivo: <strong id="cie-tot-aditivo" style="color:var(--green)">R$ 0,00</strong></span>
+      <span>Reajuste: <strong id="cie-tot-reajuste">R$ 0,00</strong></span>
+      <span>Supressão: <strong id="cie-tot-supressao" style="color:var(--red)">R$ 0,00</strong></span>
+      <span>Impacto líquido (aditivo − supressão): <strong id="cie-tot-liquido">R$ 0,00</strong></span>
+      <span>Valor final do contrato após este ajuste: <strong id="cie-valor-final">R$ 0,00</strong></span>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" onclick="salvarOperacaoContrato('reajuste')">Salvar reajuste</button>
-      <button class="btn-secondary" onclick="document.getElementById('modal-ct-reajuste').classList.remove('active')">Cancelar</button>
-      <span id="ctrea-msg" class="fmsg"></span>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Aditivo -->
-<div class="modal-overlay" id="modal-ct-aditivo">
-  <div class="modal-box" style="width:420px">
-    <div class="modal-title">➕ Aditivo</div>
-    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctad-info"></div>
-    <div class="form-grid">
-      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctad-data" onchange="ctAtualizarImpactoEvento('aditivo')"></div>
-      <div class="form-group"><div class="form-label">Status *</div><select id="ctad-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
-      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctad-pct" placeholder="ex: 25" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor acrescido (R$)</div><input type="number" id="ctad-valor" placeholder="0,00" step="0.01" min="0"></div>
-      <div class="form-group"><div class="form-label">Item base</div><select id="ctad-item"></select></div>
-      <div class="form-group"><div class="form-label">Quantidade acrescida</div><input type="number" id="ctad-qtde" step="any" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
-      <div class="form-group"><div class="form-label">Valor unitário/mensal</div><input type="number" id="ctad-unitario" step="0.01" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
-      <div class="form-group"><div class="form-label">Meses restantes</div><input type="number" id="ctad-meses" step="1" min="0" oninput="ctAtualizarImpactoEvento('aditivo')"></div>
-      <div class="form-group full"><div class="form-label">Impacto calculado</div><input type="text" id="ctad-impacto" disabled></div>
-      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctad-obs" placeholder="ex: Acréscimo de serviços..."></div>
-    </div>
-    <div class="form-actions">
-      <button class="btn-primary" onclick="salvarOperacaoContrato('aditivo')">Salvar aditivo</button>
-      <button class="btn-secondary" onclick="document.getElementById('modal-ct-aditivo').classList.remove('active')">Cancelar</button>
-      <span id="ctad-msg" class="fmsg"></span>
+      <button class="btn-primary" id="cie-btn-salvar" onclick="salvarItensEventosContrato()">Salvar ajustes</button>
+      <button class="btn-secondary" onclick="document.getElementById('modal-ct-itens-eventos').classList.remove('active')">Cancelar</button>
+      <span id="cie-msg" class="fmsg"></span>
     </div>
   </div>
 </div>
@@ -2505,30 +2542,6 @@
   </div>
 </div>
 
-<!-- Modal Supressão -->
-<div class="modal-overlay" id="modal-ct-supressao">
-  <div class="modal-box" style="width:420px">
-    <div class="modal-title">✂️ Supressão</div>
-    <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctsu-info"></div>
-    <div class="form-grid">
-      <div class="form-group"><div class="form-label">Data *</div><input type="date" id="ctsu-data" onchange="ctAtualizarImpactoEvento('supressao')"></div>
-      <div class="form-group"><div class="form-label">Status *</div><select id="ctsu-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
-      <div class="form-group"><div class="form-label">Percentual (%)</div><input type="number" id="ctsu-pct" placeholder="ex: 10" step="0.01"></div>
-      <div class="form-group"><div class="form-label">Valor reduzido (R$)</div><input type="number" id="ctsu-valor" placeholder="0,00" step="0.01" min="0"></div>
-      <div class="form-group"><div class="form-label">Item base</div><select id="ctsu-item"></select></div>
-      <div class="form-group"><div class="form-label">Quantidade reduzida</div><input type="number" id="ctsu-qtde" step="any" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
-      <div class="form-group"><div class="form-label">Valor unitário/mensal</div><input type="number" id="ctsu-unitario" step="0.01" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
-      <div class="form-group"><div class="form-label">Meses restantes</div><input type="number" id="ctsu-meses" step="1" min="0" oninput="ctAtualizarImpactoEvento('supressao')"></div>
-      <div class="form-group full"><div class="form-label">Impacto calculado</div><input type="text" id="ctsu-impacto" disabled></div>
-      <div class="form-group full"><div class="form-label">Observação</div><input type="text" id="ctsu-obs" placeholder="ex: Redução de escopo..."></div>
-    </div>
-    <div class="form-actions">
-      <button class="btn-primary" style="background:var(--red)" onclick="salvarOperacaoContrato('supressao')">Salvar supressão</button>
-      <button class="btn-secondary" onclick="document.getElementById('modal-ct-supressao').classList.remove('active')">Cancelar</button>
-      <span id="ctsu-msg" class="fmsg"></span>
-    </div>
-  </div>
-</div>
 
 <!-- Modal Trocar Fiscal -->
 <div class="modal-overlay" id="modal-ct-fiscal">
