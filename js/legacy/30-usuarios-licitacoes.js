@@ -354,6 +354,7 @@ async function abrirNovoProcesso(){
   document.getElementById('proc-tipo').value='';
   document.getElementById('proc-natureza').value='';
   document.getElementById('proc-tipo-servico').value='';
+  const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value='';
   await preencherSelectStatusProcesso();
   await preencherSelectSecoes('proc-secao', false);
   _procItensLoaded=[];
@@ -376,6 +377,7 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-serv-mensal-meses').value=p.servico_mensal_meses??'';
   document.getElementById('proc-serv-mensal-valor-mensal').value=p.servico_mensal_valor_mensal??'';
   document.getElementById('proc-serv-mensal-valor-global').value=p.servico_mensal_valor_global??'';
+  const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value=p.servico_demanda_meses??'';
   document.getElementById('proc-objeto').value=p.objeto||'';
   document.getElementById('proc-modalidade').value=p.modalidade||'';
   document.getElementById('proc-valor').value=p.valor_estimado??'';
@@ -405,12 +407,15 @@ async function salvarProcesso(){
   const natureza=document.getElementById('proc-natureza').value;
   const tipoServico=document.getElementById('proc-tipo-servico')?.value||'';
   const servicoMensal=_procLerServicoMensal();
+  const servicoDemandaMeses=Number(document.getElementById('proc-serv-demanda-meses')?.value||0);
   const secao=document.getElementById('proc-secao').value;
   const objeto=document.getElementById('proc-objeto').value.trim();
   if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
   if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
   if(_procEhServicoMensalFixo()&&!_procServicoMensalValido(servicoMensal)){showMsg('proc','Preencha todos os campos obrigatórios do Serviço mensal valor fixo.','err');return;}
   if(tipo==='SEI' && /[A-Za-zÀ-ÿ]/.test(ident)){showMsg('proc','Processo SEI: o identificador deve conter apenas números e separadores (. / -), sem letras.','err');return;}
+  if(_procEhServicoDemanda()&&!document.querySelectorAll('#proc-itens-lista .proc-item-card').length){showMsg('proc','Servico por demanda/execucao precisa de pelo menos 1 item cadastrado.','err');return;}
+  if(_procEhServicoDemanda()&&servicoDemandaMeses<=0){showMsg('proc','Informe a vigencia em meses do servico por demanda/execucao.','err');return;}
   const dados={
     identificador:ident,
     tipo,
@@ -425,6 +430,7 @@ async function salvarProcesso(){
     servico_mensal_meses:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_meses:null,
     servico_mensal_valor_mensal:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_mensal:null,
     servico_mensal_valor_global:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:null,
+    servico_demanda_meses:_procEhServicoDemanda()?servicoDemandaMeses:null,
     observacao:document.getElementById('proc-obs').value.trim()||null,
   };
   const btn=document.querySelector('#modal-processo .btn-primary'); btn.disabled=true;
@@ -433,7 +439,7 @@ async function salvarProcesso(){
     : await sb.from('processos').insert(dados).select('id').single();
   if(res.error){btn.disabled=false;showMsg('proc','Erro: '+res.error.message,'err');return;}
   const procId=res.data?.id||_procEditId;
-  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'){
+  if(natureza==='AQUISIÇÃO'||natureza==='ATA DE RP'||_procEhServicoDemanda()){
     try{ await _persistProcItens(procId, natureza); }
     catch(e){ btn.disabled=false; showMsg('proc','Processo salvo, mas erro nos itens: '+(e.message||e),'err'); await loadLicitacoes(); return; }
   }
@@ -444,6 +450,7 @@ async function salvarProcesso(){
 }
 // ═══ ITENS PREVISTOS DO PROCESSO (Fase 1) ═══
 let _procItensLoaded=[];
+const PROC_TIPO_SERVICO_DEMANDA_NORM='servico por demanda/execucao';
 const PROC_FONTES=[['emenda','Emenda'],['sem_emenda','Não há emenda'],['recurso_proprio','Recurso próprio'],['municipal','Fonte municipal'],['outra','Outra']];
 const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
 function _procServicoMensalIds(){
@@ -451,6 +458,10 @@ function _procServicoMensalIds(){
 }
 function _procEhServicoMensalFixo(){
   return document.getElementById('proc-natureza')?.value==='SERVIÇO' && document.getElementById('proc-tipo-servico')?.value===PROC_TIPO_SERVICO_MENSAL_FIXO;
+}
+function _procEhServicoDemanda(){
+  const tipo=String(document.getElementById('proc-tipo-servico')?.value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return document.getElementById('proc-natureza')?.value==='SERVIÇO' && tipo===PROC_TIPO_SERVICO_DEMANDA_NORM;
 }
 function _procSetValorEstimadoServicoMensal(readOnly){
   const valEl=document.getElementById('proc-valor');
@@ -552,8 +563,16 @@ function procRecalcServicoMensal(){
 }
 function procTipoServicoChange(){
   const mensal=_procEhServicoMensalFixo();
+  const demanda=_procEhServicoDemanda();
   const wrap=document.getElementById('proc-servico-mensal-wrap');
   if(wrap) wrap.style.display=mensal?'block':'none';
+  const demandaWrap=document.getElementById('proc-serv-demanda-meses-wrap');
+  if(demandaWrap) demandaWrap.style.display=demanda?'block':'none';
+  const demandaMeses=document.getElementById('proc-serv-demanda-meses');
+  if(demandaMeses){
+    demandaMeses.required=demanda;
+    if(!demanda) demandaMeses.value='';
+  }
   _procServicoMensalIds().forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
@@ -574,11 +593,14 @@ function procTipoServicoChange(){
     const lista=document.getElementById('proc-serv-mensal-itens-lista');
     if(lista) lista.innerHTML='';
   }
+  const itensSec=document.getElementById('proc-itens-section');
+  if(demanda&&itensSec) itensSec.style.display='block';
+  _procAplicarModoAta();
 }
 
 function procNaturezaChange(){
   const nat=document.getElementById('proc-natureza').value;
-  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP');
+  const show=(nat==='AQUISIÇÃO'||nat==='ATA DE RP'||_procEhServicoDemanda());
   const showServico=(nat==='SERVIÇO');
   const tipoServicoWrap=document.getElementById('proc-tipo-servico-wrap');
   const tipoServico=document.getElementById('proc-tipo-servico');
@@ -592,14 +614,14 @@ function procNaturezaChange(){
   _procAplicarModoAta();
   const valEl=document.getElementById('proc-valor');
   if(valEl){
-    if(show){ valEl.readOnly=true; valEl.placeholder='soma automática dos itens'; valEl.style.background='var(--surface2)'; valEl.style.opacity='.85'; _recalcProcValorEstimado(); }
+    if(show){ valEl.readOnly=true; valEl.placeholder=_procEhServicoDemanda()?'soma dos itens de demanda':'soma automática dos itens'; valEl.style.background='var(--surface2)'; valEl.style.opacity='.85'; _recalcProcValorEstimado(); }
     else { valEl.readOnly=false; valEl.placeholder='ex: 50000'; valEl.style.background=''; valEl.style.opacity=''; }
   }
   procTipoServicoChange();
 }
 function _recalcProcValorEstimado(){
   const nat=document.getElementById('proc-natureza').value;
-  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP') return;
+  if(nat!=='AQUISIÇÃO'&&nat!=='ATA DE RP'&&!_procEhServicoDemanda()) return;
   let soma=0;
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
     const q=parseFloat(c.querySelector('.pi-qtde')?.value)||0;
@@ -616,16 +638,18 @@ function _renderProcItensVazio(){
 function _procEhAta(){ return document.getElementById('proc-natureza')?.value==='ATA DE RP'; }
 function _procAplicarModoAta(){
   const ata=_procEhAta();
+  const demanda=_procEhServicoDemanda();
   // botão "Puxar de emenda" some na ATA (vínculo de emenda só na execução da ata)
-  const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=ata?'none':'';
-  if(ata){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
+  const btn=document.getElementById('proc-btn-puxar-emenda'); if(btn) btn.style.display=(ata||demanda)?'none':'';
+  if(ata||demanda){ const box=document.getElementById('proc-import-box'); if(box){ box.style.display='none'; box.innerHTML=''; } }
   // dica do cabeçalho
   const hint=document.getElementById('proc-itens-hint');
-  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':'(fonte de recurso obrigatória por item)';
+  if(hint) hint.textContent=ata?'(ata de registro de preços — sem emenda/unidade/fonte nesta fase)':(demanda?'(serviço por demanda — pelo menos 1 item obrigatório)':'(fonte de recurso obrigatória por item)');
   // em cada card de item, oculta Unidade destino e a linha de Fonte
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{
-    const u=c.querySelector('.pi-unidade-col'); if(u) u.style.display=ata?'none':'';
-    const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=ata?'none':'';
+    const p=c.querySelector('.pi-prazo-col'); if(p) p.style.display=demanda?'none':'';
+    const u=c.querySelector('.pi-unidade-col'); if(u) u.style.display=(ata||demanda)?'none':'';
+    const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=(ata||demanda)?'none':'';
   });
 }
 function _procFonteOpts(sel){return PROC_FONTES.map(([v,l])=>`<option value="${v}"${sel===v?' selected':''}>${l}</option>`).join('');}
@@ -658,7 +682,7 @@ function procAddItemRow(data){
     <div style="display:grid;grid-template-columns:90px 130px 100px 1fr;gap:8px;margin-top:6px">
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Qtde *</div><input type="number" class="pi-qtde"${roAttr} placeholder="ex: 25" value="${data.qtde??''}" oninput="_recalcProcValorEstimado()" style="${inp};${ro}"></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Vl. unit. estimado</div><input type="number" step="0.01" class="pi-valor" placeholder="ex: 2500" value="${data.valor_estimado??''}" oninput="_recalcProcValorEstimado()" style="${inp}"></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias)</div><input type="number" class="pi-prazo" placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" style="${inp}"></div>
+      <div class="pi-prazo-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Prazo (dias)</div><input type="number" class="pi-prazo" placeholder="ex: 30" value="${data.prazo_entrega_dias??''}" style="${inp}"></div>
       <div class="pi-unidade-col"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Unidade destino${locked?' · da emenda':''}</div><select class="pi-unidade"${dis} style="${inp};${ro}">${_procUnidadeOpts(data.unidade_destino_id)}</select></div>
     </div>
     <div class="pi-fonte-row" style="display:grid;grid-template-columns:170px 1fr;gap:8px;margin-top:6px;align-items:end">
@@ -742,7 +766,8 @@ async function _carregarProcItens(processoId){
 }
 async function _persistProcItens(processoId, natureza){
   const ehAta=(natureza==='ATA DE RP');
-  const origem=ehAta?'ata':'aquisicao';
+  const ehDemanda=_procEhServicoDemanda();
+  const origem=ehAta?'ata':(ehDemanda?'servico_demanda':'aquisicao');
   const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')];
   const current=[];
   for(const c of cards){
@@ -751,20 +776,21 @@ async function _persistProcItens(processoId, natureza){
     const qtde=parseFloat(g('pi-qtde').value);
     const fonte_tipo=g('pi-fonte').value;
     // Item 3: ATA DE RP não exige fonte/emenda/unidade nesta fase (vínculo ocorre na execução da ata)
-    if(ehAta){
-      if(!descricao||!qtde) throw new Error('Cada item da ata precisa de descrição e quantidade.');
+    if(ehAta||ehDemanda){
+      if(!descricao||!qtde) throw new Error(ehDemanda?'Cada item do servico por demanda precisa de descricao e quantidade estimada.':'Cada item da ata precisa de descrição e quantidade.');
+      if(ehDemanda && !(parseFloat(g('pi-valor').value)>0)) throw new Error('Cada item do servico por demanda precisa de valor unitario estimado.');
     }else{
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
-    if(!ehAta && fonte_tipo==='emenda'){ emenda_id=g('pi-emenda').value||null; if(!emenda_id) throw new Error('Selecione a emenda dos itens com fonte = Emenda.'); emenda_item_id=c.dataset.emendaItemId||null; }
-    else if(!ehAta){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
+    if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){ emenda_id=g('pi-emenda').value||null; if(!emenda_id) throw new Error('Selecione a emenda dos itens com fonte = Emenda.'); emenda_item_id=c.dataset.emendaItemId||null; }
+    else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
-      processo_id:processoId, origem, fonte_tipo:ehAta?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
+      processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,
       grupo_item_id:c.dataset.grupo||null, descricao, qtde,
       valor_estimado:parseFloat(g('pi-valor').value)||null,
-      prazo_entrega_dias:parseInt(g('pi-prazo').value)||null,
-      unidade_destino_id:(!ehAta && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
+      prazo_entrega_dias:ehDemanda?null:(parseInt(g('pi-prazo').value)||null),
+      unidade_destino_id:(!ehAta && !ehDemanda && g('pi-unidade').value)?Number(g('pi-unidade').value):null,
       status:'em licitação'
     }});
   }

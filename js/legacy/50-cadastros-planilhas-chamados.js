@@ -730,8 +730,8 @@ async function enviarEmailChamadoNovo(id){
 // carrega contratos no select do modal de chamados novos
 let _contratosParaModal = [];
 async function _ensureContratosModal(){
-  if(_contratosParaModal.length) return;
-  const {data}=await sb.from("contratos").select("id,cpl,objeto,prestador,status,secao,email_empresa")
+  if(_contratosParaModal.length&&_contratosParaModal.every(c=>Object.prototype.hasOwnProperty.call(c,'valor_mensal'))) return;
+  const {data}=await sb.from("contratos").select("id,cpl,numero_contrato,objeto,prestador,status,secao,email_empresa,fornecedor_id,processo_id,valor_mensal")
     .eq("status","VIGENTE")
     .ilike("secao","SUEQ%")
     .order("cpl");

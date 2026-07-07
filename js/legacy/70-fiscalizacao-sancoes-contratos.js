@@ -530,6 +530,247 @@ async function confirmarGerarTermo(){
   const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
 
+function _fiscSelecionadasParaMedicao(){
+  const checks=[...document.querySelectorAll(".fisc-check:checked")];
+  const protocolos=checks.map(c=>c.dataset.protocolo);
+  return fiscalizacaoRows.filter(r=>protocolos.includes(r.protocolo));
+}
+
+function _fiscContratoDaOs(r){
+  const id=r?.contrato_id;
+  if(id) return (_contratosParaModal||[]).find(c=>String(c.id)===String(id))||null;
+  const cpl=r?.cpl_contrato;
+  return (_contratosParaModal||[]).find(c=>String(c.cpl||'')===String(cpl||''))||null;
+}
+
+function gerarTermoAteste(){ gerarMedicaoFiscalizacao(); }
+
+async function gerarMedicaoFiscalizacao(){
+  if(typeof _ensureContratosModal==='function') await _ensureContratosModal();
+  const selecionadas=_fiscSelecionadasParaMedicao();
+  if(!selecionadas.length){alert("Selecione ao menos uma OS para gerar a medicao.");return;}
+  if(selecionadas.some(r=>!['conforme','conforme_ressalva','parcial'].includes(String(r.situacao_os||'')))){
+    alert("Gere medicao apenas para OS ja fiscalizadas como conforme, conforme com ressalva ou parcial.");
+    return;
+  }
+  const contratos=[...new Set(selecionadas.map(r=>String(r.contrato_id||_fiscContratoDaOs(r)?.id||r.cpl_contrato||'')).filter(Boolean))];
+  if(contratos.length!==1){
+    alert("Selecione OS de apenas um contrato por vez para gerar uma medicao e vincular uma NF.");
+    return;
+  }
+  const contrato=_fiscContratoDaOs(selecionadas[0]);
+  const n=selecionadas.length;
+  const contratoTxt=contrato?`${contrato.numero_contrato||contrato.cpl||contrato.id} - ${contrato.prestador||''}`:(selecionadas[0].cpl_contrato||'contrato selecionado');
+  document.getElementById("mta-info").textContent=`${n} OS selecionada${n>1?'s':''} para ${contratoTxt}. A medicao sera criada no contrato e a NF ficara vinculada a ela.`;
+  document.getElementById("mta-competencia").value="";
+  document.getElementById("mta-nf").value="";
+  const nfData=document.getElementById("mta-nf-data"); if(nfData) nfData.value=_ctTodayISO();
+  const valor=document.getElementById("mta-valor"); if(valor) valor.value=contrato?.valor_mensal!=null?String(_ctNum(contrato.valor_mensal)):"";
+  document.getElementById("mta-msg").className="fmsg";
+  document.getElementById("modal-termo-ateste").classList.add("active");
+}
+
+async function confirmarGerarTermo(){ return confirmarGerarMedicaoFiscalizacao(); }
+
+function _fiscHtmlTermoAteste({selecionadas,contrato,competencia,nf,valor,fiscal,hoje}){
+  const cpl=contrato?.cpl||selecionadas[0]?.cpl_contrato||"";
+  const empresa=contrato?.prestador||selecionadas[0]?.empresa||"";
+  const tabelaRows=selecionadas.map((r,i)=>{
+    const ch=r._chamado||{};
+    const sit=SITUACAO_FISC[r.situacao_os]?.label||r.situacao_os||"-";
+    return `<tr style="border-bottom:1px solid #e0e0e0">
+      <td style="padding:5px 8px;font-size:12px">${i+1}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.protocolo||"-"}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.os||"-"}</td>
+      <td style="padding:5px 8px;font-size:12px">${ch.unidade||"-"}</td>
+      <td style="padding:5px 8px;font-size:12px">${ch.equipamento||"-"}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.servico_realizado||r.feito||"-"}</td>
+      <td style="padding:5px 8px;font-size:12px;font-weight:600">${sit}</td>
+      <td style="padding:5px 8px;font-size:12px">${r.ocorrencias||"-"}</td>
+    </tr>`;
+  }).join("");
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Termo de Ateste</title>
+  <link rel="stylesheet" href="css/print-termo-ateste.css"></head><body>
+  <div class="header">
+    <h2>SECRETARIA MUNICIPAL DA SAUDE - SOROCABA</h2>
+    <h3>Secao de Aquisicao e Manutencao de Equipamentos e Mobiliarios da Saude - SUEQ</h3>
+    <h2 style="margin-top:8px">TERMO DE ATESTE - RECEBIMENTO DEFINITIVO DE SERVICOS</h2>
+  </div>
+  <div class="info-grid">
+    <div class="info-item"><span class="info-label">Contrato / CPL:</span><strong>${cpl||"-"}</strong></div>
+    <div class="info-item"><span class="info-label">Empresa contratada:</span><strong>${empresa||"-"}</strong></div>
+    <div class="info-item"><span class="info-label">Competencia:</span><strong>${competencia}</strong></div>
+    <div class="info-item"><span class="info-label">Nota Fiscal:</span><strong>${nf}</strong></div>
+    <div class="info-item"><span class="info-label">Valor atestado:</span><strong>${_ctMoney(valor)}</strong></div>
+    <div class="info-item"><span class="info-label">Data do ateste:</span><strong>${hoje}</strong></div>
+    <div class="info-item"><span class="info-label">Fiscal responsavel:</span>${fiscal}</div>
+    <div class="info-item"><span class="info-label">Total de OS fiscalizadas:</span>${selecionadas.length}</div>
+  </div>
+  <table><thead><tr>
+    <th style="width:30px">#</th>
+    <th>Protocolo</th><th>No OS</th><th>Unidade</th><th>Equipamento</th>
+    <th>Servico realizado</th><th>Situacao</th><th>Ocorrencias</th>
+  </tr></thead><tbody>${tabelaRows}</tbody></table>
+  <div class="ateste-box">
+    <p>A fiscalizacao tecnica das ordens de servico listadas acima foi realizada na data de <strong>${hoje}</strong>,
+    em conformidade com o disposto no art. 117 da Lei no 14.133/2021, atestando-se o recebimento definitivo
+    dos servicos prestados${empresa?` pela empresa <strong>${empresa}</strong>`:''}${cpl?`, referentes ao contrato ${cpl}`:''},
+    competencia <strong>${competencia}</strong>, conforme Nota Fiscal <strong>${nf}</strong>,
+    no valor atestado de <strong>${_ctMoney(valor)}</strong>.</p>
+  </div>
+  <div class="assinatura">
+    <div class="linha-assinatura"></div>
+    <div><strong>${fiscal}</strong></div>
+    <div style="font-size:11px;color:#555">Fiscal de Contrato - SMS Sorocaba</div>
+    <div style="font-size:11px;color:#555;margin-top:2px">${hoje}</div>
+  </div>
+  <script>window.onload=()=>window.print();<\/script>
+  <\/body><\/html>`;
+}
+
+async function confirmarGerarMedicaoFiscalizacao(){
+  const competencia=document.getElementById("mta-competencia").value.trim();
+  const nf=document.getElementById("mta-nf").value.trim();
+  const nfData=document.getElementById("mta-nf-data")?.value||null;
+  const valor=_ctNum(document.getElementById("mta-valor")?.value);
+  if(!competencia||!nf||!valor){showMsg("mta","Preencha a competencia, a NF e o valor da medicao.","err");return;}
+  const btn=document.querySelector("#modal-termo-ateste .btn-primary");
+  btn.disabled=true;btn.textContent="Gerando...";
+  const selecionadas=_fiscSelecionadasParaMedicao();
+  const protocolos=selecionadas.map(r=>r.protocolo).filter(Boolean);
+  const contrato=_fiscContratoDaOs(selecionadas[0]);
+  if(!contrato?.id){
+    showMsg("mta","Nao foi possivel identificar o contrato dessas OS.","err");
+    btn.disabled=false;btn.textContent="Gerar medicao";
+    return;
+  }
+  const contratoKeys=[...new Set(selecionadas.map(r=>String(r.contrato_id||_fiscContratoDaOs(r)?.id||r.cpl_contrato||'')).filter(Boolean))];
+  if(contratoKeys.length!==1){
+    showMsg("mta","Selecione OS de apenas um contrato por vez.","err");
+    btn.disabled=false;btn.textContent="Gerar medicao";
+    return;
+  }
+  const fiscal=currentProfile?.nome||currentProfile?.email||"fiscal responsavel";
+  const medPayload={
+    contrato_id:contrato.id,
+    competencia,
+    tipo_medicao:'demanda',
+    data_medicao:_ctTodayISO(),
+    fiscal_responsavel:fiscal,
+    status:'aprovada_pelo_fiscal',
+    valor_bruto:valor,
+    valor_glosa:0,
+    valor_liquido:valor,
+    observacoes:`Medicao gerada pela Fiscalizacao a partir de ${selecionadas.length} OS: ${protocolos.join(', ')}`,
+    validado_por:fiscal,
+    validado_em:new Date().toISOString(),
+    updated_at:new Date().toISOString()
+  };
+  const {data:med,error:medErr}=await sb.from("contratos_medicoes").insert(medPayload).select("*").single();
+  if(medErr){showMsg("mta","Erro ao criar medicao: "+medErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
+  const numeroNorm=_ctNormalizedDoc(nf);
+  const nfPayload={
+    numero:nf,
+    numero_normalizado:numeroNorm||null,
+    fornecedor_id:contrato.fornecedor_id||null,
+    contrato_id:contrato.id,
+    processo_id:contrato.processo_id||null,
+    medicao_id:med.id,
+    competencia,
+    data_emissao:nfData,
+    data_recebimento:_ctTodayISO(),
+    valor_total:valor,
+    valor_bruto:valor,
+    valor_liquido:valor,
+    valor_glosa:0,
+    valor_aprovado:valor,
+    status:'aprovada',
+    origem_sistema:'fiscalizacao',
+    origem_codigo:med.id,
+    observacoes:`NF vinculada automaticamente pela Fiscalizacao. Protocolos: ${protocolos.join(', ')}`,
+    validado_por:fiscal,
+    validado_em:new Date().toISOString(),
+    updated_at:new Date().toISOString()
+  };
+  const {data:nfRow,error:nfErr}=await sb.from("notas_fiscais").insert(nfPayload).select("*").single();
+  if(nfErr){showMsg("mta","Medicao criada, mas erro ao vincular NF: "+nfErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
+  const {data:termo,error:termoErr}=await sb.from("termos_ateste").insert({
+    cpl_contrato:contrato.cpl||selecionadas[0].cpl_contrato||null,
+    contrato_id:contrato.id,
+    medicao_id:med.id,
+    nota_fiscal_id:nfRow.id,
+    competencia,
+    nf_referencia:nf,
+    fiscalizado_por:fiscal,
+    gerado_em:_ctTodayISO(),
+    protocolos,
+    valor_atestado:valor
+  }).select("*").single();
+  if(termoErr){showMsg("mta","Medicao e NF criadas, mas erro ao registrar termo: "+termoErr.message,"err");btn.disabled=false;btn.textContent="Gerar medicao";return;}
+  await sb.from("termo_contratos").insert([{termo_id:termo.id,contrato_id:contrato.id}]);
+  const chIds=[...new Set(selecionadas.map(r=>r.chamado_id).filter(Boolean))];
+  if(chIds.length) await sb.from("termo_chamados").insert(chIds.map(chid=>({termo_id:termo.id,chamado_id:chid})));
+  await sb.from("chamados_controle").update({competencia,nf_referencia:nf,medicao_id:med.id,nota_fiscal_id:nfRow.id,termo_ateste_id:termo.id}).in("protocolo",protocolos);
+  await sb.from("contratos_historico").insert({
+    contrato_id:contrato.id,
+    cpl:contrato.cpl||null,
+    tipo:'Medicao gerada pela Fiscalizacao',
+    data_evento:_ctTodayISO(),
+    valor_novo:String(valor),
+    obs:`Medicao ${competencia} criada com ${selecionadas.length} OS fiscalizada(s), NF ${nf}, valor ${_ctMoney(valor)}.`,
+    usuario:fiscal,
+    related_entity_type:'measurement',
+    related_entity_id:med.id
+  });
+  fiscalizacaoRows.filter(r=>protocolos.includes(r.protocolo)).forEach(r=>{
+    r.competencia=competencia;r.nf_referencia=nf;r.medicao_id=med.id;r.nota_fiscal_id=nfRow.id;r.termo_ateste_id=termo.id;
+  });
+  filtrarFiscalizacao();
+  document.getElementById("modal-termo-ateste").classList.remove("active");
+  btn.disabled=false;btn.textContent="Gerar medicao";
+  contratosCarregado=false;
+  if(window.toast) toast("Medicao, NF e termo registrados no contrato.","success");
+}
+
+async function baixarTermoAtesteMedicao(medicaoId){
+  const med=(_ctMedicoesAtual||[]).find(m=>String(m.id)===String(medicaoId));
+  if(!med){alert("Medicao nao encontrada.");return;}
+  const termo=(_ctTermosAtual||[]).find(t=>String(t.medicao_id||'')===String(medicaoId));
+  const nf=(_ctNotasAtual||[]).find(n=>String(n.medicao_id||'')===String(medicaoId));
+  let protocolos=Array.isArray(termo?.protocolos)?termo.protocolos:[];
+  if(!protocolos.length&&termo?.protocolos&&typeof termo.protocolos==='string'){
+    try{protocolos=JSON.parse(termo.protocolos)||[];}catch(_e){protocolos=[];}
+  }
+  let selecionadas=(fiscalizacaoRows||[]).filter(r=>protocolos.includes(r.protocolo));
+  if(!selecionadas.length&&protocolos.length){
+    const {data:controle}=await sb.from("chamados_controle").select("*").in("protocolo",protocolos);
+    selecionadas=(controle||[]).map(r=>({...r,_chamado:{}}));
+  }
+  if(!selecionadas.length){
+    selecionadas=[{
+      protocolo:protocolos.join(", ")||"medicao-"+medicaoId,
+      os:"",
+      cpl_contrato:_ctAtual?.cpl||termo?.cpl_contrato||"",
+      empresa:_ctAtual?.prestador||"",
+      situacao_os:"conforme",
+      servico_realizado:med.observacoes||"Servicos medidos"
+    }];
+  }
+  const html=_fiscHtmlTermoAteste({
+    selecionadas,
+    contrato:_ctAtual,
+    competencia:med.competencia||termo?.competencia||"",
+    nf:nf?.numero||termo?.nf_referencia||"",
+    valor:_ctNum(termo?.valor_atestado??med.valor_liquido??nf?.valor_aprovado??nf?.valor_total),
+    fiscal:med.fiscal_responsavel||termo?.fiscalizado_por||currentProfile?.nome||currentProfile?.email||"fiscal responsavel",
+    hoje:fmtDate(termo?.gerado_em||med.data_medicao||_ctTodayISO())||new Date().toLocaleDateString("pt-BR")
+  });
+  const w=window.open("","_blank");
+  if(!w){alert("Nao foi possivel abrir o termo. Verifique o bloqueador de pop-up.");return;}
+  w.document.write(html);
+  w.document.close();
+}
+
 // ═══ SANÇÕES ADMINISTRATIVAS ═══
 let sancoesRows = [];
 let sancoesFiltradas = [];
@@ -745,9 +986,11 @@ let ctExpandido = {};
 let ctItensPorContrato = {};
 let _ctMedicoesAtual = [];
 let _ctNotasAtual = [];
+let _ctTermosAtual = [];
 let _ctDocumentosAtual = [];
 let _ctHistoricoAtual = [];
 let _ctItensAtual = [];
+let _ctFiscaisAtual = [];
 const CT_TABLE_COLSPAN = 22;
 
 function _ctModule(){ return window.ContratosModule||{}; }
@@ -789,7 +1032,8 @@ function _ctValorReajustado(r){
 function _ctAditivoUsado(r){
   const mod=_ctModule();
   if(!r._contractEvents?.length||typeof mod.createContractRecord!=='function'||typeof mod.calculateContractFinancialSummary!=='function') return null;
-  return mod.calculateContractFinancialSummary(mod.createContractRecord(r),[],r._contractEvents,[],[]).additiveLimitUsedPercent;
+  const financial=mod.calculateContractFinancialSummary(mod.createContractRecord(r),[],r._contractEvents,[],[]);
+  return financial.additiveContractPercent??financial.additiveLimitUsedPercent;
 }
 function _ctPendenciasResumo(r){
   const tags=[];
@@ -921,6 +1165,8 @@ function _ctHistoricoToEvents(hist=[]){
       adjustedValueAfter:h.valor_reajustado??h.adjusted_value_after??(eventType==='reajuste'?h.valor_novo:null),
       affectsValue:eventType!=='reajuste',
       affectsInitialAdjustedValue:eventType==='reajuste',
+      relatedEntityType:h.related_entity_type,
+      relatedEntityId:h.related_entity_id,
       effectiveDate:h.data_evento,
       createdAt:h.created_at,
       notes:h.obs
@@ -975,6 +1221,185 @@ async function ctRegistrarHistoricoContrato(entry={}){
     fiscalizacao_nova:payload.fiscalizacao_nova,
     usuario:payload.usuario
   });
+}
+
+function _ctEventoQuantidade(h,tipo=_ctEventType(h)){
+  const obs=String(h?.obs||h?.notes||'');
+  const padrao=tipo==='supressao'?/Qtde suprimida:\s*([\d.,]+)/i:/Qtde acrescida:\s*([\d.,]+)/i;
+  const m=obs.match(padrao);
+  return m?_ctNum(m[1]):0;
+}
+function _ctEventoMeses(h){
+  const m=String(h?.obs||h?.notes||'').match(/Meses considerados:\s*([\d.,]+)/i);
+  return m?Math.max(_ctNum(m[1]),1):1;
+}
+function _ctEventoValorUnitario(h){
+  const m=String(h?.obs||h?.notes||'').match(/Valor unit[aá]rio usado:\s*(?:R\$\s*)?([\d.,]+)/i);
+  return m?_ctNum(m[1]):0;
+}
+function _ctEventoItemId(h){
+  return h?.related_entity_id??h?.relatedEntityId??null;
+}
+function _ctQuantidadeDeltaEvento(h){
+  const tipo=_ctEventType(h);
+  if(!['aditivo','supressao'].includes(tipo)) return 0;
+  const qtde=_ctEventoQuantidade(h,tipo);
+  if(!qtde) return 0;
+  return tipo==='supressao'?-qtde:qtde;
+}
+function _ctQuantidadeInicialItem(item,historico=[]){
+  const atual=Number(item?.qtde)||0;
+  const itemId=String(item?.id);
+  const deltaFormalizado=(historico||[]).reduce((total,h)=>{
+    if(String(_ctEventoItemId(h))!==itemId||_ctEventStatus(h)!=='formalizado') return total;
+    return total+_ctQuantidadeDeltaEvento(h);
+  },0);
+  return atual-deltaFormalizado;
+}
+function _ctEventoObsAtualizada(h,tipo,qtde,impacto,obsUsuario){
+  let obs=String(h?.obs||'');
+  const qtdeTexto=tipo==='supressao'?`Qtde suprimida: ${qtde}`:`Qtde acrescida: ${qtde}`;
+  const impactoTexto=tipo==='supressao'?`Impacto redutor ${_ctMoney(impacto)}`:`Impacto ${_ctMoney(impacto)}`;
+  if(/Qtde (acrescida|suprimida):\s*[\d.,]+/i.test(obs)) obs=obs.replace(/Qtde (acrescida|suprimida):\s*[\d.,]+/i,qtdeTexto);
+  else obs=`${obs}${obs?'. ':''}${qtdeTexto}`;
+  if(/Impacto(?: redutor)?\s+R\$\s*[\d.,]+/i.test(obs)) obs=obs.replace(/Impacto(?: redutor)?\s+R\$\s*[\d.,]+/i,impactoTexto);
+  else obs=`${obs}${obs?'. ':''}${impactoTexto}`;
+  obs=obs.replace(/Status:\s*[^.]+/i,'Status: formalizado');
+  if(obsUsuario) obs=`${obs}. ${obsUsuario}`;
+  return obs;
+}
+async function _ctAjustarQuantidadeItemPorEvento(h,tipo,deltaQtde){
+  if(!deltaQtde||!h?.related_entity_id) return;
+  const itemId=h.related_entity_id;
+  const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(itemId));
+  const qtdeAtual=item?Number(item.qtde||0):null;
+  let base=qtdeAtual;
+  if(base===null){
+    const {data,error}=await sb.from('itens').select('qtde').eq('id',itemId).single();
+    if(error) throw error;
+    base=Number(data?.qtde||0);
+  }
+  const sinal=tipo==='supressao'?-1:1;
+  const novaQtde=Math.max(base+(sinal*deltaQtde),0);
+  const {error}=await sb.from('itens').update({qtde:novaQtde}).eq('id',itemId);
+  if(error) throw error;
+}
+async function _ctRecalcularValorAtualContrato(contratoId){
+  const [ctRes,histRes]=await Promise.all([
+    sb.from('contratos').select('*').eq('id',contratoId).single(),
+    sb.from('contratos_historico').select('*').eq('contrato_id',contratoId)
+  ]);
+  if(ctRes.error) throw ctRes.error;
+  if(histRes.error) throw histRes.error;
+  const eventos=_ctHistoricoToEvents(histRes.data||[]);
+  const mod=_ctModule();
+  let valorAtual;
+  if(typeof mod.createContractRecord==='function'&&typeof mod.calculateCurrentContractValue==='function'){
+    valorAtual=mod.calculateCurrentContractValue(mod.createContractRecord(ctRes.data),[],eventos);
+  }else{
+    const base=_ctValorInicial(ctRes.data);
+    const add=eventos.filter(e=>e.eventType==='aditivo'&&e.status==='formalizado').reduce((s,e)=>s+_ctNum(e.impactValue),0);
+    const sup=eventos.filter(e=>e.eventType==='supressao'&&e.status==='formalizado').reduce((s,e)=>s+Math.abs(_ctNum(e.impactValue)),0);
+    valorAtual=Math.max(base+add-sup,0);
+  }
+  const {error}=await sb.from('contratos').update({valor_atual:valorAtual}).eq('id',contratoId);
+  if(error) throw error;
+  return valorAtual;
+}
+async function editarEventoContrato(eventId){
+  if(bloquearSeVisualiz('contratos')) return;
+  const h=(_ctHistoricoAtual||[]).find(x=>String(x.id)===String(eventId));
+  const tipo=_ctEventType(h);
+  if(!h||!['aditivo','supressao'].includes(tipo)){alert('Evento não encontrado para edição.');return;}
+  const dataAtual=String(h.data_evento||(h.created_at||'').substring(0,10)||_ctTodayISO()).substring(0,10);
+  const novaData=prompt('Data do evento (AAAA-MM-DD):',dataAtual);
+  if(novaData===null) return;
+  const qtdeAtual=_ctEventoQuantidade(h,tipo);
+  const unit=_ctEventoValorUnitario(h);
+  const meses=_ctEventoMeses(h);
+  let novoImpacto=_ctNum(h.valor_impacto??h.valor_novo);
+  let deltaQtde=0;
+  let novaQtde=qtdeAtual;
+  let novaObs=String(h.obs||'');
+  if(qtdeAtual&&unit&&h.related_entity_id){
+    const qtdeTxt=prompt(tipo==='supressao'?'Quantidade suprimida:':'Quantidade acrescida:',String(qtdeAtual));
+    if(qtdeTxt===null) return;
+    novaQtde=_ctNum(qtdeTxt);
+    if(novaQtde<0){alert('A quantidade não pode ser negativa.');return;}
+    deltaQtde=novaQtde-qtdeAtual;
+    novoImpacto=novaQtde*unit*meses;
+    const obsExtra=prompt('Observação adicional (opcional):','')||'';
+    novaObs=_ctEventoObsAtualizada(h,tipo,novaQtde,novoImpacto,obsExtra.trim());
+  }else{
+    const valorTxt=prompt('Valor de impacto do evento:',String(novoImpacto||''));
+    if(valorTxt===null) return;
+    novoImpacto=_ctNum(valorTxt);
+    if(novoImpacto<0){alert('O valor não pode ser negativo.');return;}
+    const obsTxt=prompt('Observação:',String(h.obs||''));
+    if(obsTxt===null) return;
+    novaObs=obsTxt;
+  }
+  try{
+    await _ctAjustarQuantidadeItemPorEvento(h,tipo,deltaQtde);
+    const payload={data_evento:novaData||_ctTodayISO(),valor_impacto:novoImpacto,obs:novaObs,status_evento:'formalizado',usuario:currentProfile?.nome??currentProfile?.email??null};
+    let res=await sb.from('contratos_historico').update(payload).eq('id',eventId).eq('contrato_id',_ctAtual.id);
+    if(res.error&&_ctIsSchemaCacheError(res.error)){
+      res=await sb.from('contratos_historico').update({data_evento:payload.data_evento,valor_impacto:payload.valor_impacto,obs:payload.obs}).eq('id',eventId).eq('contrato_id',_ctAtual.id);
+    }
+    if(res.error) throw res.error;
+    await _ctRecalcularValorAtualContrato(_ctAtual.id);
+    await loadContratos();
+    _ctAtual=contratosRows.find(r=>String(r.id)===String(_ctAtual.id))||_ctAtual;
+    await abrirDetalheContrato(_ctAtual.id);
+    ctOpenContratoTab(tipo==='supressao'?'supressoes':'aditivos');
+  }catch(e){
+    alert('Erro ao editar evento: '+(e.message||e));
+  }
+}
+async function aplicarEventoContrato(eventId){
+  if(bloquearSeVisualiz('contratos')) return;
+  const h=(_ctHistoricoAtual||[]).find(x=>String(x.id)===String(eventId));
+  const tipo=_ctEventType(h);
+  if(!h||!['aditivo','supressao'].includes(tipo)){alert('Evento não encontrado para aplicação.');return;}
+  if(_ctEventStatus(h)==='formalizado') return;
+  if(!await uiConfirm(`Aplicar este ${tipo==='supressao'?'supressão':'aditivo'} agora? A quantidade do item e o valor atual do contrato serão atualizados.`)) return;
+  try{
+    const qtde=_ctEventoQuantidade(h,tipo);
+    await _ctAjustarQuantidadeItemPorEvento(h,tipo,qtde);
+    const obs=String(h.obs||'').replace(/Status:\s*[^.]+/i,'Status: formalizado');
+    let res=await sb.from('contratos_historico').update({status_evento:'formalizado',obs,usuario:currentProfile?.nome??currentProfile?.email??null}).eq('id',eventId).eq('contrato_id',_ctAtual.id);
+    if(res.error&&_ctIsSchemaCacheError(res.error)){
+      res=await sb.from('contratos_historico').update({obs}).eq('id',eventId).eq('contrato_id',_ctAtual.id);
+    }
+    if(res.error) throw res.error;
+    await _ctRecalcularValorAtualContrato(_ctAtual.id);
+    await loadContratos();
+    _ctAtual=contratosRows.find(r=>String(r.id)===String(_ctAtual.id))||_ctAtual;
+    await abrirDetalheContrato(_ctAtual.id);
+    ctOpenContratoTab(tipo==='supressao'?'supressoes':'aditivos');
+  }catch(e){
+    alert('Erro ao aplicar evento: '+(e.message||e));
+  }
+}
+async function excluirEventoContrato(eventId){
+  if(bloquearSeVisualiz('contratos')) return;
+  const h=(_ctHistoricoAtual||[]).find(x=>String(x.id)===String(eventId));
+  const tipo=_ctEventType(h);
+  if(!h||!['aditivo','supressao'].includes(tipo)){alert('Evento não encontrado para exclusão.');return;}
+  if(!await uiConfirm(`Excluir este ${tipo==='supressao'?'supressão':'aditivo'}?`)) return;
+  try{
+    const qtde=_ctEventoQuantidade(h,tipo);
+    await _ctAjustarQuantidadeItemPorEvento(h,tipo,-qtde);
+    const {error}=await sb.from('contratos_historico').delete().eq('id',eventId).eq('contrato_id',_ctAtual.id);
+    if(error) throw error;
+    await _ctRecalcularValorAtualContrato(_ctAtual.id);
+    await loadContratos();
+    _ctAtual=contratosRows.find(r=>String(r.id)===String(_ctAtual.id))||_ctAtual;
+    await abrirDetalheContrato(_ctAtual.id);
+    ctOpenContratoTab(tipo==='supressao'?'supressoes':'aditivos');
+  }catch(e){
+    alert('Erro ao excluir evento: '+(e.message||e));
+  }
 }
 
 async function loadContratos(){
@@ -1705,6 +2130,7 @@ async function salvarNovoContrato(){
   const fiscalizacao=fiscais.join(', ');
   const email=document.getElementById("nc-email").value.trim();
   const modoNC=_ncModo(window._gerarContratoProcesso?.natureza);
+  const servDemandaNC=typeof _ncServicoDemanda==='function' && _ncServicoDemanda(window._gerarContratoProcesso);
   const numeroContrato=document.getElementById("nc-numero").value.trim();
   const inicioContrato=document.getElementById("nc-inicio").value||null;
   const secSelEarly=document.getElementById("nc-secao");
@@ -1767,7 +2193,7 @@ async function salvarNovoContrato(){
     vigencia_atual:_mn("nc-vigencia"),
     vencimento:_mn("nc-vencimento"),
     valor_inicial:_mn("nc-valor-inicial"),
-    valor_mensal:tipoInstrumento==="ATA"?null:(document.getElementById("nc-valor-mensal").value.trim()?parseFloat(document.getElementById("nc-valor-mensal").value.replace(/\./g,'').replace(',','.')):null),
+    valor_mensal:(tipoInstrumento==="ATA"||servDemandaNC)?null:(document.getElementById("nc-valor-mensal").value.trim()?parseFloat(document.getElementById("nc-valor-mensal").value.replace(/\./g,'').replace(',','.')):null),
     fonte:_mn("nc-fonte"),
     fiscalizacao,
     contato:_mn("nc-contato"),
@@ -1949,6 +2375,15 @@ function diasContratoVencer(vencimento){
 function renderTabelaContratos(){
   const tbody=document.getElementById("ct-tbody");
   if(!tbody) return;
+  const table=document.getElementById("ct-table");
+  if(table){
+    table.style.display="table";
+    table.style.width="100%";
+    table.style.minWidth="0";
+    table.style.tableLayout="fixed";
+    const head=table.querySelector("thead");
+    if(head) head.style.display="none";
+  }
 
   // Atualizar ícones de ordenação
   ["numero_contrato","cpl","modelo_contrato","origem_contratacao","prestador","objeto","vigencia_atual","vencimento","dias","status","secao","fiscalizacao","valor_inicial","valor_reajustado","valor_total","aditivo_usado","atualizado_em"].forEach(col=>{
@@ -1973,6 +2408,13 @@ function renderTabelaContratos(){
   }
   if(selectAll) selectAll.checked=rows.length>0&&rows.every(r=>contratosSelecionados.has(String(r.id)));
 
+  tbody.innerHTML=`<tr style="display:block;width:100%"><td colspan="${CT_TABLE_COLSPAN}" style="display:block;width:100%;padding:0;background:transparent;border:0;box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box">
+      ${rows.map(_ctContratoCardHtml).join("")}
+    </div>
+  </td></tr>`;
+  return;
+
   tbody.innerHTML=rows.map(r=>{
     const cor=corVencimento(r.vencimento);
     const fisc=r.fiscalizacao||"—";
@@ -1987,7 +2429,7 @@ function renderTabelaContratos(){
     const valorReajustado=_ctValorReajustado(r);
     const valorAtual=_ctValorAtual(r);
     const aditivoUsado=_ctAditivoUsado(r);
-    const aditivoHtml=aditivoUsado==null?'<span style="color:var(--text3)" title="Aguardando eventos estruturados">—</span>':`<span style="color:${aditivoUsado>=80?'var(--red)':aditivoUsado>=60?'var(--amber)':'var(--text2)'};font-weight:${aditivoUsado>=80?'700':'500'}">${aditivoUsado}%</span>`;
+    const aditivoHtml=aditivoUsado==null?'<span style="color:var(--text3)" title="Aguardando eventos estruturados">—</span>':`<span style="color:${aditivoUsado>=20?'var(--red)':aditivoUsado>=15?'var(--amber)':'var(--text2)'};font-weight:${aditivoUsado>=20?'700':'500'}" title="Percentual de aditivo sobre o valor inicial reajustado">${aditivoUsado}%</span>`;
     const btnEncerrarCt=r.status!=="ENCERRADO"&&podeEditar('contratos')
       ?`<button onclick="abrirEncerrarCt('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap" title="Encerrar contrato">⛔ Encerrar</button>`
       :"";
@@ -2024,6 +2466,110 @@ function renderTabelaContratos(){
 }
 
 // Linhas expansíveis: clicar no ▶ mostra os itens do contrato inline (mesmo padrão de Licitações/cpToggle)
+function _ctContratoCardHtml(r){
+  const id=String(r.id).replace(/'/g,"\\'");
+  const expandido=!!ctExpandido[r.id];
+  const cor=corVencimento(r.vencimento);
+  const dias=diasContratoVencer(r.vencimento);
+  let diasHtml="Sem vencimento";
+  if(dias!==null){
+    if(dias<0) diasHtml='<span style="color:var(--red);font-weight:700">Vencido</span>';
+    else if(dias<=90) diasHtml=`<span style="color:var(--amber);font-weight:700">${dias}d</span>`;
+    else diasHtml=`<span style="color:var(--green);font-weight:700">${dias}d</span>`;
+  }
+  const valorInicial=_ctValorInicial(r);
+  const valorReajustado=_ctValorReajustado(r);
+  const valorAtual=_ctValorAtual(r);
+  const aditivoUsado=_ctAditivoUsado(r);
+  const aditivoHtml=aditivoUsado==null
+    ?'<span style="color:var(--text3)">-</span>'
+    :`<span style="color:${aditivoUsado>=20?'var(--red)':aditivoUsado>=15?'var(--amber)':'var(--text)'};font-weight:700">${aditivoUsado}%</span>`;
+  const temVinculacao=!!(r.email_empresa||r.prefixo_chamado);
+  const podeManter=podeEditar('contratos');
+  const btnEncerrarCt=r.status!=="ENCERRADO"&&podeManter
+    ?`<button onclick="event.stopPropagation();abrirEncerrarCt('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer;white-space:nowrap">Encerrar</button>`
+    :"";
+  const btnEmailCt=podeManter
+    ?`<button onclick="event.stopPropagation();abrirEmailContrato('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid ${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};background:${temVinculacao?'var(--blue-bg)':'var(--amber-bg)'};color:${temVinculacao?'var(--blue-text)':'var(--amber-text)'};cursor:pointer;white-space:nowrap">Vinculacoes</button>`
+    :"";
+  const btnEditar=_isAdmin()
+    ?`<button onclick="event.stopPropagation();abrirEditarContrato('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">Editar</button>`
+    :"";
+  const seletor=podeManter
+    ?`<label onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} onchange="selecionarContrato('${id}',this.checked)" style="accent-color:var(--blue)">Selecionar</label>`
+    :"";
+  const meta=[
+    ['Contrato',r.numero_contrato||'-'],
+    ['Prestador',r.prestador||'-'],
+    ['Modelo',_ctModeloLabel(r)||'-'],
+    ['Vigencia',r.vigencia_atual||'-'],
+    ['Fiscal',r.fiscalizacao||'-'],
+    ['Valor atual',valorAtual?_ctMoney(valorAtual):'-']
+  ].map(([label,value])=>`<div style="min-width:112px;flex:1 1 112px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;line-height:1.1">${label}</div><div style="font-size:12px;color:var(--text);font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis">${_sanEsc(String(value))}</div></div>`).join('');
+  return `<div onclick="if(event.target.closest('button,input,select,a,label'))return;ctToggleExpand('${id}')" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;background:${expandido?'var(--surface)':'var(--surface2)'};box-shadow:${expandido?'0 3px 10px rgba(15,23,42,.06)':'none'};cursor:pointer;overflow:hidden">
+    <div style="display:grid;grid-template-columns:22px minmax(260px,1.4fr) minmax(380px,2fr) minmax(220px,.9fr);gap:10px;align-items:center;padding:10px 14px 8px">
+      <div style="color:var(--text3);font-size:15px;text-align:center;user-select:none">${expandido?'▼':'▶'}</div>
+      <div style="min-width:0">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+          <span style="font-size:15px;font-weight:800;color:var(--text)">${_sanEsc(r.cpl||r.numero_contrato||'-')}</span>
+          <span style="font-size:12px;color:var(--text3)">Contrato ${_sanEsc(r.numero_contrato||'-')}</span>
+        </div>
+      </div>
+      <div style="min-width:0;font-size:14px;font-weight:700;color:var(--text);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_sanEsc(r.objeto||'Sem objeto informado')}</div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap">
+        ${badgeStatusContrato(r.status,dias!==null&&dias<0)}
+        <span style="font-size:12px;color:${cor};font-weight:700">${_sanEsc(r.vencimento||'-')}</span>
+        <span style="font-size:12px;color:var(--text2)">${diasHtml}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px 18px;align-items:flex-start;flex-wrap:wrap;padding:0 14px 9px 46px">${meta}</div>
+    ${expandido?`<div style="border-top:1px solid var(--border);padding:10px 14px 12px 46px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${seletor}<button onclick="event.stopPropagation();abrirContratoGerencial('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap">Gerenciar contrato</button>${btnEmailCt}${btnEncerrarCt}${btnEditar}</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text2)">
+          <span>Inicial: <b>${valorInicial?_ctMoney(valorInicial):'-'}</b></span>
+          <span>Reajustado: <b>${valorReajustado?_ctMoney(valorReajustado):'-'}</b></span>
+          <span>Aditivo: ${aditivoHtml}</span>
+          <span>${_ctPendenciasResumo(r)}</span>
+        </div>
+      </div>
+      ${_ctCardItensHtml(r.id)}
+    </div>`:''}
+  </div>`;
+}
+
+function _ctCardItensHtml(contratoId){
+  const itens=ctItensPorContrato[contratoId];
+  if(itens===undefined) return `<div style="font-size:12px;color:var(--text3);padding:8px 0"><span class="spinner"></span> Carregando itens...</div>`;
+  if(!itens.length) return `<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum item vinculado a este contrato nesta matriz.</div>`;
+  const contrato=contratosRows.find(r=>String(r.id)===String(contratoId));
+  const eventos=contrato?._contractEvents||[];
+  const mensal=itens.every(i=>i.origem==='servico_mensal');
+  const linhas=itens.map(i=>{
+    const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
+    const qtde=Number(i.qtde)||0;
+    const qtdeInicial=_ctQuantidadeInicialItem(i,eventos);
+    if(mensal){
+      const valorMensal=valorUnit*qtde;
+      return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorMensal?_ctMoney(valorMensal):'-'}</td></tr>`;
+    }
+    const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
+    const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+    const saldo=qtde-recebido;
+    const valorTotal=valorUnit*qtde;
+    return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${recebido}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'-'}</td></tr>`;
+  }).join('');
+  const header=mensal
+    ?'<th style="padding:7px 10px">Item</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor mensal</th>'
+    :'<th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Marca/Modelo</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">Recebido</th><th style="padding:7px 10px;text-align:right">Saldo</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor total</th>';
+  return `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:${mensal?'620px':'860px'}">
+      <thead><tr style="background:var(--blue-bg);color:var(--blue-text);text-align:left">${header}</tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </div>`;
+}
+
 function _ctLinhaItensHtml(contratoId){
   const itens=ctItensPorContrato[contratoId];
   if(itens===undefined){
@@ -2034,11 +2580,14 @@ function _ctLinhaItensHtml(contratoId){
   }
   // Serviço mensal fixo (ex.: manutenção de equipamentos) não tem recebimento/saldo/AF
   // por item — é quantidade coberta pelo contrato, cobrada mês a mês.
-  if(itens.every(i=>i.origem==='servico_mensal')) return _ctLinhaItensServicoMensalHtml(itens);
+  const contrato=contratosRows.find(r=>String(r.id)===String(contratoId));
+  const eventos=contrato?._contractEvents||[];
+  if(itens.every(i=>i.origem==='servico_mensal')) return _ctLinhaItensServicoMensalHtml(itens,eventos);
   const linhas=itens.map(i=>{
     const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
     const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
     const qtde=Number(i.qtde)||0;
+    const qtdeInicial=_ctQuantidadeInicialItem(i,eventos);
     const saldo=qtde-recebido;
     const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
     const valorTotal=valorUnit*qtde;
@@ -2046,7 +2595,8 @@ function _ctLinhaItensHtml(contratoId){
     return `<tr style="border-top:1px solid var(--border)">
       <td style="padding:6px 10px 6px 40px">${_sanEsc(i.descricao||'—')}</td>
       <td style="padding:6px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td>
-      <td style="padding:6px 10px;text-align:right">${qtde}</td>
+      <td style="padding:6px 10px;text-align:right">${qtdeInicial}</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:700">${qtde}</td>
       <td style="padding:6px 10px;text-align:right">${recebido}</td>
       <td style="padding:6px 10px;text-align:right;font-weight:600;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td>
       <td style="padding:6px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'—'}</td>
@@ -2058,7 +2608,7 @@ function _ctLinhaItensHtml(contratoId){
     <table style="width:100%;font-size:12px;border-collapse:collapse">
       <thead><tr style="color:var(--text2);text-align:left">
         <th style="padding:6px 10px 6px 40px">Item</th><th style="padding:6px 10px">Marca/Modelo</th>
-        <th style="padding:6px 10px;text-align:right">Qtde</th><th style="padding:6px 10px;text-align:right">Recebido</th>
+        <th style="padding:6px 10px;text-align:right">Qtde inicial</th><th style="padding:6px 10px;text-align:right">Qtde atual</th><th style="padding:6px 10px;text-align:right">Recebido</th>
         <th style="padding:6px 10px;text-align:right">Saldo</th><th style="padding:6px 10px;text-align:right">Valor unit.</th>
         <th style="padding:6px 10px;text-align:right">Valor total</th><th style="padding:6px 10px">AF</th>
       </tr></thead>
@@ -2067,14 +2617,16 @@ function _ctLinhaItensHtml(contratoId){
   </td></tr>`;
 }
 // Itens de serviço mensal fixo: sem marca/modelo, recebido, saldo ou AF — só qtde contratada e valor mensal.
-function _ctLinhaItensServicoMensalHtml(itens){
+function _ctLinhaItensServicoMensalHtml(itens,eventos=[]){
   const linhas=itens.map(i=>{
     const qtde=Number(i.qtde)||0;
+    const qtdeInicial=_ctQuantidadeInicialItem(i,eventos);
     const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
     const valorMensal=valorUnit*qtde;
     return `<tr style="border-top:1px solid var(--border)">
       <td style="padding:6px 10px 6px 40px">${_sanEsc(i.descricao||'—')}</td>
-      <td style="padding:6px 10px;text-align:right">${qtde}</td>
+      <td style="padding:6px 10px;text-align:right">${qtdeInicial}</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:700">${qtde}</td>
       <td style="padding:6px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'—'}</td>
       <td style="padding:6px 10px;text-align:right">${valorMensal?_ctMoney(valorMensal):'—'}</td>
     </tr>`;
@@ -2083,7 +2635,8 @@ function _ctLinhaItensServicoMensalHtml(itens){
     <table style="width:auto;min-width:0;font-size:12px;border-collapse:collapse">
       <thead><tr style="color:var(--text2);text-align:left">
         <th style="padding:6px 16px 6px 40px">Item</th>
-        <th style="padding:6px 16px;text-align:right">Qtde contratada</th>
+        <th style="padding:6px 16px;text-align:right">Qtde inicial</th>
+        <th style="padding:6px 16px;text-align:right">Qtde atual</th>
         <th style="padding:6px 16px;text-align:right">Valor unit.</th>
         <th style="padding:6px 16px;text-align:right">Valor mensal</th>
       </tr></thead>
@@ -2097,7 +2650,7 @@ async function ctToggleExpand(id){
     renderTabelaContratos();
     const {data,error}=await sb.from('itens')
       .select('id,descricao,qtde,marca,modelo,origem,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)')
-      .eq('contrato_id',id).in('origem',['aquisicao','servico_mensal']).order('created_at');
+      .eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_demanda']).order('created_at');
     ctItensPorContrato[id]=error?[]:(data||[]);
   }
   renderTabelaContratos();
@@ -2293,14 +2846,6 @@ async function abrirDetalheContratoLegado(id){
   el.classList.add("active");
   const editor=podeEditar('contratos');
   document.getElementById("mcd-acoes").style.display=editor?"block":"none";
-  const mcdValores=document.getElementById("mcd-valores");
-  if(mcdValores){
-    mcdValores.style.display=editor&&_ctAtual.tipo_instrumento!=="ATA"?"block":"none";
-    document.getElementById("mcd-novo-mensal").value="";
-    document.getElementById("mcd-novo-total").value="";
-    const msgV=document.getElementById("mcd-valores-msg");
-    if(msgV){msgV.className="fmsg";msgV.textContent="";}
-  }
 
   const [vigRes,histRes,fiscRes,itemRes]=await Promise.all([
     sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
@@ -2336,7 +2881,7 @@ async function abrirDetalheContratoLegado(id){
     html+=`</div>`;
   } else {
     // Fase 13: itens de aquisição/serviço mensal do contrato + destaque "sem AF" + troca de marca/modelo
-    const {data:itAq}=await sb.from('itens').select('id,descricao,qtde,marca,modelo,itens_entregas(id,af_numero,status)').eq('contrato_id',id).in('origem',['aquisicao','servico_mensal']).order('created_at');
+    const {data:itAq}=await sb.from('itens').select('id,descricao,qtde,marca,modelo,itens_entregas(id,af_numero,status)').eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_demanda']).order('created_at');
     const lista=itAq||[];
     html+=`<div style="margin-bottom:1.25rem"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.5rem"><div class="card-title" style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Itens do contrato</div>${editor&&lista.length?`<button class="btn-secondary" onclick="abrirTrocaMarcaModelo('${c.id}')" style="font-size:12px;padding:5px 10px">🔧 Trocar marca/modelo (aditivo)</button>`:""}</div>`;
     if(!lista.length){ html+=`<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado.</div>`; }
@@ -2409,7 +2954,6 @@ async function abrirDetalheContrato(id){
       <button class="btn-secondary" onclick="fecharContratoIndividual()">Voltar para Contratos em execução</button>
     </div>`;
     const acoes=document.getElementById("mcd-acoes");if(acoes)acoes.style.display="none";
-    const valores=document.getElementById("mcd-valores");if(valores)valores.style.display="none";
     return;
   }
 
@@ -2420,22 +2964,15 @@ async function abrirDetalheContrato(id){
   const editor=podeEditar('contratos');
   const acoes=document.getElementById("mcd-acoes");
   if(acoes) acoes.style.display="none";
-  const mcdValores=document.getElementById("mcd-valores");
-  if(mcdValores){
-    mcdValores.style.display=editor&&_ctAtual.tipo_instrumento!=="ATA"?"block":"none";
-    document.getElementById("mcd-novo-mensal").value="";
-    document.getElementById("mcd-novo-total").value="";
-    const msgV=document.getElementById("mcd-valores-msg");
-    if(msgV){msgV.className="fmsg";msgV.textContent="";}
-  }
 
-  const [vigRes,histRes,fiscRes,itemRes,medRes,nfRes,docRes]=await Promise.all([
+  const [vigRes,histRes,fiscRes,itemRes,medRes,nfRes,termoRes,docRes]=await Promise.all([
     sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
     sb.from("contratos_historico").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
     sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
-    sb.from("itens").select("id,descricao,qtde,origem,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)").eq("contrato_id",id).in("origem",["aquisicao","servico_mensal"]).order("created_at"),
+    sb.from("itens").select("id,descricao,qtde,origem,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)").eq("contrato_id",id).in("origem",["aquisicao","servico_mensal","servico_demanda"]).order("created_at"),
     sb.from("contratos_medicoes").select("*,contratos_medicao_itens(*),contratos_medicao_glosas(*)").eq("contrato_id",id).order("data_medicao",{ascending:false}),
     sb.from("notas_fiscais").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
+    sb.from("termos_ateste").select("*").eq("contrato_id",id).order("gerado_em",{ascending:false}),
     sb.from("contratos_documentos").select("*").eq("contrato_id",id).order("created_at",{ascending:false})
   ]);
 
@@ -2445,12 +2982,15 @@ async function abrirDetalheContrato(id){
   const itens=itemRes.data||[];
   const medicoes=medRes.error?[]:(medRes.data||[]);
   const notas=nfRes.error?[]:(nfRes.data||[]);
+  const termos=termoRes.error?[]:(termoRes.data||[]);
   const documentos=docRes.error?[]:(docRes.data||[]);
   _ctMedicoesAtual=medicoes;
   _ctNotasAtual=notas;
+  _ctTermosAtual=termos;
   _ctDocumentosAtual=documentos;
   _ctHistoricoAtual=hist;
   _ctItensAtual=itens;
+  _ctFiscaisAtual=fiscais;
   const eventosContrato=_ctHistoricoToEvents(hist);
   const medicoesNorm=medicoes.map(m=>({
     ...m,
@@ -2475,6 +3015,8 @@ async function abrirDetalheContrato(id){
       executedValue:medicoes.filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase())).reduce((s,m)=>s+_ctNum(m.valor_liquido),0),
       approvedInvoiceValue:notas.filter(n=>['aprovada','aprovada_com_glosa','encaminhada_para_pagamento'].includes(String(n.status||'').toLowerCase())).reduce((s,n)=>s+_ctNum(n.valor_aprovado??n.valor_total),0),
       contractBalance:_ctValorAtual(c)-medicoes.filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase())).reduce((s,m)=>s+_ctNum(m.valor_liquido),0),
+      additiveContractPercent:0,
+      additiveLimitUsagePercent:0,
       additiveLimitUsedPercent:0,
       availableAdditiveBalance:0
     };
@@ -2484,7 +3026,9 @@ async function abrirDetalheContrato(id){
   else if(dias!==null&&dias<=90) alertas.push(["Vence em até 90 dias","var(--amber-bg)","var(--amber-text)"]);
   if(!c.fiscalizacao) alertas.push(["Sem fiscal definido","var(--red-bg)","var(--red-text)"]);
   if(_ctModeloKey(c)==='nao_classificado') alertas.push(["Modelo não classificado","var(--surface2)","var(--text3)"]);
-  if(financial.additiveLimitUsedPercent>=80) alertas.push(["Limite de aditivo acima de 80%","var(--red-bg)","var(--red-text)"]);
+  const additiveContractPercent=financial.additiveContractPercent??(financial.additiveLimitUsedPercent?financial.additiveLimitUsedPercent/4:0);
+  const additiveLimitUsagePercent=financial.additiveLimitUsagePercent??financial.additiveLimitUsedPercent??0;
+  if(additiveLimitUsagePercent>=80) alertas.push(["Limite de aditivo acima de 80%","var(--red-bg)","var(--red-text)"]);
   const pendencias=[];
   const medPendentes=medicoes.filter(m=>['rascunho','registrada'].includes(String(m.status||'').toLowerCase())).length;
   const nfPendentes=notas.filter(n=>['pendente','em_conferencia'].includes(String(n.status||'').toLowerCase())).length;
@@ -2504,14 +3048,23 @@ async function abrirDetalheContrato(id){
         ${actionBtn('documentos','Registrar documento','abrirModalDocumentoContrato()')}
       </div>
     </div>`:'';
+  const medidoPorItem={};
+  medicoes.filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase())).forEach(m=>{
+    (m.contratos_medicao_itens||[]).forEach(mi=>{
+      const key=String(mi.item_id||'');
+      if(!key) return;
+      medidoPorItem[key]=(medidoPorItem[key]||0)+_ctNum(mi.quantidade_aceita??mi.quantidade_executada);
+    });
+  });
   const rowsItens=itens.map(i=>{
     const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
-    const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+    const recebido=i.origem==='servico_demanda'?(medidoPorItem[String(i.id)]||0):entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
     const qtde=Number(i.qtde)||0;
+    const qtdeInicial=_ctQuantidadeInicialItem(i,hist);
     const saldo=qtde-recebido;
     const unit=_ctNum(i.valor_contratado??i.valor_estimado);
     const inativo=['inativo','cancelado'].includes(String(i.status||'').toLowerCase());
-    return `<tr style="${inativo?'opacity:.62':''}"><td>${_sanEsc(i.descricao||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(i.status||'contratado')}</span></td><td>${_sanEsc(_ctItemTipoLabel(_ctItemTipo(i)))}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${qtde}</td><td style="text-align:right">${recebido}</td><td style="text-align:right">${saldo}</td><td style="text-align:right">${unit?_ctMoney(unit):'—'}</td><td style="text-align:right">${unit?_ctMoney(unit*qtde):'—'}</td><td>${editor?`<button class="btn-secondary" onclick="abrirModalItemContrato('${i.id}')" style="font-size:11px;padding:3px 8px">Editar</button>`:'—'}</td></tr>`;
+    return `<tr style="${inativo?'opacity:.62':''}"><td>${_sanEsc(i.descricao||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(i.status||'contratado')}</span></td><td>${_sanEsc(_ctItemTipoLabel(_ctItemTipo(i)))}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${qtdeInicial}</td><td style="text-align:right;font-weight:700">${qtde}</td><td style="text-align:right">${recebido}</td><td style="text-align:right">${saldo}</td><td style="text-align:right">${unit?_ctMoney(unit):'—'}</td><td style="text-align:right">${unit?_ctMoney(unit*qtde):'—'}</td><td>${editor?`<button class="btn-secondary" onclick="abrirModalItemContrato('${i.id}')" style="font-size:11px;padding:3px 8px">Editar</button>`:'—'}</td></tr>`;
   }).join('');
   const rowsVigs=(vigRes.data||[]).map(v=>`<tr><td>${fmtDate(v.data_inicio)}</td><td>${fmtDate(v.data_fim)}</td><td>${v.valor_total?fmtFull(v.valor_total):'—'}</td><td>${_sanEsc(v.obs||'')}</td></tr>`).join('');
   const rowsFiscais=fiscais.map(f=>`<tr><td>${_sanEsc(f.nome||'—')}</td><td>${_sanEsc(f.cargo||'')}</td><td>${fmtDate(f.data_inicio)}</td><td>${f.data_fim?fmtDate(f.data_fim):'Ativo'}</td></tr>`).join('');
@@ -2542,18 +3095,29 @@ async function abrirDetalheContrato(id){
     </tr>`;
   }).join('');
   const histPorTipo=(termos)=>hist.filter(h=>termos.some(t=>normalizar(h.tipo||'').includes(t)));
-  const rowsEvento=(termos)=>histPorTipo(termos).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Evento')}</td><td>${_ctStatusBadge(_ctEventStatus(h),{rascunho:'Rascunho',formalizado:'Formalizado',cancelado:'Cancelado'})}</td><td style="text-align:right">${h.percentual?String(h.percentual)+'%':'—'}</td><td style="text-align:right">${h.valor_impacto?_ctMoney(h.valor_impacto):(h.valor_novo?_ctMoney(h.valor_novo):'—')}</td><td>${_sanEsc(h.obs||'')}</td></tr>`).join('');
+  const eventoActions=(h)=>{
+    if(!editor||!h.id) return '';
+    const id=_sanEsc(String(h.id));
+    const aplicar=_ctEventStatus(h)==='rascunho'?`<button class="btn-primary" data-event-id="${id}" onclick="aplicarEventoContrato(this.dataset.eventId)" style="font-size:11px;padding:3px 8px">Aplicar</button> `:'';
+    return `<td style="white-space:nowrap;text-align:right">${aplicar}<button class="btn-secondary" data-event-id="${id}" onclick="editarEventoContrato(this.dataset.eventId)" style="font-size:11px;padding:3px 8px">Editar</button> <button class="btn-secondary" data-event-id="${id}" onclick="excluirEventoContrato(this.dataset.eventId)" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red-bg)">Excluir</button></td>`;
+  };
+  const rowsEvento=(termos,acoes=false)=>histPorTipo(termos).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Evento')}</td><td>${_ctStatusBadge(_ctEventStatus(h),{rascunho:'Rascunho',formalizado:'Formalizado',cancelado:'Cancelado'})}</td><td style="text-align:right">${h.percentual?String(h.percentual)+'%':'—'}</td><td style="text-align:right">${h.valor_impacto?_ctMoney(h.valor_impacto):(h.valor_novo?_ctMoney(h.valor_novo):'—')}</td><td>${_sanEsc(h.obs||'')}</td>${acoes?eventoActions(h):''}</tr>`).join('');
   const rowsReajustes=rowsEvento(['reajuste']);
-  const rowsAditivos=rowsEvento(['aditivo']);
-  const rowsSupressoes=rowsEvento(['supressao','supress']);
+  const rowsAditivos=rowsEvento(['aditivo'],true);
+  const rowsSupressoes=rowsEvento(['supressao','supress'],true);
   const rowsProrrogacoes=histPorTipo(['prorrogacao','renovacao']).map(h=>`<tr><td>${fmtDate(h.data_evento||(h.created_at||'').substring(0,10))}</td><td>${_sanEsc(h.tipo||'Prorrogação')}</td><td>${fmtDate(h.vigencia_nova_inicio)}</td><td>${fmtDate(h.vigencia_nova_fim)}</td><td>${_sanEsc(h.obs||'')}</td></tr>`).join('');
   const medicaoLabel=(m)=>`${_sanEsc(m.competencia||'sem competência')} · ${_sanEsc(CT_MEDICAO_STATUS_LABELS[m.status]||m.status||'status')}`;
   const rowsMedicoes=medicoes.map(m=>{
     const nfCount=notas.filter(n=>String(n.medicao_id)===String(m.id)).length;
+    const termo=termos.find(t=>String(t.medicao_id||'')===String(m.id));
+    const termoBtn=termo?`<button class="btn-secondary" data-medicao-id="${_sanEsc(String(m.id))}" onclick="baixarTermoAtesteMedicao(this.dataset.medicaoId)" style="font-size:11px;padding:3px 8px">Baixar termo</button>`:'—';
     const glosas=m.contratos_medicao_glosas||[];
+    const medItens=m.contratos_medicao_itens||[];
+    const itemResumo=medItens.length?medItens.map(mi=>`${mi.descricao||'Item'}${mi.quantidade_aceita||mi.quantidade_executada?` (${mi.quantidade_aceita??mi.quantidade_executada})`:''}`).join('; '):'—';
     return `<tr>
       <td>${_sanEsc(m.competencia||'—')}<br><span style="font-size:11px;color:var(--text3)">${fmtDate(m.data_medicao)}</span></td>
       <td>${_sanEsc(_ctHumanize(m.tipo_medicao||'competencia'))}</td>
+      <td class="td-wrap" style="max-width:220px">${_sanEsc(itemResumo)}</td>
       <td>${_sanEsc(m.fiscal_responsavel||'—')}</td>
       <td style="text-align:right">${_ctMoney(m.valor_bruto)}</td>
       <td style="text-align:right;color:${_ctNum(m.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(m.valor_glosa)}</td>
@@ -2561,6 +3125,7 @@ async function abrirDetalheContrato(id){
       <td>${_ctStatusBadge(m.status,CT_MEDICAO_STATUS_LABELS)}</td>
       <td>${nfCount?nfCount+' NF(s)':'—'}</td>
       <td class="td-wrap" style="max-width:220px">${_sanEsc(m.observacoes||glosas.map(g=>g.motivo).filter(Boolean).join('; ')||'—')}</td>
+      <td>${termoBtn}</td>
     </tr>`;
   }).join('');
   const rowsNotas=notas.map(n=>{
@@ -2629,7 +3194,7 @@ async function abrirDetalheContrato(id){
       ${metric('Executado/medido',_ctMoney(financial.executedValue),'medições válidas')}
       ${metric('NF aprovada',_ctMoney(financial.approvedInvoiceValue),'não é pagamento')}
       ${metric('Saldo a executar',_ctMoney(financial.contractBalance))}
-      ${metric('% aditivo',financial.additiveLimitUsedPercent?financial.additiveLimitUsedPercent+'%':'—','limite 25%')}
+      ${metric('% aditivo',additiveContractPercent?additiveContractPercent+'%':'—',additiveLimitUsagePercent?`${additiveLimitUsagePercent}% do limite de 25%`:'limite 25%')}
       ${metric('Saldo disponível para aditivo',financial.availableAdditiveBalance?_ctMoney(financial.availableAdditiveBalance):'—')}
       ${metric('Dias p/ vencer',dias===null?'—':(dias<0?'Vencido':dias+'d'),'',dias!==null&&dias<=90?'var(--amber)':'var(--text)')}
     </div>
@@ -2657,7 +3222,7 @@ async function abrirDetalheContrato(id){
         <div style="font-size:13px;color:var(--text2)">Itens do contrato usados como base para saldos, medições, aditivos e supressões.</div>
         ${editor?'<button class="btn-secondary" onclick="abrirModalItemContrato()">Novo item</button>':''}
       </div>
-      ${rowsItens?`<div class="table-wrap" style="height:auto;max-height:380px"><table style="font-size:12px"><thead><tr><th>Item</th><th>Tipo</th><th>Marca/Modelo</th><th style="text-align:right">Qtde</th><th style="text-align:right">Executado</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Ações</th></tr></thead><tbody>${rowsItens}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado a este contrato.</div>'}
+      ${rowsItens?`<div class="table-wrap" style="height:auto;max-height:380px"><table style="font-size:12px"><thead><tr><th>Item</th><th>Tipo</th><th>Marca/Modelo</th><th style="text-align:right">Qtde inicial</th><th style="text-align:right">Qtde atual</th><th style="text-align:right">Executado</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Ações</th></tr></thead><tbody>${rowsItens}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado a este contrato.</div>'}
     </div>
 
     <div class="ct-detail-pane" data-tab="reajustes" style="display:none">
@@ -2673,7 +3238,7 @@ async function abrirDetalheContrato(id){
         <div style="font-size:13px;color:var(--text2)">Aditivos formalizados por item, que podem alterar escopo ou valor atual após aprovação.</div>
         ${editor?'<button class="btn-secondary" onclick="abrirModalItensEventos()">Ajustes por item</button>':''}
       </div>
-      ${rowsAditivos?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th></tr></thead><tbody>${rowsAditivos}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum aditivo registrado para este contrato.</div>'}
+      ${rowsAditivos?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th>${editor?'<th style="text-align:right">Ações</th>':''}</tr></thead><tbody>${rowsAditivos}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum aditivo registrado para este contrato.</div>'}
     </div>
 
     <div class="ct-detail-pane" data-tab="supressoes" style="display:none">
@@ -2681,7 +3246,7 @@ async function abrirDetalheContrato(id){
         <div style="font-size:13px;color:var(--text2)">Supressões formalizadas por item, separadas de reajustes e aditivos para manter rastreabilidade.</div>
         ${editor?'<button class="btn-secondary" onclick="abrirModalItensEventos()">Ajustes por item</button>':''}
       </div>
-      ${rowsSupressoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th></tr></thead><tbody>${rowsSupressoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma supressão registrada para este contrato.</div>'}
+      ${rowsSupressoes?`<div class="table-wrap" style="height:auto;max-height:300px"><table style="font-size:12px"><thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th style="text-align:right">Percentual</th><th style="text-align:right">Valor</th><th>Obs.</th>${editor?'<th style="text-align:right">Ações</th>':''}</tr></thead><tbody>${rowsSupressoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma supressão registrada para este contrato.</div>'}
     </div>
 
     <div class="ct-detail-pane" data-tab="prorrogacoes" style="display:none">
@@ -2697,7 +3262,7 @@ async function abrirDetalheContrato(id){
         ${editor?'<button class="btn-secondary" onclick="abrirModalMedicaoContrato()">Nova medição</button>':''}
       </div>
       ${medError}
-      ${rowsMedicoes?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
+      ${rowsMedicoes?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Item</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th><th>Termo</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
     </div>
     <div class="ct-detail-pane" data-tab="notas" style="display:none">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
@@ -2764,7 +3329,7 @@ async function salvarItemContrato(){
     contrato_id:_ctAtual.id,
     processo_id:_ctAtual.processo_id||null,
     fornecedor_id:_ctAtual.fornecedor_id||null,
-    origem:'aquisicao',
+    origem:_ctEhServicoDemandaContrato(_ctAtual)?'servico_demanda':'aquisicao',
     fonte_tipo:'contrato',
     fonte_descricao:_ctAtual.numero_contrato||_ctAtual.cpl||String(_ctAtual.id),
     descricao,
@@ -2848,7 +3413,6 @@ function abrirModalItensEventos(){
   if(bloquearSeVisualiz()) return;
   const info=_ctAtual?`${_ctAtual.cpl||""} — ${_ctAtual.prestador||""}`:"";
   const infoEl=document.getElementById('cie-info'); if(infoEl) infoEl.textContent=info;
-  const st=document.getElementById('cie-status'); if(st) st.value='rascunho';
   const dt=document.getElementById('cie-data'); if(dt&&!dt.value) dt.value=_ctTodayISO();
   const mesesWrap=document.getElementById('cie-meses-wrap');
   const usaMeses=ctEventoUsaMesesRestantes();
@@ -2895,7 +3459,6 @@ function _cieRecalcularMeses(){
 // Aditivo/supressão são valorados pelo unitário JÁ reajustado (se houver % na mesma sessão),
 // porque a quantidade nova será paga ao preço novo. Em contratos não mensais, meses = 1.
 function _cieImpactosItem(item,row){
-  // Reajuste aumenta a base e o valor final, mas nao infla o valor unitario do aditivo/supressao digitado na mesma sessao.
   const usaMeses=ctEventoUsaMesesRestantes();
   const meses=usaMeses?(_ctNum(document.getElementById('cie-meses')?.value)||1):1;
   const qtdeAtual=Number(item.qtde)||0;
@@ -2906,10 +3469,10 @@ function _cieImpactosItem(item,row){
   const novoValorUnitario=unitVigente*(1+rePct/100);
   const novaQtde=Math.max(qtdeAtual+adQtde-suQtde,0);
   const valorMensalAntes=qtdeAtual*unitVigente;
-  const impactoAditivo=(adQtde>0&&unitVigente>0)?adQtde*unitVigente*meses:0;
-  const impactoSupressao=(suQtde>0&&unitVigente>0)?suQtde*unitVigente*meses:0;
+  const impactoAditivo=(adQtde>0&&novoValorUnitario>0)?adQtde*novoValorUnitario*meses:0;
+  const impactoSupressao=(suQtde>0&&novoValorUnitario>0)?suQtde*novoValorUnitario*meses:0;
   const impactoReajuste=rePct?(novoValorUnitario-unitVigente)*qtdeAtual*meses:0;
-  const valorMensalDepois=valorMensalAntes+((impactoAditivo+impactoReajuste-impactoSupressao)/meses);
+  const valorMensalDepois=novaQtde*novoValorUnitario;
   const impactoTotal=impactoAditivo+impactoReajuste-impactoSupressao;
   return {impactoAditivo,impactoReajuste,impactoSupressao,impactoTotal,novoValorUnitario,novaQtde,
           valorMensalAntes,valorMensalDepois,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses};
@@ -2961,11 +3524,9 @@ function _cieAtualizarTotais(){
     const reImp=row.querySelector('.cie-re-imp'); if(reImp) reImp.textContent=impactoReajuste?_ctMoney(impactoReajuste):'—';
     const reNovo=row.querySelector('.cie-re-novo-unit'); if(reNovo) reNovo.textContent=rePct?_ctMoney(novoValorUnitario):'—';
     const suImp=row.querySelector('.cie-su-imp'); if(suImp) suImp.textContent=impactoSupressao?_ctMoney(impactoSupressao):'—';
-    // Valor unit. exibido nas colunas de aditivo/supressão acompanha o reajuste digitado na mesma linha
+    // Valor unit. exibido nas colunas de aditivo/supressão acompanha o reajuste digitado na mesma linha.
     const adValor=row.querySelector('.cie-ad-valor'); if(adValor) adValor.value=novoValorUnitario?_ctMoney(novoValorUnitario):'—';
     const suValor=row.querySelector('.cie-su-valor'); if(suValor) suValor.value=novoValorUnitario?_ctMoney(novoValorUnitario):'—';
-    if(adValor) adValor.value=unitVigente?_ctMoney(unitVigente):'—';
-    if(suValor) suValor.value=unitVigente?_ctMoney(unitVigente):'—';
   });
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=_ctMoney(v);};
   set('cie-tot-aditivo',totAd); set('cie-tot-reajuste',totRe); set('cie-tot-supressao',totSu);
@@ -2985,8 +3546,9 @@ function _cieAtualizarTotais(){
     set('cie-impacto-total',(totMensalDepois-totMensalAntes)*meses);
   }
   // Limites de 25%: aditivo e supressão são INDEPENDENTES (um não compensa o outro) e ambos
-  // calculados sobre o valor INICIAL reajustado (se houver reajuste/repactuação) — nunca sobre
-  // o valor atual, senão cada evento formalizado infla a base do próximo cálculo.
+  // calculados sobre o valor INICIAL reajustado (se houver reajuste/repactuação). Como o
+  // reajuste também altera o valor unitário dos itens, o impacto quantitativo acima usa
+  // esse mesmo unitário reajustado; assim a margem e o consumo sobem pela mesma base.
   const baseOriginal=_ctValorReajustado(_ctAtual||{});
   const {baseReajustada}= _cieBaseReajustadaSessao(baseOriginal,totMensalAntes);
   const base=baseReajustada;
@@ -3023,7 +3585,7 @@ async function salvarItensEventosContrato(){
   const id=_ctAtual.id;
   const data=document.getElementById('cie-data')?.value;
   if(!data){setMsg("Data e obrigatoria",false);return;}
-  const status=document.getElementById('cie-status')?.value||'rascunho';
+  const status='formalizado';
   const obs=document.getElementById('cie-obs')?.value.trim()||'';
   const rows=[...document.querySelectorAll('#cie-tbody tr[data-item]')];
   const {adUltrapassou,suUltrapassou,baseReajustada}=_cieAtualizarTotais();
@@ -3071,7 +3633,7 @@ async function salvarItensEventosContrato(){
       const novoTotal=Math.max(_ctValorAtual(_ctAtual)+totalImpacto,0);
       await sb.from("contratos").update({valor_atual:novoTotal}).eq("id",id);
     }
-    setMsg(status==="formalizado"?`${eventosGerados} evento(s) formalizado(s).`:`${eventosGerados} evento(s) salvo(s) como ${status}.`,true);
+    setMsg(`${eventosGerados} evento(s) formalizado(s).`,true);
     await loadContratos();
     _ctAtual=contratosRows.find(r=>String(r.id)===String(id))||_ctAtual;
     setTimeout(async()=>{document.getElementById('modal-ct-itens-eventos').classList.remove('active');await abrirDetalheContrato(id);},1200);
@@ -3102,16 +3664,118 @@ function ctAtualizarValorAprovadoNF(){
   if(status&&glosa>0&&status.value==='aprovada') status.value='aprovada_com_glosa';
 }
 
+function _ctEhServicoDemandaContrato(c=_ctAtual){
+  if(!c) return false;
+  const forma=String(_ctFormaKey(c)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const modelo=String(_ctModeloKey(c)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(['por_demanda','demanda','por_medicao','estimativo'].includes(forma)) return true;
+  if(modelo.includes('demanda')) return true;
+  return (_ctItensAtual||[]).some(i=>i.origem==='servico_demanda');
+}
+
+function _ctSaldoItemMedicao(item){
+  const qtde=_ctNum(item?.qtde);
+  const medido=(_ctMedicoesAtual||[])
+    .filter(m=>!['rascunho','recusada','cancelada'].includes(String(m.status||'').toLowerCase()))
+    .flatMap(m=>m.contratos_medicao_itens||[])
+    .filter(mi=>String(mi.item_id||'')===String(item?.id||''))
+    .reduce((s,mi)=>s+_ctNum(mi.quantidade_aceita??mi.quantidade_executada),0);
+  return Math.max(qtde-medido,0);
+}
+
+function _ctItensMedicaoAtivos(){
+  return (_ctItensAtual||[]).filter(i=>!['inativo','cancelado'].includes(String(i.status||'').toLowerCase()));
+}
+
+function _ctOptionsItensMedicao(selected=''){
+  return '<option value="">Selecione o item...</option>'+_ctItensMedicaoAtivos().map(i=>`<option value="${_sanEsc(String(i.id))}"${String(selected)===String(i.id)?' selected':''}>${_sanEsc(i.descricao||'Item')} - saldo ${_ctSaldoItemMedicao(i)}</option>`).join('');
+}
+
+function ctAdicionarItemMedicao(itemId=''){
+  const lista=document.getElementById('ctmed-itens-lista');
+  if(!lista) return;
+  const row=document.createElement('div');
+  row.className='ctmed-item-row';
+  row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;background:var(--surface2);width:100%;max-width:100%;box-sizing:border-box;overflow:hidden';
+  row.innerHTML=`<div><div class="form-label">Item *</div><select class="ctmi-item" onchange="ctAtualizarItemMedicao(this)">${_ctOptionsItensMedicao(itemId)}</select></div>
+    <div><div class="form-label">Descrição</div><input type="text" class="ctmi-desc" readonly style="background:var(--surface2);color:var(--text2)"></div>
+    <div><div class="form-label">Quantidade *</div><input type="number" class="ctmi-qtd" step="any" min="0" oninput="ctAtualizarItemMedicao(this)"></div>
+    <div><div class="form-label">Valor bruto</div><input type="text" class="ctmi-total" readonly style="background:var(--surface2);color:var(--text2)"></div>
+    <button type="button" class="btn-secondary" onclick="ctRemoverItemMedicao(this)" title="Remover item" style="padding:7px 0;color:var(--red)">×</button>`;
+  row.querySelectorAll(':scope > div').forEach(el=>{el.style.minWidth='0';});
+  row.querySelectorAll('select,input').forEach(el=>{el.style.width='100%';el.style.boxSizing='border-box';});
+  const remover=row.querySelector('button');
+  if(remover) remover.style.width='100%';
+  lista.appendChild(row);
+  ctAtualizarItemMedicao(row.querySelector('.ctmi-item'));
+}
+
+function ctRemoverItemMedicao(btn){
+  btn.closest('.ctmed-item-row')?.remove();
+  ctAtualizarTotaisItensMedicao();
+}
+
+function ctAtualizarItemMedicao(el){
+  const row=el?.closest?.('.ctmed-item-row')||el;
+  if(!row) return;
+  const itemId=row.querySelector('.ctmi-item')?.value||'';
+  const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(itemId));
+  const desc=row.querySelector('.ctmi-desc');
+  if(desc) desc.value=item?.descricao||'';
+  const qtdEl=row.querySelector('.ctmi-qtd');
+  if(qtdEl&&item){
+    const saldo=_ctSaldoItemMedicao(item);
+    qtdEl.max=String(saldo);
+    qtdEl.title=`Saldo disponivel para medir: ${saldo}`;
+  }else if(qtdEl){
+    qtdEl.removeAttribute('max');
+    qtdEl.removeAttribute('title');
+  }
+  const qtde=_ctNum(qtdEl?.value);
+  const unit=_ctNum(item?.valor_contratado??item?.valor_estimado);
+  const total=qtde>0&&unit>0?qtde*unit:0;
+  const totalEl=row.querySelector('.ctmi-total');
+  if(totalEl) totalEl.value=total?_ctMoney(total):'';
+  row.dataset.valorTotal=String(total||0);
+  row.dataset.valorUnitario=String(unit||0);
+  ctAtualizarTotaisItensMedicao();
+}
+
+function ctAtualizarTotaisItensMedicao(){
+  let bruto=0;
+  document.querySelectorAll('#ctmed-itens-lista .ctmed-item-row').forEach(row=>{ bruto+=_ctNum(row.dataset.valorTotal); });
+  const brutoEl=document.getElementById('ctmed-valor-bruto');
+  if(brutoEl) brutoEl.value=bruto?bruto.toFixed(2):'';
+  ctAtualizarLiquidoMedicao();
+}
+
 function abrirModalMedicaoContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
+  const demanda=_ctEhServicoDemandaContrato(_ctAtual);
   document.getElementById('ctmed-info').textContent=`${_ctAtual.numero_contrato||_ctAtual.cpl||_ctAtual.id} — ${_ctAtual.prestador||''}`;
   document.getElementById('ctmed-competencia').value=_ctMonthISO();
   document.getElementById('ctmed-data').value=_ctTodayISO();
-  document.getElementById('ctmed-tipo').value=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===_ctModeloKey(_ctAtual))?.measurementMode||'competencia';
+  document.getElementById('ctmed-tipo').value=demanda?'demanda':((_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===_ctModeloKey(_ctAtual))?.measurementMode||'competencia');
   document.getElementById('ctmed-status').value='registrada';
-  document.getElementById('ctmed-fiscal').value=_ctAtual.fiscalizacao||currentProfile?.nome||currentProfile?.email||'';
-  document.getElementById('ctmed-valor-bruto').value='';
+  const fiscalSel=document.getElementById('ctmed-fiscal');
+  if(fiscalSel){
+    const nomes=[...new Set((_ctFiscaisAtual||[]).filter(f=>!f.data_fim).map(f=>f.nome).concat((_ctAtual.fiscalizacao||'').split(',')).map(s=>String(s||'').trim()).filter(Boolean))];
+    fiscalSel.innerHTML='<option value="">Selecione...</option>'+nomes.map(nome=>`<option value="${_sanEsc(nome)}">${_sanEsc(nome)}</option>`).join('');
+    fiscalSel.value=nomes[0]||'';
+  }
+  const itensWrap=document.getElementById('ctmed-itens-wrap');
+  if(itensWrap) itensWrap.style.display=demanda?'block':'none';
+  const listaItens=document.getElementById('ctmed-itens-lista');
+  if(listaItens) listaItens.innerHTML='';
+  if(demanda) ctAdicionarItemMedicao();
+  const brutoEl=document.getElementById('ctmed-valor-bruto');
+  if(brutoEl){
+    brutoEl.value='';
+    brutoEl.readOnly=demanda;
+    brutoEl.style.background=demanda?'var(--surface2)':'';
+    brutoEl.style.color=demanda?'var(--text2)':'';
+  }
   document.getElementById('ctmed-valor-glosa').value='0';
   document.getElementById('ctmed-glosa-motivo').value='';
   document.getElementById('ctmed-obs').value='';
@@ -3148,11 +3812,35 @@ async function salvarMedicaoContrato(){
   const tipo=document.getElementById('ctmed-tipo').value||'competencia';
   const status=document.getElementById('ctmed-status').value||'registrada';
   const fiscal=(document.getElementById('ctmed-fiscal').value||'').trim();
+  const itensMedidos=[...document.querySelectorAll('#ctmed-itens-lista .ctmed-item-row')].map(row=>{
+    const itemId=row.querySelector('.ctmi-item')?.value||'';
+    const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(itemId));
+    const quantidade=_ctNum(row.querySelector('.ctmi-qtd')?.value);
+    const unit=_ctNum(row.dataset.valorUnitario||item?.valor_contratado||item?.valor_estimado);
+    const total=_ctNum(row.dataset.valorTotal)||(quantidade*unit);
+    const saldo=item?_ctSaldoItemMedicao(item):0;
+    return {itemId,item,descricao:item?.descricao||'',quantidade,unit,total,saldo};
+  }).filter(x=>x.itemId||x.quantidade||x.total);
   const valorBruto=_ctNum(document.getElementById('ctmed-valor-bruto').value);
   const valorGlosa=_ctNum(document.getElementById('ctmed-valor-glosa').value);
   const valorLiquido=Math.max(valorBruto-valorGlosa,0);
   const motivoGlosa=(document.getElementById('ctmed-glosa-motivo').value||'').trim();
   const obs=(document.getElementById('ctmed-obs').value||'').trim();
+  const demanda=_ctEhServicoDemandaContrato(_ctAtual);
+  if(demanda&&!itensMedidos.length){if(msg){msg.textContent='Adicione ao menos um item medido.';msg.className='fmsg err';}return;}
+  if(demanda&&itensMedidos.some(x=>!x.itemId)){if(msg){msg.textContent='Selecione todos os itens medidos.';msg.className='fmsg err';}return;}
+  if(demanda&&itensMedidos.some(x=>x.quantidade<=0)){if(msg){msg.textContent='Informe a quantidade medida de todos os itens.';msg.className='fmsg err';}return;}
+  const itemSemSaldo=demanda?itensMedidos.find(x=>x.quantidade>x.saldo):null;
+  if(itemSemSaldo){
+    if(msg){
+      msg.textContent=`A quantidade medida de "${itemSemSaldo.descricao||itemSemSaldo.itemId}" (${itemSemSaldo.quantidade}) nao pode ser maior que o saldo disponivel (${itemSemSaldo.saldo}).`;
+      msg.className='fmsg err';
+    }
+    return;
+  }
+  const itensDuplicados=itensMedidos.map(x=>String(x.itemId)).filter((id,idx,arr)=>id&&arr.indexOf(id)!==idx);
+  if(demanda&&itensDuplicados.length){if(msg){msg.textContent='Cada item deve aparecer apenas uma vez na mesma medicao.';msg.className='fmsg err';}return;}
+  if(!fiscal){if(msg){msg.textContent='Selecione o fiscal responsavel.';msg.className='fmsg err';}return;}
   if(!competencia){if(msg){msg.textContent='Informe a competência.';msg.className='fmsg err';}return;}
   if(!valorBruto&&status!=='rascunho'){if(msg){msg.textContent='Informe o valor bruto da medição.';msg.className='fmsg err';}return;}
   if(valorGlosa>valorBruto){if(msg){msg.textContent='A glosa não pode ser maior que o valor bruto.';msg.className='fmsg err';}return;}
@@ -3176,6 +3864,23 @@ async function salvarMedicaoContrato(){
   const btn=document.querySelector('#modal-ct-medicao .btn-primary'); if(btn)btn.disabled=true;
   const {data:med,error}=await sb.from('contratos_medicoes').insert(payload).select('*').single();
   if(error){if(btn)btn.disabled=false;if(msg){msg.textContent='Erro: '+error.message;msg.className='fmsg err';}return;}
+  if(itensMedidos.length){
+    const linhas=itensMedidos.map(x=>({
+      medicao_id:med.id,
+      contrato_id:_ctAtual.id,
+      item_id:x.itemId,
+      descricao:x.descricao||x.item?.descricao||null,
+      unidade:x.item?.unidade||null,
+      quantidade_executada:x.quantidade||null,
+      quantidade_aceita:['recusada','cancelada'].includes(String(status||'').toLowerCase())?0:(x.quantidade||null),
+      quantidade_recusada:String(status||'').toLowerCase()==='recusada'?(x.quantidade||0):0,
+      valor_unitario:x.unit||null,
+      valor_total:x.total||0,
+      observacoes:obs||null
+    }));
+    const {error:itemErr}=await sb.from('contratos_medicao_itens').insert(linhas);
+    if(itemErr){if(btn)btn.disabled=false;if(msg){msg.textContent='Medicao salva, mas erro ao vincular item: '+itemErr.message;msg.className='fmsg err';}return;}
+  }
   if(valorGlosa>0){
     const {error:gErr}=await sb.from('contratos_medicao_glosas').insert({
       medicao_id:med.id,
@@ -3592,37 +4297,6 @@ async function salvarOperacaoContratoLegacy(op){
   } catch(e){
     setMsg("✗ Erro: "+(e.message||e),"err");
   }
-}
-
-async function salvarValoresContrato(){
-  if(bloquearSeVisualiz()) return;
-  if(!_ctAtual) return;
-  const novoMensal=document.getElementById("mcd-novo-mensal").value.trim();
-  const novoTotal=document.getElementById("mcd-novo-total").value.trim();
-  const msgEl=document.getElementById("mcd-valores-msg");
-  const setMsg=(txt,ok)=>{msgEl.className="fmsg "+(ok?"ok":"err");msgEl.textContent=txt;};
-  if(!novoMensal&&!novoTotal){setMsg("Informe ao menos um valor.","err");return;}
-  const upd={};
-  const partes=[];
-  if(novoMensal){
-    const antigo=_ctAtual.valor_mensal!=null?_ctAtual.valor_mensal:"—";
-    partes.push(`Mensal: ${antigo} → ${novoMensal}`);
-    upd.valor_mensal=parseFloat(novoMensal);
-  }
-  if(novoTotal){
-    const antigo=(_ctAtual.valor_atual??_ctAtual.valor_inicial)!=null?(_ctAtual.valor_atual??_ctAtual.valor_inicial):"—";
-    partes.push(`Total: ${antigo} → ${novoTotal}`);
-    upd.valor_atual=parseFloat(novoTotal);
-  }
-  const {error}=await sb.from("contratos").update(upd).eq("id",_ctAtual.id);
-  if(error){setMsg("Erro: "+error.message,"err");return;}
-  const hoje=new Date().toISOString().substring(0,10);
-  await sb.from("contratos_historico").insert({contrato_id:_ctAtual.id,tipo:"ATUALIZAÇÃO DE VALOR",data_evento:hoje,obs:partes.join("; ")});
-  setMsg("✓ Valores atualizados!","ok");
-  await loadContratos();
-  _ctAtual=contratosRows.find(r=>String(r.id)===String(_ctAtual.id))||_ctAtual;
-  document.getElementById("mcd-novo-mensal").value="";
-  document.getElementById("mcd-novo-total").value="";
 }
 
 setHeaderH();

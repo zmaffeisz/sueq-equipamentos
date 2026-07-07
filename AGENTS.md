@@ -75,6 +75,13 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
   (`userCanView/userCanEdit`). `usuarios`/`cadastros` são admin-only.
 - **Chamados:** "Chamados Antigos" (Google Sheets) é **somente leitura**; chamado órfão sem
   controle = "não aberto" (não criar controle automático).
+- **Contratos mensais fixos/manutencao sao um fluxo separado:** as regras ja criadas para
+  contratos de manutencao de equipamentos com pagamento mensal fixo (fiscalizacao, medicao
+  gerada pela fiscalizacao, termo de ateste, NF vinculada, aditivo, supressao e reajuste
+  por item) **nao devem ser reaproveitadas automaticamente** para outros modelos. Ao
+  trabalhar em **Servico por demanda/execucao** ou qualquer outro tipo de contrato, nao
+  puxar a logica do mensal fixo sem pedido explicito do usuario; primeiro confirmar a
+  forma de execucao/pagamento e desenhar um fluxo proprio.
 
 ## Como rodar
 

@@ -218,6 +218,8 @@ export function calculateContractFinancialSummary(contract = {}, items = [], eve
   const currentValue = calculateCurrentContractValue(contract, items, events);
   const additiveLimit = calculateAdditiveLimit(contract, items, events);
   const availableAdditiveBalance = calculateAvailableAdditiveBalance(contract, items, events);
+  const additiveContractPercent = initialAdjustedValue > 0 ? roundMoney((formalizedAdditions / initialAdjustedValue) * 100) : 0;
+  const additiveLimitUsagePercent = additiveLimit > 0 ? roundMoney((formalizedAdditions / additiveLimit) * 100) : 0;
   const executedValue = calculateExecutedValue(contract, measurements);
   const approvedInvoiceValue = calculateApprovedInvoiceValue(invoices);
 
@@ -232,7 +234,9 @@ export function calculateContractFinancialSummary(contract = {}, items = [], eve
     executedValue,
     approvedInvoiceValue,
     contractBalance: roundMoney(currentValue - executedValue),
-    additiveLimitUsedPercent: additiveLimit > 0 ? roundMoney((formalizedAdditions / additiveLimit) * 100) : 0
+    additiveContractPercent,
+    additiveLimitUsagePercent,
+    additiveLimitUsedPercent: additiveLimitUsagePercent
   };
 }
 

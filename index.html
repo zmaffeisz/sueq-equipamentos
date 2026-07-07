@@ -25,7 +25,7 @@
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
     <button class="refresh-btn" id="tema-btn" onclick="alternarTema()" aria-label="Alternar tema" style="font-size:16px;padding:6px 11px">🌙</button>
     <span id="last-update" style="display:none"></span>
-    <a href="https://zmaffeisz.github.io/dashboard-emendas/chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn" style="text-decoration:none">Abertura de Chamados</a>
+    <a href="chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn" style="text-decoration:none">Abertura de Chamados</a>
     <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">🔑 Entrar</button>
     <span class="pill pill-loading" id="conn-pill" style="display:none">⏳ Conectando</span>
   </div>
@@ -750,7 +750,7 @@
     <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
       <button onclick="selecionarTodasFisc(true)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☑ Marcar todas</button>
       <button onclick="selecionarTodasFisc(false)" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer">☐ Desmarcar</button>
-      <button onclick="gerarTermoAteste()" style="font-size:12px;padding:6px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📄 Gerar Termo de Ateste</button>
+      <button onclick="gerarMedicaoFiscalizacao()" style="font-size:12px;padding:6px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">📊 Gerar Medição</button>
       <span id="fisc-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -873,11 +873,11 @@
   </div>
 </div>
 
-<!-- Modal NF + Competência antes de gerar o termo -->
+<!-- Modal NF + Competência antes de gerar medição pela fiscalização -->
 <div class="modal-overlay" id="modal-termo-ateste">
   <div class="modal-box" style="width:420px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-      <span style="font-size:15px;font-weight:700">📄 Gerar Termo de Ateste</span>
+      <span style="font-size:15px;font-weight:700">📊 Gerar Medição</span>
       <button onclick="document.getElementById('modal-termo-ateste').classList.remove('active')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:1rem" id="mta-info"></div>
@@ -887,12 +887,20 @@
         <input type="text" id="mta-competencia" placeholder="ex: 06/2026">
       </div>
       <div class="form-group">
-        <div class="form-label">Nota Fiscal de referência *</div>
+        <div class="form-label">Número da NF *</div>
         <input type="text" id="mta-nf" placeholder="ex: NF 12345">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Data da NF</div>
+        <input type="date" id="mta-nf-data">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Valor da medição/NF (R$) *</div>
+        <input type="number" id="mta-valor" step="0.01" min="0" placeholder="0,00">
       </div>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" onclick="confirmarGerarTermo()">Gerar PDF</button>
+      <button class="btn-primary" onclick="confirmarGerarMedicaoFiscalizacao()">Gerar medição</button>
       <button class="btn-secondary" onclick="document.getElementById('modal-termo-ateste').classList.remove('active')">Cancelar</button>
       <span id="mta-msg" class="fmsg"></span>
     </div>
@@ -1512,6 +1520,7 @@
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
       <div class="form-group" id="proc-tipo-servico-wrap" style="display:none"><div class="form-label">Tipo do serviço *</div><select id="proc-tipo-servico" onchange="procTipoServicoChange()"><option value="">Selecione...</option><option>Serviço mensal valor fixo</option><option>Serviço por demanda/execução</option><option>Serviço por escopo fechado</option><option>Locação de bem móvel</option><option>Mão de obra com dedicação exclusiva</option><option>Credenciamento</option></select></div>
       <div class="form-group"><div class="form-label">Seção *</div><select id="proc-secao"><option value="">Selecione...</option></select></div>
+      <div class="form-group" id="proc-serv-demanda-meses-wrap" style="display:none"><div class="form-label">Vigência em meses *</div><input type="number" id="proc-serv-demanda-meses" min="1" step="1" placeholder="ex: 12"></div>
       <div class="form-group full" id="proc-servico-mensal-wrap" style="display:none;min-width:0;max-width:100%;box-sizing:border-box">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
           <div class="form-label" style="margin:0">Itens do contrato *</div>
@@ -2219,13 +2228,13 @@
 </div>
 
 <!-- Modal Detalhes do Contrato -->
-<div class="modal-overlay" id="modal-contrato-detalhe" style="align-items:flex-start;padding:1rem;overflow-y:auto">
-  <div class="modal-box" style="width:1180px;max-width:98vw;max-height:94vh;overflow-y:auto">
+<div class="modal-overlay" id="modal-contrato-detalhe" style="align-items:flex-start;padding:1rem;overflow-y:auto;overflow-x:hidden">
+  <div class="modal-box" style="width:min(1180px,96vw);max-width:96vw;max-height:92vh;overflow:auto;box-sizing:border-box">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
       <div class="modal-title" id="mcd-titulo">Contrato</div>
       <button onclick="fecharContratoIndividual()" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1">✕</button>
     </div>
-    <div id="mcd-corpo"></div>
+    <div id="mcd-corpo" style="min-width:0;overflow-x:hidden"></div>
     <div id="mcd-acoes" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.625rem">Ações</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -2235,17 +2244,6 @@
         <button class="btn-secondary" onclick="abrirModalContratoOp('prorrogacao')">📅 Prorrogação</button>
         <button class="btn-secondary" onclick="abrirModalContratoOp('supressao')" style="color:var(--red)">✂️ Supressão</button>
         <button class="btn-secondary" onclick="abrirModalContratoOp('fiscal')">👤 Trocar fiscal</button>
-      </div>
-    </div>
-    <div id="mcd-valores" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Atualizar valores</div>
-      <div class="form-grid" style="margin-bottom:.75rem">
-        <div class="form-group"><div class="form-label">Novo valor mensal (R$)</div><input type="number" id="mcd-novo-mensal" placeholder="0,00" step="0.01" min="0"></div>
-        <div class="form-group"><div class="form-label">Novo valor total (R$)</div><input type="number" id="mcd-novo-total" placeholder="0,00" step="0.01" min="0"></div>
-      </div>
-      <div class="form-actions">
-        <button class="btn-primary" onclick="salvarValoresContrato()">Salvar valores</button>
-        <span id="mcd-valores-msg" class="fmsg"></span>
       </div>
     </div>
   </div>
@@ -2336,8 +2334,8 @@
 </div>
 
 <!-- Modal Medição do Contrato -->
-<div class="modal-overlay" id="modal-ct-medicao">
-  <div class="modal-box" style="width:680px;max-width:96vw">
+<div class="modal-overlay" id="modal-ct-medicao" style="overflow-y:auto;overflow-x:hidden;padding:1rem">
+  <div class="modal-box" style="width:min(760px,96vw);max-width:96vw;max-height:92vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box">
     <div class="modal-title">Medição do contrato</div>
     <div style="font-size:12px;color:var(--text2);margin:.5rem 0 1rem" id="ctmed-info"></div>
     <div class="form-grid">
@@ -2367,7 +2365,14 @@
           <option value="cancelada">Cancelada</option>
         </select>
       </div>
-      <div class="form-group"><div class="form-label">Fiscal responsável</div><input type="text" id="ctmed-fiscal"></div>
+      <div class="form-group"><div class="form-label">Fiscal responsável *</div><select id="ctmed-fiscal"></select></div>
+      <div class="form-group full" id="ctmed-itens-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <div class="form-label" style="margin:0">Itens medidos *</div>
+          <button type="button" class="btn-secondary" onclick="ctAdicionarItemMedicao()" style="font-size:12px;padding:5px 10px">+ Adicionar item</button>
+        </div>
+        <div id="ctmed-itens-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
       <div class="form-group"><div class="form-label">Valor bruto (R$) *</div><input type="number" id="ctmed-valor-bruto" step="0.01" min="0" oninput="ctAtualizarLiquidoMedicao()"></div>
       <div class="form-group"><div class="form-label">Valor glosado (R$)</div><input type="number" id="ctmed-valor-glosa" step="0.01" min="0" oninput="ctAtualizarLiquidoMedicao()"></div>
       <div class="form-group"><div class="form-label">Valor líquido</div><input type="text" id="ctmed-valor-liquido" disabled></div>
@@ -2447,7 +2452,6 @@
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="cie-info"></div>
     <div class="form-grid" style="margin-bottom:.75rem">
       <div class="form-group"><div class="form-label">Data de início do efeito *</div><input type="date" id="cie-data" onchange="_cieRecalcularMeses()"></div>
-      <div class="form-group"><div class="form-label">Status *</div><select id="cie-status"><option value="rascunho">Rascunho</option><option value="formalizado">Formalizado</option><option value="cancelado">Cancelado</option></select></div>
       <div class="form-group" id="cie-meses-wrap"><div class="form-label">Fim da vigência / meses considerados</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="cie-vigencia-fim" disabled style="width:110px"><input type="number" id="cie-meses" step="1" min="0" title="Meses restantes considerados no cálculo (editável se precisar ajustar)" oninput="_cieAtualizarTotais()" style="width:70px"></div></div>
       <div class="form-group full"><div class="form-label">Observação (aplicada a todos os itens marcados)</div><input type="text" id="cie-obs" placeholder="ex: Acréscimo de escopo aprovado em..."></div>
     </div>
@@ -2487,7 +2491,7 @@
         <span>Limite: <strong id="cie-ad-lim-limite">—</strong></span>
         <span>Já formalizado: <strong id="cie-ad-lim-anteriores">—</strong></span>
         <span>Deste ajuste: <strong id="cie-ad-lim-novo">—</strong></span>
-        <span>% consumido: <strong id="cie-ad-lim-pct">—</strong></span>
+        <span>% do contrato: <strong id="cie-ad-lim-pct">—</strong></span>
         <span>Saldo restante: <strong id="cie-ad-lim-saldo">—</strong></span>
         <span id="cie-ad-lim-badge" class="badge">OK</span>
       </div>
@@ -2496,7 +2500,7 @@
         <span>Limite: <strong id="cie-su-lim-limite">—</strong></span>
         <span>Já formalizada: <strong id="cie-su-lim-anteriores">—</strong></span>
         <span>Desta supressão: <strong id="cie-su-lim-novo">—</strong></span>
-        <span>% consumido: <strong id="cie-su-lim-pct">—</strong></span>
+        <span>% do contrato: <strong id="cie-su-lim-pct">—</strong></span>
         <span>Saldo restante: <strong id="cie-su-lim-saldo">—</strong></span>
         <span id="cie-su-lim-badge" class="badge">OK</span>
       </div>

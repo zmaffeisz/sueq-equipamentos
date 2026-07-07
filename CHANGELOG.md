@@ -10,6 +10,21 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
 ## [Não versionado]
 
 ### Alterado
+- **Contratos em execucao com visualizacao em cartoes**: a lista de contratos passou a
+  seguir o mesmo padrao visual das licitacoes, com linha inteira clicavel para expandir,
+  destaque para processo/CPL e objeto, e botoes de acao exibidos apenas no contrato aberto.
+- **Servico por demanda/execucao como fluxo leve e separado do mensal fixo**: processos de
+  servico por demanda agora exigem pelo menos um item, calculam o valor estimado pela soma
+  dos itens e geram contratos sem valor mensal automatico. As medicoes manuais podem
+  vincular item, descricao e quantidade medida, registrando `contratos_medicao_itens` para
+  consumo de saldo por contrato e por item, sem reaproveitar a logica mensal fixa.
+- **Vigencia propria para servico por demanda/execucao**: neste tipo de processo, o item
+  nao exibe mais prazo em dias; a vigencia passa a ser informada uma vez no processo, em
+  meses, e herdada pelo contrato para calcular vigencia/vencimento.
+- **Medicao por demanda com multiplos itens**: a medicao manual de servico por demanda
+  permite informar varios itens do contrato na mesma medicao. A descricao fica travada
+  pelo nome do item selecionado, o valor bruto e calculado pela soma dos itens medidos e o
+  fiscal responsavel passa a ser escolhido entre os fiscais cadastrados no contrato.
 - **Refatoração estrutural incremental do frontend**: `index.html` foi reduzido para a
   estrutura da SPA e carregamento de arquivos externos. O JavaScript monolítico foi
   extraído e dividido em scripts clássicos menores em `js/legacy/`, preservando ordem de
@@ -18,12 +33,45 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   `js/components/` para as próximas extrações sem alterar regra de negócio.
 
 ### Corrigido
+- **Bloqueio de medição acima do saldo contratado**: medições de serviço por demanda
+  agora impedem salvar item com quantidade maior que o saldo disponível do contrato.
+- **Formulário público de chamados no projeto de teste**: o botão "Abertura de Chamados"
+  agora abre o `chamado.html` do próprio ambiente, em vez da URL antiga do GitHub. A RPC
+  `abrir_chamado_publico` no Supabase de teste (`contratos-dag`) foi ajustada para gerar
+  protocolo via `chamados_seq` com `SECURITY INVOKER`, `search_path` fixo e grants mínimos
+  para `anon/authenticated`, permitindo abertura pública sem conceder leitura pública dos
+  chamados.
+- **Atualização de chamados novos no projeto de teste**: as políticas RLS de
+  `chamados_controle` agora permitem que usuários autenticados com permissão de edição na
+  aba `chamados-novos` atualizem/vinculem o chamado a contrato/CPL, enquanto a abertura
+  pública continua limitada ao status inicial "Aguardando abertura".
+- **Fiscalização gera medição contratual**: o fluxo da aba Fiscalização passou de
+  "Gerar Termo de Ateste" para "Gerar Medição". OS fiscalizadas de um mesmo contrato
+  agora podem gerar uma medição no contrato, vincular a NF informada, registrar o termo de
+  ateste e exibir o botão "Baixar termo" na aba Medições do contrato. O Supabase de teste
+  recebeu a estrutura de `contratos_medicoes`, vínculos com `notas_fiscais`,
+  `termos_ateste` e rastreio das OS em `chamados_controle`.
+- **Ajustes por item sem rascunho e com manutenção de eventos**: o modal de
+  reajuste/aditivo/supressão não permite mais salvar como rascunho; salvar agora
+  formaliza o ajuste. As abas de Aditivos e Supressões ganharam ações para editar ou
+  excluir eventos registrados, com recálculo do valor atual do contrato e ajuste da
+  quantidade do item quando o evento possui item/quantidade rastreável.
+- **Aplicação de aditivos/supressões pendentes e quantidades visíveis**: eventos de
+  aditivo/supressão que já tinham ficado como rascunho agora podem ser aplicados pela
+  própria linha da aba, atualizando quantidade do item e valor atual do contrato. A lista
+  de itens passou a mostrar `Qtde inicial` e `Qtde atual`, deixando claro o efeito de
+  aditivos e supressões.
+- **Percentual de aditivo consistente entre modal e painel**: o card `% aditivo` e a
+  coluna da lista principal agora mostram o percentual de aditivo sobre o valor inicial
+  reajustado do contrato. O consumo do limite de 25% fica no texto secundário do card,
+  evitando confusão com o percentual do limite já utilizado.
 - **Limite de 25% em ajustes por item com reajuste simultâneo**: o modal de
-  reajuste/aditivo/supressão agora recalcula em tempo real o "Valor inicial do contrato
-  reajustado" quando há percentual de reajuste digitado, e usa essa base reajustada para
-  validar os limites independentes de aditivo e supressão, sem inflar o valor unitário do
-  aditivo/supressão digitado na mesma simulação. Reajustes formalizados também gravam a
-  base reajustada para manter o cálculo correto após recarregar.
+  reajuste/aditivo/supressão agora aplica o percentual de reajuste também ao valor
+  unitário usado no impacto de aditivo/supressão da mesma linha. Assim, quando o valor
+  inicial reajustado aumenta, o consumo do limite de 25% aumenta pela mesma base dos
+  itens, evitando que um reajuste alto faça um aditivo acima do limite aparecer como OK.
+  Reajustes formalizados também gravam a base reajustada para manter o cálculo correto
+  após recarregar.
 - **Gerar contrato para serviço mensal fixo não herdava/calculava corretamente os dados da
   licitação**: no modal "Gerar contrato", a vigência e o vencimento agora ficam
   somente leitura para serviço mensal valor fixo, usando os meses cadastrados na licitação

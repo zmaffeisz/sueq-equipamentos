@@ -2329,7 +2329,7 @@ function _ncFixarProcessoContrato(proc){
 async function preencherSelectProcessos(currentId){
   const sel=document.getElementById('nc-processo'); if(!sel) return;
   const {data,error}=await sb.from('vw_processos_resumo')
-    .select('id,identificador,objeto,natureza,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global')
+    .select('id,identificador,objeto,natureza,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global,servico_demanda_meses')
     .order('identificador');
   if(error){ sel.innerHTML='<option value="">Erro ao carregar processos</option>'; return; }
   let lista=(data||[]).filter(p=>Number(p.n_contratos||0)===0 || p.gera_mais_contratos);
@@ -2382,13 +2382,19 @@ function _ncServicoMensalFixo(proc){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return tipo==='servico mensal valor fixo';
 }
+function _ncServicoDemanda(proc){
+  const tipo=String(proc?.tipo_servico||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return tipo==='servico por demanda/execucao';
+}
 function _ncShow(id,on){ const el=document.getElementById(id); if(el) el.style.display=on?'':'none'; }
 function _ncAplicarModo(natureza){
   const modo=_ncModo(natureza);
   const ata=modo==='ata', aq=modo==='aquisicao';
   const servMensal=_ncServicoMensalFixo(window._gerarContratoProcesso);
+  const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
   // valor mensal e fonte: só contratos comuns (outro)
-  _ncShow('nc-valor-mensal-wrap', modo==='outro');
+  _ncShow('nc-valor-mensal-wrap', modo==='outro'&&!servDemanda);
   _ncShow('nc-fonte-wrap', modo==='outro');
   // datas/vigência: ATA usa início (assinatura/vigência/vencimento automáticos); Aquisição não usa nenhuma
   _ncShow('nc-assinatura-wrap', modo==='outro');
@@ -2400,14 +2406,14 @@ function _ncAplicarModo(natureza){
   // valor global é calculado (read-only) nas duas naturezas com itens
   const valInp=document.getElementById('nc-valor-inicial');
   const mensalInp=document.getElementById('nc-valor-mensal');
-  if(valInp){ valInp.readOnly=(ata||aq); valInp.placeholder=(ata||aq)?'soma dos itens (automático)':'ex: 120000,00'; }
+  if(valInp){ valInp.readOnly=(ata||aq||servDemanda); valInp.placeholder=(ata||aq||servDemanda)?'soma dos itens (automático)':'ex: 120000,00'; }
   // vigência/vencimento read-only na ATA (12 meses fixos)
   if(valInp&&servMensal){ valInp.readOnly=true; valInp.placeholder='calculado pelos itens marcados'; }
   if(mensalInp){
     mensalInp.readOnly=servMensal;
     mensalInp.placeholder=servMensal?'calculado pelos itens marcados':'ex: 10000,00';
   }
-  ['nc-vigencia','nc-vencimento'].forEach(id=>{const el=document.getElementById(id); if(el) el.readOnly=(ata||servMensal);});
+  ['nc-vigencia','nc-vencimento'].forEach(id=>{const el=document.getElementById(id); if(el) el.readOnly=(ata||servMensal||servDemanda);});
   // status
   const stSel=document.getElementById('nc-status'), stAuto=document.getElementById('nc-status-auto');
   if(stSel){
@@ -2423,7 +2429,8 @@ function _ncAplicarModo(natureza){
       stSel.disabled=false; if(stAuto) stAuto.style.display='none';
     }
   }
-  if(ata||servMensal) _ncRecalcVigencia();
+  if(servDemanda) _ncRecalcValorGlobal();
+  if(ata||servMensal||servDemanda) _ncRecalcVigencia();
 }
 // Fase 10: ATA tem vigência fixa de 12 meses a partir da data de início
 function _ncAddMonthsMinusOneDay(iso, meses){
@@ -2438,10 +2445,11 @@ function _ncRecalcVigencia(){
   const proc=window._gerarContratoProcesso||{};
   const ata=_ncModo(proc.natureza)==='ata';
   const servMensal=_ncServicoMensalFixo(proc);
-  if(!ata&&!servMensal) return;
+  const servDemanda=_ncServicoDemanda(proc);
+  if(!ata&&!servMensal&&!servDemanda) return;
   const ini=document.getElementById('nc-inicio')?.value;
   const asn=document.getElementById('nc-assinatura'); if(asn) asn.value=ini||'';
-  const meses=servMensal?Number(proc.servico_mensal_meses||0):12;
+  const meses=servMensal?Number(proc.servico_mensal_meses||0):(servDemanda?Number(proc.servico_demanda_meses||0):12);
   const vig=document.getElementById('nc-vigencia'); if(vig) vig.value=meses?`${meses} meses`:'';
   const venc=document.getElementById('nc-vencimento');
   if(venc) venc.value=(ini&&meses)?_ncAddMonthsMinusOneDay(ini,meses):'';
@@ -2466,7 +2474,8 @@ function _ncUpdateItemTotal(el){
 function _ncRecalcValorGlobal(){
   const modo=_ncModo(window._gerarContratoProcesso?.natureza);
   const servMensal=_ncServicoMensalFixo(window._gerarContratoProcesso);
-  if(modo!=='ata' && modo!=='aquisicao' && !servMensal) return;
+  const servDemanda=_ncServicoDemanda(window._gerarContratoProcesso);
+  if(modo!=='ata' && modo!=='aquisicao' && !servMensal && !servDemanda) return;
   const lista=document.getElementById('nc-itens-lista'); if(!lista) return;
   let tot=0;
   lista.querySelectorAll('.nc-item-row').forEach(r=>{
