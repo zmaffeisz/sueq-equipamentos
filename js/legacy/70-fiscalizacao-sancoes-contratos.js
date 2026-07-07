@@ -922,6 +922,7 @@ function _ctHistoricoToEvents(hist=[]){
       affectsValue:eventType!=='reajuste',
       affectsInitialAdjustedValue:eventType==='reajuste',
       effectiveDate:h.data_evento,
+      createdAt:h.created_at,
       notes:h.obs
     };
   }).filter(e=>['reajuste','aditivo','supressao','prorrogacao'].includes(e.eventType));
@@ -954,6 +955,10 @@ async function ctRegistrarHistoricoContrato(entry={}){
     valor_reajustado:entry.valor_reajustado??entry.adjustedValueAfter??null,
     usuario:entry.usuario??currentProfile?.nome??currentProfile?.email??null
   };
+  const tipoHistorico=normalizar(`${payload.tipo||''} ${payload.action_type||''}`);
+  if(!payload.valor_reajustado&&tipoHistorico.includes('reajuste')&&window._cieBaseReajustadaParaSalvar){
+    payload.valor_reajustado=window._cieBaseReajustadaParaSalvar;
+  }
   const res=await sb.from('contratos_historico').insert(payload);
   if(!res.error||!_ctIsSchemaCacheError(res.error)) return res;
   return sb.from('contratos_historico').insert({
@@ -2428,7 +2433,7 @@ async function abrirDetalheContrato(id){
     sb.from("contratos_vigencias").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
     sb.from("contratos_historico").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
     sb.from("contratos_fiscalizadores").select("*").eq("contrato_id",id).order("data_inicio",{ascending:false}),
-    sb.from("itens").select("id,descricao,qtde,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)").eq("contrato_id",id).in("origem",["aquisicao","servico_mensal"]).order("created_at"),
+    sb.from("itens").select("id,descricao,qtde,origem,marca,modelo,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)").eq("contrato_id",id).in("origem",["aquisicao","servico_mensal"]).order("created_at"),
     sb.from("contratos_medicoes").select("*,contratos_medicao_itens(*),contratos_medicao_glosas(*)").eq("contrato_id",id).order("data_medicao",{ascending:false}),
     sb.from("notas_fiscais").select("*").eq("contrato_id",id).order("created_at",{ascending:false}),
     sb.from("contratos_documentos").select("*").eq("contrato_id",id).order("created_at",{ascending:false})
@@ -2814,7 +2819,11 @@ async function inativarItemContrato(){
 function ctEventoUsaMesesRestantes(){
   const forma=_ctFormaKey(_ctAtual||{});
   const modelo=(_ctModule().CONTRACT_MODELS||[]).find(m=>m.key===_ctModeloKey(_ctAtual||{}));
-  return modelo?.usesRemainingMonths===true||['mensal','mensal_fixo','por_competencia','continuo','continua','contínua'].includes(forma);
+  if(modelo?.usesRemainingMonths===true||['mensal','mensal_fixo','por_competencia','continuo','continua','contínua'].includes(forma)) return true;
+  // Fallback: contrato/processo pode nunca ter sido classificado (forma/modelo "não informada"),
+  // mas se os itens têm origem 'servico_mensal' (serviço mensal fixo), a execução É mensal —
+  // não dá pra confiar só no campo de classificação, que fica vazio nesses casos.
+  return (_ctItensAtual||[]).some(i=>i.origem==='servico_mensal');
 }
 
 function ctMesesRestantesEvento(dataInicio){
@@ -2879,22 +2888,31 @@ function _cieRecalcularMeses(){
   mesesEl.value=ctEventoUsaMesesRestantes()?ctMesesRestantesEvento(data):'';
   _cieAtualizarTotais();
 }
-// Impacto de UM item: aditivo (+, qtde × valor unit. vigente), reajuste (+/-, sobre valor unit. vigente
-// × qtde atual) e supressão (-, qtde × valor unit. vigente). Em contratos mensais, multiplica pelos
-// meses restantes até o fim da vigência.
+// Impacto de UM item, comparando o cenário mensal ANTES × DEPOIS do ajuste:
+//   1. reajuste atualiza o valor unitário: novoUnit = unitVigente × (1 + %/100)
+//   2. aditivo/supressão mudam a quantidade: novaQtde = qtdeAtual + adQtde − suQtde
+//   3. valorMensalDepois = novaQtde × novoUnit; a diferença mensal × meses restantes = impacto total.
+// Aditivo/supressão são valorados pelo unitário JÁ reajustado (se houver % na mesma sessão),
+// porque a quantidade nova será paga ao preço novo. Em contratos não mensais, meses = 1.
 function _cieImpactosItem(item,row){
+  // Reajuste aumenta a base e o valor final, mas nao infla o valor unitario do aditivo/supressao digitado na mesma sessao.
   const usaMeses=ctEventoUsaMesesRestantes();
   const meses=usaMeses?(_ctNum(document.getElementById('cie-meses')?.value)||1):1;
   const qtdeAtual=Number(item.qtde)||0;
   const unitVigente=_ctNum(item.valor_contratado??item.valor_estimado);
   const adQtde=_ctNum(row.querySelector('.cie-ad-qtde')?.value);
-  const impactoAditivo=(adQtde>0&&unitVigente>0)?adQtde*unitVigente*meses:0;
+  const suQtde=_ctNum(row.querySelector('.cie-su-qtde')?.value);
   const rePct=_ctNum(row.querySelector('.cie-re-pct')?.value);
   const novoValorUnitario=unitVigente*(1+rePct/100);
-  const impactoReajuste=rePct?(novoValorUnitario-unitVigente)*qtdeAtual*meses:0;
-  const suQtde=_ctNum(row.querySelector('.cie-su-qtde')?.value);
+  const novaQtde=Math.max(qtdeAtual+adQtde-suQtde,0);
+  const valorMensalAntes=qtdeAtual*unitVigente;
+  const impactoAditivo=(adQtde>0&&unitVigente>0)?adQtde*unitVigente*meses:0;
   const impactoSupressao=(suQtde>0&&unitVigente>0)?suQtde*unitVigente*meses:0;
-  return {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,unitVigente,adQtde,suQtde,rePct,qtdeAtual};
+  const impactoReajuste=rePct?(novoValorUnitario-unitVigente)*qtdeAtual*meses:0;
+  const valorMensalDepois=valorMensalAntes+((impactoAditivo+impactoReajuste-impactoSupressao)/meses);
+  const impactoTotal=impactoAditivo+impactoReajuste-impactoSupressao;
+  return {impactoAditivo,impactoReajuste,impactoSupressao,impactoTotal,novoValorUnitario,novaQtde,
+          valorMensalAntes,valorMensalDepois,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses};
 }
 function _cieAtualizarImpactoItem(itemId){
   const row=document.querySelector(`#cie-tbody tr[data-item="${itemId}"]`);
@@ -2907,30 +2925,76 @@ function _cieAtualizarImpactoItem(itemId){
   }
   _cieAtualizarTotais();
 }
-function _cieAtualizarTotais(){
-  let totAd=0,totRe=0,totSu=0;
+function _cieMesesBaseContrato(base,valorMensalBase){
+  const txt=String(_ctAtual?.vigencia_atual||'');
+  const m=txt.match(/(\d+(?:[,.]\d+)?)\s*mes/i);
+  if(m) return Math.max(_ctNum(m[1]),1);
+  if(ctEventoUsaMesesRestantes()&&base>0&&valorMensalBase>0) return Math.max(base/valorMensalBase,1);
+  return 1;
+}
+function _cieBaseReajustadaSessao(base,valorMensalBase){
+  const mesesBase=ctEventoUsaMesesRestantes()?_cieMesesBaseContrato(base,valorMensalBase):1;
+  let impactoBaseReajuste=0;
   document.querySelectorAll('#cie-tbody tr[data-item]').forEach(row=>{
     const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) return;
-    const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,rePct}=_cieImpactosItem(item,row);
+    const qtdeAtual=Number(item.qtde)||0;
+    const unitVigente=_ctNum(item.valor_contratado??item.valor_estimado);
+    const rePct=_ctNum(row.querySelector('.cie-re-pct')?.value);
+    if(rePct) impactoBaseReajuste+=qtdeAtual*unitVigente*(rePct/100)*mesesBase;
+  });
+  return {
+    baseReajustada:Math.max(base+impactoBaseReajuste,0),
+    impactoBaseReajuste,
+    mesesBase
+  };
+}
+function _cieAtualizarTotais(){
+  let totAd=0,totRe=0,totSu=0,totMensalAntes=0,totMensalDepois=0;
+  const usaMeses=ctEventoUsaMesesRestantes();
+  const meses=usaMeses?(_ctNum(document.getElementById('cie-meses')?.value)||1):1;
+  document.querySelectorAll('#cie-tbody tr[data-item]').forEach(row=>{
+    const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) return;
+    const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,rePct,valorMensalAntes,valorMensalDepois,unitVigente}=_cieImpactosItem(item,row);
     totAd+=impactoAditivo; totRe+=impactoReajuste; totSu+=impactoSupressao;
+    totMensalAntes+=valorMensalAntes; totMensalDepois+=valorMensalDepois;
     const adImp=row.querySelector('.cie-ad-imp'); if(adImp) adImp.textContent=impactoAditivo?_ctMoney(impactoAditivo):'—';
     const reImp=row.querySelector('.cie-re-imp'); if(reImp) reImp.textContent=impactoReajuste?_ctMoney(impactoReajuste):'—';
     const reNovo=row.querySelector('.cie-re-novo-unit'); if(reNovo) reNovo.textContent=rePct?_ctMoney(novoValorUnitario):'—';
     const suImp=row.querySelector('.cie-su-imp'); if(suImp) suImp.textContent=impactoSupressao?_ctMoney(impactoSupressao):'—';
+    // Valor unit. exibido nas colunas de aditivo/supressão acompanha o reajuste digitado na mesma linha
+    const adValor=row.querySelector('.cie-ad-valor'); if(adValor) adValor.value=novoValorUnitario?_ctMoney(novoValorUnitario):'—';
+    const suValor=row.querySelector('.cie-su-valor'); if(suValor) suValor.value=novoValorUnitario?_ctMoney(novoValorUnitario):'—';
+    if(adValor) adValor.value=unitVigente?_ctMoney(unitVigente):'—';
+    if(suValor) suValor.value=unitVigente?_ctMoney(unitVigente):'—';
   });
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=_ctMoney(v);};
   set('cie-tot-aditivo',totAd); set('cie-tot-reajuste',totRe); set('cie-tot-supressao',totSu);
   set('cie-tot-liquido',totAd-totSu);
   set('cie-valor-final',Math.max(_ctValorAtual(_ctAtual||{})+totAd+totRe-totSu,0));
+  // Painel comparativo mensal (só faz sentido em contrato mensal)
+  const comp=document.getElementById('cie-comparativo');
+  if(comp) comp.style.display=usaMeses?'':'none';
+  if(usaMeses){
+    const mesesInfo=document.getElementById('cie-meses-info');
+    if(mesesInfo) mesesInfo.textContent=`📅 Este ajuste afetará ${meses} ${meses===1?'mês':'meses'} até o final do contrato${_ctAtual?.vencimento?` (${_ctAtual.vencimento})`:''}.`;
+    set('cie-mensal-antes',totMensalAntes);
+    set('cie-mensal-depois',totMensalDepois);
+    set('cie-dif-mensal',totMensalDepois-totMensalAntes);
+    set('cie-total-sem',totMensalAntes*meses);
+    set('cie-total-com',totMensalDepois*meses);
+    set('cie-impacto-total',(totMensalDepois-totMensalAntes)*meses);
+  }
   // Limites de 25%: aditivo e supressão são INDEPENDENTES (um não compensa o outro) e ambos
   // calculados sobre o valor INICIAL reajustado (se houver reajuste/repactuação) — nunca sobre
   // o valor atual, senão cada evento formalizado infla a base do próximo cálculo.
-  const base=_ctValorReajustado(_ctAtual||{});
+  const baseOriginal=_ctValorReajustado(_ctAtual||{});
+  const {baseReajustada}= _cieBaseReajustadaSessao(baseOriginal,totMensalAntes);
+  const base=baseReajustada;
   document.getElementById('cie-lim-base').textContent=base?_ctMoney(base):'—';
-  const limite=base*CIE_LIMITE_ADITIVO_PCT;
+  const limite=baseReajustada*CIE_LIMITE_ADITIVO_PCT;
   const aplicarLimite=(prefixo,anteriores,novo)=>{
     const saldo=limite-anteriores;
-    const pctConsumido=base?((anteriores+novo)/base)*100:0;
+    const pctConsumido=baseReajustada?((anteriores+novo)/baseReajustada)*100:0;
     const ultrapassou=novo>saldo+0.005;
     document.getElementById(`cie-${prefixo}-lim-limite`).textContent=base?_ctMoney(limite):'—';
     document.getElementById(`cie-${prefixo}-lim-anteriores`).textContent=_ctMoney(anteriores);
@@ -2949,7 +3013,7 @@ function _cieAtualizarTotais(){
   const suUltrapassou=aplicarLimite('su',_cieAnterioresFormalizados('supress'),totSu);
   const ultrapassou=adUltrapassou||suUltrapassou;
   const btn=document.getElementById('cie-btn-salvar'); if(btn) btn.disabled=ultrapassou;
-  return {totAd,totRe,totSu,ultrapassou,adUltrapassou,suUltrapassou};
+  return {totAd,totRe,totSu,ultrapassou,adUltrapassou,suUltrapassou,baseReajustada};
 }
 async function salvarItensEventosContrato(){
   if(bloquearSeVisualiz()) return;
@@ -2962,7 +3026,7 @@ async function salvarItensEventosContrato(){
   const status=document.getElementById('cie-status')?.value||'rascunho';
   const obs=document.getElementById('cie-obs')?.value.trim()||'';
   const rows=[...document.querySelectorAll('#cie-tbody tr[data-item]')];
-  const {adUltrapassou,suUltrapassou}=_cieAtualizarTotais();
+  const {adUltrapassou,suUltrapassou,baseReajustada}=_cieAtualizarTotais();
   if(adUltrapassou){setMsg("O aditivo ultrapassa o saldo disponível do limite de 25% (aditivo). Reduza a quantidade acrescida.",false);return;}
   if(suUltrapassou){setMsg("A supressão ultrapassa o saldo disponível do limite de 25% (supressão). Reduza a quantidade suprimida.",false);return;}
   for(const row of rows){
@@ -2971,26 +3035,35 @@ async function salvarItensEventosContrato(){
     if(suQtde>qtdeAtual){setMsg(`Supressão de "${item.descricao||item.id}" (${suQtde}) não pode ser maior que a quantidade atual do item (${qtdeAtual}).`,false);return;}
     if(suQtde<0||_cieImpactosItem(item,row).adQtde<0){setMsg("Quantidades não podem ser negativas.",false);return;}
   }
+  window._cieBaseReajustadaParaSalvar=baseReajustada||null;
   let totalImpacto=0,eventosGerados=0;
   try{
     for(const row of rows){
       const item=(_ctItensAtual||[]).find(i=>String(i.id)===String(row.dataset.item)); if(!item) continue;
-      const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,unitVigente,adQtde,suQtde,rePct}=_cieImpactosItem(item,row);
+      const {impactoAditivo,impactoReajuste,impactoSupressao,novoValorUnitario,unitVigente,adQtde,suQtde,rePct,qtdeAtual,meses}=_cieImpactosItem(item,row);
       if(impactoAditivo){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Aditivo",action_type:"aditivo",titulo:"Aditivo registrado",data_evento:data,status_evento:status,valor_impacto:impactoAditivo,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. Qtde acrescida: ${adQtde}. Valor unitário vigente usado: ${_ctMoney(unitVigente)}. Impacto ${_ctMoney(impactoAditivo)}. Status: ${status}.${obs?". "+obs:""}`});
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Aditivo",action_type:"aditivo",titulo:"Aditivo registrado",data_evento:data,status_evento:status,valor_impacto:impactoAditivo,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. Qtde acrescida: ${adQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${rePct?` (vigente ${_ctMoney(unitVigente)} reajustado em ${rePct}%)`:''}. Meses considerados: ${meses}. Impacto ${_ctMoney(impactoAditivo)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         totalImpacto+=impactoAditivo; eventosGerados++;
       }
       if(impactoReajuste){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Reajuste",action_type:"reajuste",titulo:"Reajuste registrado",data_evento:data,percentual:rePct,status_evento:status,valor_impacto:impactoReajuste,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. ${rePct}% sobre valor unitário vigente (${_ctMoney(unitVigente)} → ${_ctMoney(novoValorUnitario)}). Impacto ${_ctMoney(impactoReajuste)}. Status: ${status}.${obs?". "+obs:""}`});
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Reajuste",action_type:"reajuste",titulo:"Reajuste registrado",data_evento:data,percentual:rePct,status_evento:status,valor_impacto:impactoReajuste,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. ${rePct}% sobre valor unitário vigente (${_ctMoney(unitVigente)} → ${_ctMoney(novoValorUnitario)}). Qtde atual: ${qtdeAtual}. Meses considerados: ${meses}. Impacto ${_ctMoney(impactoReajuste)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         if(status==="formalizado"){ const {error:e2}=await sb.from("itens").update({valor_contratado:novoValorUnitario}).eq("id",item.id); if(e2) throw e2; }
         totalImpacto+=impactoReajuste; eventosGerados++;
       }
       if(impactoSupressao){
-        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Supressao",action_type:"supressao",titulo:"Supressao registrada",data_evento:data,status_evento:status,valor_impacto:impactoSupressao,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. Qtde suprimida: ${suQtde}. Valor unitário vigente usado: ${_ctMoney(unitVigente)}. Impacto redutor ${_ctMoney(impactoSupressao)}. Status: ${status}.${obs?". "+obs:""}`});
+        const {error}=await ctRegistrarHistoricoContrato({contrato_id:id,tipo:"Supressao",action_type:"supressao",titulo:"Supressao registrada",data_evento:data,status_evento:status,valor_impacto:impactoSupressao,related_entity_type:"contractItem",related_entity_id:String(item.id),obs:`Item: ${item.descricao||item.id}. Qtde suprimida: ${suQtde}. Valor unitário usado: ${_ctMoney(novoValorUnitario)}${rePct?` (vigente ${_ctMoney(unitVigente)} reajustado em ${rePct}%)`:''}. Meses considerados: ${meses}. Impacto redutor ${_ctMoney(impactoSupressao)}. Status: ${status}.${obs?". "+obs:""}`});
         if(error) throw error;
         totalImpacto-=impactoSupressao; eventosGerados++;
+      }
+      // Aditivo e supressão do mesmo item, no mesmo salvamento, alteram a MESMA quantidade —
+      // aplicar como um único update (qtdeAtual + adQtde - suQtde), nunca dois updates separados
+      // (o segundo sobrescreveria o efeito do primeiro, já que ambos partem do qtdeAtual original).
+      if(status==="formalizado"&&(adQtde||suQtde)){
+        const novaQtde=Math.max(qtdeAtual+adQtde-suQtde,0);
+        const {error:e2}=await sb.from("itens").update({qtde:novaQtde}).eq("id",item.id);
+        if(e2) throw e2;
       }
     }
     if(!eventosGerados){setMsg("Preencha ao menos um campo de aditivo, reajuste ou supressão em algum item.",false);return;}
@@ -3004,6 +3077,8 @@ async function salvarItensEventosContrato(){
     setTimeout(async()=>{document.getElementById('modal-ct-itens-eventos').classList.remove('active');await abrirDetalheContrato(id);},1200);
   }catch(e){
     setMsg("Erro: "+(e.message||e),false);
+  }finally{
+    window._cieBaseReajustadaParaSalvar=null;
   }
 }
 

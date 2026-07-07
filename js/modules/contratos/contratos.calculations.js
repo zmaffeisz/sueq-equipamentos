@@ -40,6 +40,7 @@ export function calculateInitialAdjustedValue(contract = {}, items = [], events 
   calculateFormalizedEvents(events)
     .filter((event) => event.eventType === "reajuste" || event.tipo === "reajuste")
     .filter((event) => event.affectsInitialAdjustedValue !== false)
+    .sort(compareEventsByDate)
     .forEach((event) => {
       if (event.adjustedValueAfter != null && event.adjustedValueAfter !== "") {
         adjustedValue = toContractNumber(event.adjustedValueAfter);
@@ -56,6 +57,15 @@ export function calculateInitialAdjustedValue(contract = {}, items = [], events 
     });
 
   return roundMoney(adjustedValue);
+}
+
+function compareEventsByDate(a = {}, b = {}) {
+  const da = parseDate(a.effectiveDate ?? a.data_evento ?? a.date ?? a.createdAt ?? a.created_at);
+  const db = parseDate(b.effectiveDate ?? b.data_evento ?? b.date ?? b.createdAt ?? b.created_at);
+  const ta = da ? da.getTime() : 0;
+  const tb = db ? db.getTime() : 0;
+  if (ta !== tb) return ta - tb;
+  return String(a.id ?? "").localeCompare(String(b.id ?? ""));
 }
 
 export function calculateFormalizedAdditions(events = []) {

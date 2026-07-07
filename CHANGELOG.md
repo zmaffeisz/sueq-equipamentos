@@ -18,6 +18,12 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   `js/components/` para as próximas extrações sem alterar regra de negócio.
 
 ### Corrigido
+- **Limite de 25% em ajustes por item com reajuste simultâneo**: o modal de
+  reajuste/aditivo/supressão agora recalcula em tempo real o "Valor inicial do contrato
+  reajustado" quando há percentual de reajuste digitado, e usa essa base reajustada para
+  validar os limites independentes de aditivo e supressão, sem inflar o valor unitário do
+  aditivo/supressão digitado na mesma simulação. Reajustes formalizados também gravam a
+  base reajustada para manter o cálculo correto após recarregar.
 - **Gerar contrato para serviço mensal fixo não herdava/calculava corretamente os dados da
   licitação**: no modal "Gerar contrato", a vigência e o vencimento agora ficam
   somente leitura para serviço mensal valor fixo, usando os meses cadastrados na licitação
