@@ -1035,7 +1035,7 @@ function _ctAditivoUsado(r){
   const financial=mod.calculateContractFinancialSummary(mod.createContractRecord(r),[],r._contractEvents,[],[]);
   return financial.additiveContractPercent??financial.additiveLimitUsedPercent;
 }
-function _ctPendenciasResumo(r){
+function _ctPendenciasResumo(r,mostrarSemAlerta=true){
   const tags=[];
   const dias=diasContratoVencer(r.vencimento);
   if(dias!==null&&dias<0) tags.push(['Vencido','var(--red-bg)','var(--red-text)']);
@@ -1047,7 +1047,7 @@ function _ctPendenciasResumo(r){
   if(r._eventosRascunho) tags.push([`${r._eventosRascunho} evento(s) rasc.`,'var(--surface2)','var(--text3)']);
   const aditivo=_ctAditivoUsado(r);
   if(aditivo!==null&&aditivo>=80) tags.push(['Aditivo >80%','var(--red-bg)','var(--red-text)']);
-  return tags.length?tags.map(([t,bg,c])=>`<span class="badge" style="background:${bg};color:${c};margin-right:3px">${t}</span>`):'<span style="color:var(--text3)">Sem alerta</span>';
+  return tags.length?tags.map(([t,bg,c])=>`<span class="badge" style="background:${bg};color:${c};margin-right:3px">${t}</span>`).join(''):(mostrarSemAlerta?'<span style="color:var(--text3)">Sem alerta</span>':'');
 }
 function abrirContratoGerencial(id){
   window._contratoGerencialId=id;
@@ -1080,6 +1080,12 @@ function _ctStatusBadge(status,map){
   const bg=bad?'var(--red-bg)':ok?'var(--green-bg)':key==='rascunho'?'var(--surface2)':'var(--amber-bg)';
   const color=bad?'var(--red-text)':ok?'var(--green-text)':key==='rascunho'?'var(--text3)':'var(--amber-text)';
   return `<span class="badge" style="background:${bg};color:${color}">${label}</span>`;
+}
+function _ctStatusSelectHtml(status,map,entity,id){
+  const current=String(status||'').toLowerCase();
+  const options=Object.entries(map).map(([key,label])=>`<option value="${key}"${key===current?' selected':''}>${_sanEsc(label)}</option>`).join('');
+  const handler=entity==='medicao'?'alterarStatusMedicaoContrato':'alterarStatusNotaFiscalContrato';
+  return `<select aria-label="Alterar status" data-entity-id="${_sanEsc(String(id))}" onchange="${handler}(this.dataset.entityId,this.value)" style="max-width:165px;font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer">${options}</select>`;
 }
 function _ctTodayISO(){return new Date().toISOString().slice(0,10);}
 function _ctMonthISO(){return new Date().toISOString().slice(0,7);}
@@ -2471,19 +2477,10 @@ function _ctContratoCardHtml(r){
   const expandido=!!ctExpandido[r.id];
   const cor=corVencimento(r.vencimento);
   const dias=diasContratoVencer(r.vencimento);
-  let diasHtml="Sem vencimento";
-  if(dias!==null){
-    if(dias<0) diasHtml='<span style="color:var(--red);font-weight:700">Vencido</span>';
-    else if(dias<=90) diasHtml=`<span style="color:var(--amber);font-weight:700">${dias}d</span>`;
-    else diasHtml=`<span style="color:var(--green);font-weight:700">${dias}d</span>`;
-  }
   const valorInicial=_ctValorInicial(r);
   const valorReajustado=_ctValorReajustado(r);
   const valorAtual=_ctValorAtual(r);
   const aditivoUsado=_ctAditivoUsado(r);
-  const aditivoHtml=aditivoUsado==null
-    ?'<span style="color:var(--text3)">-</span>'
-    :`<span style="color:${aditivoUsado>=20?'var(--red)':aditivoUsado>=15?'var(--amber)':'var(--text)'};font-weight:700">${aditivoUsado}%</span>`;
   const temVinculacao=!!(r.email_empresa||r.prefixo_chamado);
   const podeManter=podeEditar('contratos');
   const btnEncerrarCt=r.status!=="ENCERRADO"&&podeManter
@@ -2499,43 +2496,44 @@ function _ctContratoCardHtml(r){
     ?`<label onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap"><input type="checkbox" class="ct-row-check" ${contratosSelecionados.has(String(r.id))?'checked':''} onchange="selecionarContrato('${id}',this.checked)" style="accent-color:var(--blue)">Selecionar</label>`
     :"";
   const meta=[
-    ['Contrato',r.numero_contrato||'-'],
     ['Prestador',r.prestador||'-'],
+    ['Fiscal responsável',r.fiscalizacao||'-'],
     ['Modelo',_ctModeloLabel(r)||'-'],
-    ['Vigencia',r.vigencia_atual||'-'],
-    ['Fiscal',r.fiscalizacao||'-'],
-    ['Valor atual',valorAtual?_ctMoney(valorAtual):'-']
-  ].map(([label,value])=>`<div style="min-width:112px;flex:1 1 112px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;line-height:1.1">${label}</div><div style="font-size:12px;color:var(--text);font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis">${_sanEsc(String(value))}</div></div>`).join('');
-  return `<div onclick="if(event.target.closest('button,input,select,a,label'))return;ctToggleExpand('${id}')" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;background:${expandido?'var(--surface)':'var(--surface2)'};box-shadow:${expandido?'0 3px 10px rgba(15,23,42,.06)':'none'};cursor:pointer;overflow:hidden">
-    <div style="display:grid;grid-template-columns:22px minmax(260px,1.4fr) minmax(380px,2fr) minmax(220px,.9fr);gap:10px;align-items:center;padding:10px 14px 8px">
-      <div style="color:var(--text3);font-size:15px;text-align:center;user-select:none">${expandido?'▼':'▶'}</div>
-      <div style="min-width:0">
-        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
-          <span style="font-size:15px;font-weight:800;color:var(--text)">${_sanEsc(r.cpl||r.numero_contrato||'-')}</span>
-          <span style="font-size:12px;color:var(--text3)">Contrato ${_sanEsc(r.numero_contrato||'-')}</span>
-        </div>
+    ['Vigência',r.vigencia_atual||'-'],
+    ['Valor atual',valorAtual?_ctMoney(valorAtual):'-'],
+    ['Aditivo',aditivoUsado==null?'-':`${aditivoUsado}%`]
+  ].map(([label,value])=>`<div class="ct-contract-meta"><span>${label}</span><strong title="${_sanEsc(String(value))}">${_sanEsc(String(value))}</strong></div>`).join('');
+  return `<article class="ct-contract-card${expandido?' is-expanded':''}" onclick="if(event.target.closest('button,input,select,a,label'))return;ctToggleExpand('${id}')">
+    <div class="ct-contract-summary">
+      <div class="ct-contract-identity">
+        <span class="ct-contract-kicker">Processo</span>
+        <strong>${_sanEsc(r.cpl||'Não informado')}</strong>
+        <span class="ct-contract-number">Contrato ${_sanEsc(r.numero_contrato||'não informado')}</span>
       </div>
-      <div style="min-width:0;font-size:14px;font-weight:700;color:var(--text);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_sanEsc(r.objeto||'Sem objeto informado')}</div>
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="ct-contract-object">
+        <span class="ct-contract-kicker">Objeto</span>
+        <strong title="${_sanEsc(r.objeto||'Sem objeto informado')}">${_sanEsc(r.objeto||'Sem objeto informado')}</strong>
+      </div>
+      <div class="ct-contract-status">
         ${badgeStatusContrato(r.status,dias!==null&&dias<0)}
-        <span style="font-size:12px;color:${cor};font-weight:700">${_sanEsc(r.vencimento||'-')}</span>
-        <span style="font-size:12px;color:var(--text2)">${diasHtml}</span>
+        <span style="color:${cor}">${_sanEsc(r.vencimento||'Sem vencimento')}</span>
+        <small style="color:${cor}">${dias===null?'Sem vencimento informado':dias<0?'Vencido':dias===0?'Vence hoje':`${dias} dias restantes`}</small>
       </div>
     </div>
-    <div style="display:flex;gap:12px 18px;align-items:flex-start;flex-wrap:wrap;padding:0 14px 9px 46px">${meta}</div>
-    ${expandido?`<div style="border-top:1px solid var(--border);padding:10px 14px 12px 46px;background:var(--surface)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    <div class="ct-contract-disclosure"><span>${expandido?'Ocultar informações':'Ver informações do contrato'}</span><div class="ct-contract-alerts">${_ctPendenciasResumo(r,false)}</div><span aria-hidden="true">${expandido?'⌃':'⌄'}</span></div>
+    ${expandido?`<div class="ct-contract-details">
+      <div class="ct-contract-meta-grid">${meta}</div>
+      <div class="ct-contract-actions">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${seletor}<button onclick="event.stopPropagation();abrirContratoGerencial('${id}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;white-space:nowrap">Gerenciar contrato</button>${btnEmailCt}${btnEncerrarCt}${btnEditar}</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text2)">
           <span>Inicial: <b>${valorInicial?_ctMoney(valorInicial):'-'}</b></span>
           <span>Reajustado: <b>${valorReajustado?_ctMoney(valorReajustado):'-'}</b></span>
-          <span>Aditivo: ${aditivoHtml}</span>
           <span>${_ctPendenciasResumo(r)}</span>
         </div>
       </div>
       ${_ctCardItensHtml(r.id)}
     </div>`:''}
-  </div>`;
+  </article>`;
 }
 
 function _ctCardItensHtml(contratoId){
@@ -2545,6 +2543,7 @@ function _ctCardItensHtml(contratoId){
   const contrato=contratosRows.find(r=>String(r.id)===String(contratoId));
   const eventos=contrato?._contractEvents||[];
   const mensal=itens.every(i=>i.origem==='servico_mensal');
+  const porDemanda=itens.every(i=>i.origem==='servico_demanda');
   const linhas=itens.map(i=>{
     const valorUnit=_ctNum(i.valor_contratado??i.valor_estimado);
     const qtde=Number(i.qtde)||0;
@@ -2554,15 +2553,17 @@ function _ctCardItensHtml(contratoId){
       return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorMensal?_ctMoney(valorMensal):'-'}</td></tr>`;
     }
     const entregas=(i.itens_entregas||[]).filter(e=>(e.status||'')!=='cancelada');
-    const recebido=entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
-    const saldo=qtde-recebido;
+    // Serviço por demanda não possui recebimento físico: o executado vem da medição aprovada.
+    const executado=porDemanda?(Number(i._qtdeMedida)||0):entregas.reduce((s,e)=>s+(Number(e.qtde_recebida)||0),0);
+    const saldo=qtde-executado;
     const valorTotal=valorUnit*qtde;
-    return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${recebido}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'-'}</td></tr>`;
+    const valorSaldo=Math.max(saldo,0)*valorUnit;
+    return `<tr><td style="padding:7px 10px">${_sanEsc(i.descricao||'-')}</td><td style="padding:7px 10px">${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'-')}</td><td style="padding:7px 10px;text-align:right">${qtdeInicial}</td><td style="padding:7px 10px;text-align:right;font-weight:700">${qtde}</td><td style="padding:7px 10px;text-align:right">${executado}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--amber)'}">${saldo}</td><td style="padding:7px 10px;text-align:right">${valorUnit?_ctMoney(valorUnit):'-'}</td><td style="padding:7px 10px;text-align:right">${valorTotal?_ctMoney(valorTotal):'-'}</td><td style="padding:7px 10px;text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--text)'}">${_ctMoney(valorSaldo)}</td></tr>`;
   }).join('');
   const header=mensal
     ?'<th style="padding:7px 10px">Item</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor mensal</th>'
-    :'<th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Marca/Modelo</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">Recebido</th><th style="padding:7px 10px;text-align:right">Saldo</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor total</th>';
-  return `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+    :`<th style="padding:7px 10px">Item</th><th style="padding:7px 10px">Marca/Modelo</th><th style="padding:7px 10px;text-align:right">Qtde inicial</th><th style="padding:7px 10px;text-align:right">Qtde atual</th><th style="padding:7px 10px;text-align:right">${porDemanda?'Executado':'Recebido'}</th><th style="padding:7px 10px;text-align:right">Saldo</th><th style="padding:7px 10px;text-align:right">Valor unit.</th><th style="padding:7px 10px;text-align:right">Valor total</th><th style="padding:7px 10px;text-align:right">Valor do saldo</th>`;
+  return `<div class="ct-contract-items-table${mensal?' is-monthly':''}">
     <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:${mensal?'620px':'860px'}">
       <thead><tr style="background:var(--blue-bg);color:var(--blue-text);text-align:left">${header}</tr></thead>
       <tbody>${linhas}</tbody>
@@ -2648,10 +2649,19 @@ async function ctToggleExpand(id){
   ctExpandido[id]=!ctExpandido[id];
   if(ctExpandido[id] && !ctItensPorContrato[id]){
     renderTabelaContratos();
-    const {data,error}=await sb.from('itens')
-      .select('id,descricao,qtde,marca,modelo,origem,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)')
-      .eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_demanda']).order('created_at');
-    ctItensPorContrato[id]=error?[]:(data||[]);
+    const [itensRes,medicoesRes]=await Promise.all([
+      sb.from('itens').select('id,descricao,qtde,marca,modelo,origem,valor_contratado,valor_estimado,itens_entregas(id,af_numero,qtde_recebida,status)').eq('contrato_id',id).in('origem',['aquisicao','servico_mensal','servico_demanda']).order('created_at'),
+      sb.from('contratos_medicoes').select('status,contratos_medicao_itens(item_id,quantidade_executada,quantidade_aceita)').eq('contrato_id',id)
+    ]);
+    const statusQueExecuta=new Set(['aprovada','aprovada_pelo_fiscal','aprovada_com_glosa','validada','encaminhada']);
+    const medidoPorItem=new Map();
+    (medicoesRes.error?[]:(medicoesRes.data||[])).filter(m=>statusQueExecuta.has(String(m.status||'').toLowerCase())).forEach(m=>{
+      (m.contratos_medicao_itens||[]).forEach(mi=>{
+        const itemId=String(mi.item_id||'');
+        if(itemId) medidoPorItem.set(itemId,(medidoPorItem.get(itemId)||0)+_ctNum(mi.quantidade_aceita??mi.quantidade_executada));
+      });
+    });
+    ctItensPorContrato[id]=itensRes.error?[]:(itensRes.data||[]).map(item=>({...item,_qtdeMedida:medidoPorItem.get(String(item.id))||0}));
   }
   renderTabelaContratos();
 }
@@ -3063,8 +3073,9 @@ async function abrirDetalheContrato(id){
     const qtdeInicial=_ctQuantidadeInicialItem(i,hist);
     const saldo=qtde-recebido;
     const unit=_ctNum(i.valor_contratado??i.valor_estimado);
+    const valorSaldo=Math.max(saldo,0)*unit;
     const inativo=['inativo','cancelado'].includes(String(i.status||'').toLowerCase());
-    return `<tr style="${inativo?'opacity:.62':''}"><td>${_sanEsc(i.descricao||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(i.status||'contratado')}</span></td><td>${_sanEsc(_ctItemTipoLabel(_ctItemTipo(i)))}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${qtdeInicial}</td><td style="text-align:right;font-weight:700">${qtde}</td><td style="text-align:right">${recebido}</td><td style="text-align:right">${saldo}</td><td style="text-align:right">${unit?_ctMoney(unit):'—'}</td><td style="text-align:right">${unit?_ctMoney(unit*qtde):'—'}</td><td>${editor?`<button class="btn-secondary" onclick="abrirModalItemContrato('${i.id}')" style="font-size:11px;padding:3px 8px">Editar</button>`:'—'}</td></tr>`;
+    return `<tr style="${inativo?'opacity:.62':''}"><td>${_sanEsc(i.descricao||'—')}<br><span style="font-size:11px;color:var(--text3)">${_sanEsc(i.status||'contratado')}</span></td><td>${_sanEsc(_ctItemTipoLabel(_ctItemTipo(i)))}</td><td>${_sanEsc([i.marca,i.modelo].filter(Boolean).join(' ')||'—')}</td><td style="text-align:right">${qtdeInicial}</td><td style="text-align:right;font-weight:700">${qtde}</td><td style="text-align:right">${recebido}</td><td style="text-align:right">${saldo}</td><td style="text-align:right">${unit?_ctMoney(unit):'—'}</td><td style="text-align:right">${unit?_ctMoney(unit*qtde):'—'}</td><td style="text-align:right;font-weight:700;color:${saldo<=0?'var(--green)':'var(--text)'}">${_ctMoney(valorSaldo)}</td></tr>`;
   }).join('');
   const rowsVigs=(vigRes.data||[]).map(v=>`<tr><td>${fmtDate(v.data_inicio)}</td><td>${fmtDate(v.data_fim)}</td><td>${v.valor_total?fmtFull(v.valor_total):'—'}</td><td>${_sanEsc(v.obs||'')}</td></tr>`).join('');
   const rowsFiscais=fiscais.map(f=>`<tr><td>${_sanEsc(f.nome||'—')}</td><td>${_sanEsc(f.cargo||'')}</td><td>${fmtDate(f.data_inicio)}</td><td>${f.data_fim?fmtDate(f.data_fim):'Ativo'}</td></tr>`).join('');
@@ -3122,7 +3133,7 @@ async function abrirDetalheContrato(id){
       <td style="text-align:right">${_ctMoney(m.valor_bruto)}</td>
       <td style="text-align:right;color:${_ctNum(m.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(m.valor_glosa)}</td>
       <td style="text-align:right;font-weight:700">${_ctMoney(m.valor_liquido)}</td>
-      <td>${_ctStatusBadge(m.status,CT_MEDICAO_STATUS_LABELS)}</td>
+      <td>${editor?_ctStatusSelectHtml(m.status,CT_MEDICAO_STATUS_LABELS,'medicao',m.id):_ctStatusBadge(m.status,CT_MEDICAO_STATUS_LABELS)}</td>
       <td>${nfCount?nfCount+' NF(s)':'—'}</td>
       <td class="td-wrap" style="max-width:220px">${_sanEsc(m.observacoes||glosas.map(g=>g.motivo).filter(Boolean).join('; ')||'—')}</td>
       <td>${termoBtn}</td>
@@ -3137,7 +3148,7 @@ async function abrirDetalheContrato(id){
       <td style="text-align:right">${_ctMoney(n.valor_total)}</td>
       <td style="text-align:right;color:${_ctNum(n.valor_glosa)>0?'var(--red)':'var(--text2)'}">${_ctMoney(n.valor_glosa)}</td>
       <td style="text-align:right;font-weight:700">${_ctMoney(n.valor_aprovado??n.valor_total)}</td>
-      <td>${_ctStatusBadge(n.status,CT_NF_STATUS_LABELS)}</td>
+      <td>${editor?_ctStatusSelectHtml(n.status,CT_NF_STATUS_LABELS,'nota',n.id):_ctStatusBadge(n.status,CT_NF_STATUS_LABELS)}</td>
       <td class="td-wrap" style="max-width:220px">${_sanEsc(n.observacoes||'—')}</td>
     </tr>`;
   }).join('');
@@ -3213,7 +3224,7 @@ async function abrirDetalheContrato(id){
         <div class="ficha-field"><div class="ficha-field-label">Observações</div><div class="ficha-field-value">${_sanEsc(c.obs||'—')}</div></div>
       </div>
       <div style="margin-top:1rem"><div class="card-title" style="font-size:11px;text-transform:uppercase;color:var(--text3);letter-spacing:.04em;margin-bottom:.5rem">Fiscalizadores</div>
-        ${rowsFiscais?`<div class="table-wrap" style="height:auto;max-height:260px"><table style="font-size:12px"><thead><tr><th>Nome</th><th>Cargo</th><th>Início</th><th>Fim</th></tr></thead><tbody>${rowsFiscais}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum fiscalizador registrado.</div>'}
+        ${rowsFiscais?`<div class="table-wrap ct-fiscais-table" style="height:auto;max-height:260px"><table style="font-size:12px"><thead><tr><th>Nome</th><th>Cargo</th><th>Início</th><th>Fim</th></tr></thead><tbody>${rowsFiscais}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum fiscalizador registrado.</div>'}
       </div>
     </div>
 
@@ -3222,7 +3233,7 @@ async function abrirDetalheContrato(id){
         <div style="font-size:13px;color:var(--text2)">Itens do contrato usados como base para saldos, medições, aditivos e supressões.</div>
         ${editor?'<button class="btn-secondary" onclick="abrirModalItemContrato()">Novo item</button>':''}
       </div>
-      ${rowsItens?`<div class="table-wrap" style="height:auto;max-height:380px"><table style="font-size:12px"><thead><tr><th>Item</th><th>Tipo</th><th>Marca/Modelo</th><th style="text-align:right">Qtde inicial</th><th style="text-align:right">Qtde atual</th><th style="text-align:right">Executado</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Ações</th></tr></thead><tbody>${rowsItens}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado a este contrato.</div>'}
+      ${rowsItens?`<div class="table-wrap ct-itens-table" style="height:auto;max-height:380px"><table style="font-size:12px"><thead><tr><th>Item</th><th>Tipo</th><th>Marca/Modelo</th><th style="text-align:right">Qtde inicial</th><th style="text-align:right">Qtde atual</th><th style="text-align:right">Executado</th><th style="text-align:right">Saldo</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th style="text-align:right">Valor do saldo</th></tr></thead><tbody>${rowsItens}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhum item vinculado a este contrato.</div>'}
     </div>
 
     <div class="ct-detail-pane" data-tab="reajustes" style="display:none">
@@ -3262,7 +3273,7 @@ async function abrirDetalheContrato(id){
         ${editor?'<button class="btn-secondary" onclick="abrirModalMedicaoContrato()">Nova medição</button>':''}
       </div>
       ${medError}
-      ${rowsMedicoes?`<div class="table-wrap" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Item</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th><th>Termo</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
+      ${rowsMedicoes?`<div class="table-wrap ct-medicoes-table" style="height:auto;max-height:360px"><table style="font-size:12px"><thead><tr><th>Competência</th><th>Tipo</th><th>Item</th><th>Fiscal</th><th style="text-align:right">Valor bruto</th><th style="text-align:right">Glosa</th><th style="text-align:right">Valor líquido</th><th>Status</th><th>NF</th><th>Obs.</th><th>Termo</th></tr></thead><tbody>${rowsMedicoes}</tbody></table></div>`:'<div style="font-size:13px;color:var(--text3)">Nenhuma medição registrada para este contrato.</div>'}
     </div>
     <div class="ct-detail-pane" data-tab="notas" style="display:none">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;flex-wrap:wrap">
@@ -3803,6 +3814,52 @@ function abrirModalNotaFiscalContrato(){
   document.getElementById('modal-ct-nf').classList.add('active');
 }
 
+async function _ctReabrirAbaContrato(tab){
+  if(!_ctAtual?.id) return;
+  await abrirDetalheContrato(_ctAtual.id);
+  ctOpenContratoTab(tab);
+}
+
+async function alterarStatusMedicaoContrato(id,status){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!CT_MEDICAO_STATUS_LABELS[status]) return;
+  const medicao=(_ctMedicoesAtual||[]).find(m=>String(m.id)===String(id));
+  if(!medicao) return;
+  const anterior=String(medicao.status||'');
+  if(anterior===status) return;
+  const novoLabel=CT_MEDICAO_STATUS_LABELS[status];
+  if(!await uiConfirm(`Alterar o status da medição ${medicao.competencia||''} para "${novoLabel}"?`)){ await _ctReabrirAbaContrato('medicoes'); return; }
+  const aprovada=['aprovada_pelo_fiscal','aprovada_com_glosa'].includes(status);
+  const payload={status,updated_at:new Date().toISOString()};
+  if(aprovada){ payload.validado_por=currentProfile?.nome||currentProfile?.email||medicao.fiscal_responsavel||null; payload.validado_em=new Date().toISOString(); }
+  const {error}=await sb.from('contratos_medicoes').update(payload).eq('id',id).eq('contrato_id',_ctAtual.id);
+  if(error){alert('Erro ao alterar o status da medição: '+error.message);await _ctReabrirAbaContrato('medicoes');return;}
+  await sb.from('contratos_historico').insert({contrato_id:_ctAtual.id,cpl:_ctAtual.cpl||null,tipo:'Medição contratual',data_evento:_ctTodayISO(),obs:`Status da medição ${medicao.competencia||id} alterado de ${CT_MEDICAO_STATUS_LABELS[anterior]||anterior} para ${novoLabel}.`,usuario:currentProfile?.nome||currentProfile?.email||null});
+  delete ctItensPorContrato[_ctAtual.id];
+  if(window.toast) toast('Status da medição atualizado.','success');
+  await _ctReabrirAbaContrato('medicoes');
+}
+
+async function alterarStatusNotaFiscalContrato(id,status){
+  if(bloquearSeVisualiz('contratos')) return;
+  if(!CT_NF_STATUS_LABELS[status]) return;
+  const nota=(_ctNotasAtual||[]).find(n=>String(n.id)===String(id));
+  if(!nota) return;
+  const anterior=String(nota.status||'');
+  if(anterior===status) return;
+  const novoLabel=CT_NF_STATUS_LABELS[status];
+  if(!await uiConfirm(`Alterar o status da NF ${nota.numero||''} para "${novoLabel}"?`)){ await _ctReabrirAbaContrato('notas'); return; }
+  const validada=['aprovada','aprovada_com_glosa','encaminhada_para_pagamento'].includes(status);
+  const payload={status,updated_at:new Date().toISOString()};
+  if(validada){ payload.validado_por=currentProfile?.nome||currentProfile?.email||null; payload.validado_em=new Date().toISOString(); }
+  if(status==='encaminhada_para_pagamento') payload.encaminhado_em=new Date().toISOString();
+  const {error}=await sb.from('notas_fiscais').update(payload).eq('id',id).eq('contrato_id',_ctAtual.id);
+  if(error){alert('Erro ao alterar o status da NF: '+error.message);await _ctReabrirAbaContrato('notas');return;}
+  await sb.from('contratos_historico').insert({contrato_id:_ctAtual.id,cpl:_ctAtual.cpl||null,tipo:'Nota fiscal contratual',data_evento:_ctTodayISO(),obs:`Status da NF ${nota.numero||id} alterado de ${CT_NF_STATUS_LABELS[anterior]||anterior} para ${novoLabel}. Não representa pagamento.`,usuario:currentProfile?.nome||currentProfile?.email||null});
+  if(window.toast) toast('Status da NF atualizado.','success');
+  await _ctReabrirAbaContrato('notas');
+}
+
 async function salvarMedicaoContrato(){
   if(bloquearSeVisualiz('contratos')) return;
   if(!_ctAtual) return;
@@ -3903,6 +3960,7 @@ async function salvarMedicaoContrato(){
   });
   if(btn)btn.disabled=false;
   document.getElementById('modal-ct-medicao').classList.remove('active');
+  delete ctItensPorContrato[_ctAtual.id];
   if(window.toast) toast('Medição registrada.','success');
   await abrirDetalheContrato(_ctAtual.id);
   ctOpenContratoTab('medicoes');

@@ -716,8 +716,16 @@ async function salvarRenovacao(){
       if(errItem) throw errItem;
     }
     if(reiniciarSaldo){
+      const termosRemovidos=(atasExec||[])
+        .filter(exec=>String(exec.ata_item_id)===String(at.id))
+        .map(exec=>exec.termo_arquivo)
+        .filter(Boolean);
       const {error:errExec}=await sb.from("atas_execucao").delete().eq("ata_item_id",at.id);
       if(errExec) throw errExec;
+      if(termosRemovidos.length&&typeof removerTermosEntrega==='function'){
+        try{ await removerTermosEntrega(termosRemovidos); }
+        catch(cleanupError){ console.warn('Execuções removidas, mas termos antigos permaneceram no Storage',cleanupError); }
+      }
     }
     const {error:errHist}=await sb.from("contratos_historico").insert({
       contrato_id:at.contrato_id,
@@ -926,6 +934,13 @@ async function excluirExec(execId){
   const {data,error}=await sb.from("atas_execucao").delete().eq("id",exec.id).select("id");
   if(error){alert("Erro ao excluir solicitação: "+error.message);return;}
   if(!data?.length){alert("A solicitação não foi excluída. Verifique sua permissão na aba ATAs.");return;}
+  if(exec.termo_arquivo&&typeof removerTermosEntrega==='function'){
+    try{ await removerTermosEntrega([exec.termo_arquivo]); }
+    catch(cleanupError){
+      console.warn('Solicitação removida, mas o termo permaneceu no Storage',cleanupError);
+      alert('A solicitação foi excluída, mas não foi possível remover o termo do Storage.');
+    }
+  }
   atasExec=atasExec.filter(r=>String(r.id)!==String(exec.id));
   filtrarAtas();
 }
@@ -1332,4 +1347,3 @@ async function salvarAtaAF(){
   }
   setTimeout(()=>document.getElementById('modal-ata-af').classList.remove('active'),800);
 }
-

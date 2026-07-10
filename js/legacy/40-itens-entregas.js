@@ -2225,6 +2225,13 @@ async function _uploadTermoEntrega(row,file){
   if(error) throw error;
   return path;
 }
+async function removerTermosEntrega(paths){
+  const unicos=[...new Set((paths||[]).map(path=>String(path||'').trim()).filter(Boolean))];
+  if(!unicos.length) return [];
+  const {data,error}=await sb.storage.from('termos-entrega').remove(unicos);
+  if(error) throw error;
+  return data||[];
+}
 async function abrirTermoEntrega(encodedPath){
   const path=decodeURIComponent(encodedPath||'');
   if(!path) return;
@@ -2259,8 +2266,11 @@ async function salvarConfirmacaoUnidade(){
   if(!file && !row.termo_arquivo){ _confSetMsg('Anexe o termo em PDF ou imagem.','err'); return; }
   const btn=document.getElementById('cu-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _confSetMsg('Salvando...');
+  let novoTermoPath=null;
+  let registroAtualizado=false;
   try{
     const termoPath=await _uploadTermoEntrega(row,file);
+    if(file) novoTermoPath=termoPath;
     const patch={
       data_entrega_unidade:dataEntrega,
       termo_arquivo:termoPath,
@@ -2271,6 +2281,11 @@ async function salvarConfirmacaoUnidade(){
     const table=tipo==='ATA'?'atas_execucao':'itens_entregas';
     const {error}=await sb.from(table).update(patch).eq('id',id);
     if(error) throw error;
+    registroAtualizado=true;
+    if(file && row.termo_arquivo && row.termo_arquivo!==termoPath){
+      try{ await removerTermosEntrega([row.termo_arquivo]); }
+      catch(cleanupError){ console.warn('Termo anterior não removido do Storage',cleanupError); }
+    }
     if(tipo!=='ATA') await _confWriteBackEmenda(row,dataEntrega);
     document.getElementById('modal-confirmacao-unidade').classList.remove('active');
     if(window.toast) toast('Entrega na unidade confirmada','success');
@@ -2283,6 +2298,10 @@ async function salvarConfirmacaoUnidade(){
     if(tipo==='ATA'&&typeof loadAtas==='function') loadAtas();
     if(tipo!=='ATA'&&row.emenda_item_id) loadData();
   }catch(e){
+    if(novoTermoPath&&!registroAtualizado){
+      try{ await removerTermosEntrega([novoTermoPath]); }
+      catch(rollbackError){ console.error('Falha ao desfazer upload sem vínculo',rollbackError); }
+    }
     _confSetMsg('Erro: '+e.message,'err');
   }finally{
     btn.disabled=false; btn.textContent=label;
@@ -2293,6 +2312,7 @@ window.renderConfirmacoes=renderConfirmacoes;
 window.abrirConfirmacaoUnidade=abrirConfirmacaoUnidade;
 window.salvarConfirmacaoUnidade=salvarConfirmacaoUnidade;
 window.abrirTermoEntrega=abrirTermoEntrega;
+window.removerTermosEntrega=removerTermosEntrega;
 
 async function gerarContratoDoProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;

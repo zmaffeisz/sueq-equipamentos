@@ -9,6 +9,12 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
 
 ## [Não versionado]
 
+### Removido
+- **Limpeza do clone `contratos-dag`**: removido o schema desconectado
+  `backup_20260701`, excluídos termos de entrega órfãos do Storage e consolidados os
+  cadastros duplicados de `AFIP` e `CONNECT HEART`, preservando o registro mais antigo e
+  seu CNPJ sem alteração.
+
 ### Alterado
 - **Contratos em execucao com visualizacao em cartoes**: a lista de contratos passou a
   seguir o mesmo padrao visual das licitacoes, com linha inteira clicavel para expandir,
@@ -33,6 +39,9 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   `js/components/` para as próximas extrações sem alterar regra de negócio.
 
 ### Corrigido
+- **Upload de termos de entrega sem arquivos órfãos**: falhas após o upload agora removem
+  o novo arquivo ainda não vinculado; substituições limpam o termo anterior e exclusões de
+  execuções de ATA tentam remover os respectivos arquivos pela Storage API.
 - **Bloqueio de medição acima do saldo contratado**: medições de serviço por demanda
   agora impedem salvar item com quantidade maior que o saldo disponível do contrato.
 - **Formulário público de chamados no projeto de teste**: o botão "Abertura de Chamados"
