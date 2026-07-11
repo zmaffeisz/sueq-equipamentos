@@ -2099,7 +2099,8 @@ async function abrirModalNovoContrato(){
   fecharFornecedorCombo();
   const _ncc=document.getElementById("nc-cnpj"); if(_ncc) _ncc.readOnly=false;
   preencherSelectFornecedores();
-  preencherSelectSecoes('nc-secao', true);
+  await preencherSelectSecoes('nc-secao', _isAdmin());
+  aplicarSecaoTextoFormulario('nc-secao');
   await _ncPreencherFiscalMulti();
   window._ncEmpItens={};window._ncEmpBuffer={};window._ncEmpFree=null;window._ncModoAtual='';window._ncVincularItensMap={};
   const _fn=document.getElementById("nc-fiscalizacao-novo"); if(_fn) _fn.value="";
@@ -2193,6 +2194,7 @@ async function salvarNovoContrato(){
     cnpj:_mn("nc-cnpj"),
     email_empresa:_mn("nc-email"),
     secao:secaoVal,
+    secao_id:_secoesOrganizacionais.find(s=>s.sigla===secaoVal)?.id||null,
     status:document.getElementById("nc-status").value,
     data_inicio:inicioContrato,
     data_assinatura:document.getElementById("nc-assinatura").value||null,
@@ -2711,7 +2713,7 @@ function abrirEditarContrato(id){
   if(!contrato) return;
   _ctEdicaoId=contrato.id;
   Object.entries(CT_EDIT_FIELDS).forEach(([campo,coluna])=>{document.getElementById(campo).value=contrato[coluna]??'';});
-  preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>{ const s=document.getElementById('ec-secao'); if(s) s.value=contrato.secao||''; });
+  preencherSelectSecoes('ec-secao', false, contrato.secao).then(()=>aplicarSecaoTextoFormulario('ec-secao',contrato.secao||''));
   preencherSelectPessoas('ec-fiscalizacao', false, contrato.fiscalizacao).then(()=>{ const s=document.getElementById('ec-fiscalizacao'); if(s) s.value=contrato.fiscalizacao||''; });
   // combobox de fornecedor
   const _ecLabel=document.getElementById('ec-fornecedor-label');
@@ -2746,6 +2748,7 @@ async function salvarEdicaoContrato(){
   });
   delete dados.valor_inicial;
   delete dados.valor_atual;
+  dados.secao_id=_secoesOrganizacionais.find(s=>s.sigla===dados.secao)?.id||null;
   if(dados.tipo_instrumento==="ATA") dados.valor_mensal=null;
   dados.prefixo_chamado=prefixo||null;
   // fornecedor via combobox

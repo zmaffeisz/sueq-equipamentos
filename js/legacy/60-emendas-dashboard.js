@@ -1651,6 +1651,7 @@ async function neInitItens(){
   const box=document.getElementById('ne-itens'); if(box) box.innerHTML='';
   const r=document.getElementById('ne-resumo'); if(r) r.innerHTML='';
   await Promise.all([_neEnsureUnidades(), popularStatusLicitacao()]);
+  aplicarSecaoFormulario('ne-secao');
   neAddItem();
 }
 function neAddItem(){
@@ -1719,12 +1720,13 @@ function neRecalc(){
 }
 
 async function salvarNovaEmenda(){
+  const secaoId=Number(document.getElementById('ne-secao')?.value||0);
   const tipo=document.getElementById("ne-tipo").value;
   const emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value;
   const anoStr=document.getElementById("ne-ano").value.trim();
   const parlamentarNome=(document.getElementById("ne-parlamentar-sel")?.value)||null;
-  if(!tipo||!emenda||!valor){showMsg("ne","Preencha os campos obrigatórios (*): tipo, nº da emenda e valor cedido global.","err");return}
+  if(!secaoId||!tipo||!emenda||!valor){showMsg("ne","Preencha os campos obrigatórios (*): seção, tipo, nº da emenda e valor cedido global.","err");return}
   // coleta e valida itens inline
   const itens=[];
   for(const it of document.querySelectorAll('#ne-itens .ne-item')){
@@ -1753,7 +1755,7 @@ async function salvarNovaEmenda(){
     const nomesUnid=[...new Set(itens.flatMap(it=>it.unidades.map(u=>u.nome)))];
     const idsUnid=[...new Set(itens.flatMap(it=>it.unidades.map(u=>u.id)))];
     const {data:em,error:e1}=await sb.from("emendas").insert({
-      tipo, emenda, parlamentar:parlamentarNome,
+      secao_id:secaoId, tipo, emenda, parlamentar:parlamentarNome,
       sei_emenda:document.getElementById("ne-sei").value.trim()||null,
       objeto:document.getElementById("ne-objeto").value.trim()||null,
       valor_cedido:valorGlobal,
@@ -1874,4 +1876,3 @@ async function salvarStatus(){
   else{showMsg("as",`✓ ${done} item(ns) atualizado(s)! Recarregando...`,"ok");}
   setTimeout(()=>loadData(),1200);
 }
-

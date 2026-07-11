@@ -16,6 +16,9 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   seu CNPJ sem alteração.
 
 ### Alterado
+- **Isolamento organizacional em todo o sistema**: perfis agora pertencem a uma seção ou à chefia da divisão; permissões por aba continuam definindo visualizar/editar, enquanto o RLS limita os registros à abrangência organizacional. Administradores escolhem no cabeçalho se trabalham em uma seção específica ou na visão da divisão. Emendas passam a exigir seção responsável, e processos/contratos preenchem a seção do usuário automaticamente.
+- **Acesso público restrito ao necessário**: visitantes continuam consultando Emendas e abrindo chamados, mas deixaram de ter leitura direta de processos, contratos, ATAs, itens, entregas, empenhos, notas fiscais e fornecedores. Chamados e Fiscalização ficam sob a seção `SUEQ - EQUIP`.
+- **Cadastro de processos com tipo simplificado e SC opcional**: o tipo agora fica ao lado esquerdo do identificador e oferece somente CPL, SEI e Outro; Outro abre um campo de texto livre, e o número da Solicitação de Compra pode ser informado separadamente sem ser obrigatório.
 - **Contratos em execucao com visualizacao em cartoes**: a lista de contratos passou a
   seguir o mesmo padrao visual das licitacoes, com linha inteira clicavel para expandir,
   destaque para processo/CPL e objeto, e botoes de acao exibidos apenas no contrato aberto.
@@ -39,6 +42,7 @@ Todas as mudanças relevantes deste projeto. Formato baseado em
   `js/components/` para as próximas extrações sem alterar regra de negócio.
 
 ### Corrigido
+- **Histórico completo no visualizador público de Emendas**: restaurada a consolidação pública de processo/CPL, contrato/ATA, AF, empenho, nota fiscal, patrimônio, série, recebimento e entrega. As novas policies liberam somente registros operacionais ligados a itens de Emendas, sem tornar públicos contratos e fluxos sem esse vínculo.
 - **Upload de termos de entrega sem arquivos órfãos**: falhas após o upload agora removem
   o novo arquivo ainda não vinculado; substituições limpam o termo anterior e exclusões de
   execuções de ATA tentam remover os respectivos arquivos pela Storage API.

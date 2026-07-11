@@ -31,6 +31,10 @@ async function abrirDetalheUsuario(userId){
   document.getElementById('ud-nome').textContent=p.nome||'—';
   document.getElementById('ud-email').textContent=p.email||'';
   document.getElementById('ud-papel').value=(p.papel==='admin')?'admin':'visualizador';
+  document.getElementById('ud-escopo').value=p.escopo_organizacional==='divisao'?'divisao':'secao';
+  document.getElementById('ud-secao').innerHTML=_secaoOptions(p.secao_id||'');
+  document.getElementById('ud-secao').value=p.secao_id?String(p.secao_id):'';
+  _udEscopoChange();
   const aprovadoEl=document.getElementById('ud-aprovado');
   if(aprovadoEl) aprovadoEl.checked = p.aprovado !== false;
   const excluirEl=document.getElementById('ud-excluir');
@@ -54,6 +58,10 @@ async function abrirDetalheUsuario(userId){
     </tr>`;
   }).join('');
 }
+function _udEscopoChange(){
+  const divisao=document.getElementById('ud-escopo')?.value==='divisao';
+  const wrap=document.getElementById('ud-secao-wrap'); if(wrap) wrap.style.display=divisao?'none':'flex';
+}
 function _udSyncEdit(key){
   const v=document.getElementById('udv-'+key);
   const e=document.getElementById('ude-'+key);
@@ -70,7 +78,11 @@ async function salvarPermissoesUsuario(){
   const novoNome=(document.getElementById('ud-nome-input')?.value||'').trim();
   const novoPapel=document.getElementById('ud-papel').value;
   const aprovado=!!document.getElementById('ud-aprovado')?.checked;
-  const {data:upd,error:errPapel}=await sb.from('profiles').update({nome:novoNome||null,papel:novoPapel,aprovado}).eq('id',_udUserId).select();
+  const escopo=document.getElementById('ud-escopo').value;
+  const secaoId=escopo==='secao'?Number(document.getElementById('ud-secao').value||0):null;
+  if(escopo==='secao'&&!secaoId){msg.textContent='Selecione a seção do usuário.';msg.className='fmsg err';btn.disabled=false;btn.textContent='Salvar permissões';return;}
+  const org={escopo_organizacional:escopo,secao_id:secaoId,contexto_modo:escopo==='divisao'?'divisao':'secao',contexto_secao_id:secaoId};
+  const {data:upd,error:errPapel}=await sb.from('profiles').update({nome:novoNome||null,papel:novoPapel,aprovado,...org}).eq('id',_udUserId).select();
   if(errPapel){ msg.textContent='Erro ao salvar papel: '+errPapel.message; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
   if(!upd || upd.length===0){ msg.textContent='⚠️ Sem permissão para alterar este usuário (verifique a política RLS de profiles).'; msg.className='fmsg err'; btn.disabled=false; btn.textContent='Salvar permissões'; return; }
   const rows=PERM_TABS.map(t=>({
@@ -348,15 +360,17 @@ async function abrirNovoProcesso(){
   if(!podeEditar('contratos')&&!_isAdmin()){alert('Sem permissão.');return;}
   _procEditId=null;
   document.getElementById('proc-titulo').textContent='➕ Novo processo';
-  ['proc-identificador','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
+  ['proc-identificador','proc-tipo-outro','proc-sc','proc-objeto','proc-modalidade','proc-valor','proc-obs'].forEach(id=>document.getElementById(id).value='');
   _procServicoMensalIds().forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('proc-serv-mensal-itens-lista').innerHTML='';
   document.getElementById('proc-tipo').value='';
+  _procTipoChange();
   document.getElementById('proc-natureza').value='';
   document.getElementById('proc-tipo-servico').value='';
   const demandaMesesEl=document.getElementById('proc-serv-demanda-meses'); if(demandaMesesEl) demandaMesesEl.value='';
   await preencherSelectStatusProcesso();
   await preencherSelectSecoes('proc-secao', false);
+  aplicarSecaoTextoFormulario('proc-secao');
   _procItensLoaded=[];
   document.getElementById('proc-itens-lista').innerHTML='';
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
@@ -370,7 +384,11 @@ function abrirEditarProcesso(id){
   _procEditId=p.id;
   document.getElementById('proc-titulo').textContent='✏️ Editar processo';
   document.getElementById('proc-identificador').value=p.identificador||'';
-  document.getElementById('proc-tipo').value=p.tipo||'';
+  const tipoPadrao=['CPL','SEI'].includes(p.tipo)?p.tipo:(p.tipo?'OUTRO':'');
+  document.getElementById('proc-tipo').value=tipoPadrao;
+  document.getElementById('proc-tipo-outro').value=tipoPadrao==='OUTRO'?(p.tipo||''):'';
+  document.getElementById('proc-sc').value=p.sc||'';
+  _procTipoChange();
   document.getElementById('proc-natureza').value=p.natureza||'';
   document.getElementById('proc-tipo-servico').value=p.tipo_servico||'';
   _procCarregarServicoMensalItens(p);
@@ -383,7 +401,7 @@ function abrirEditarProcesso(id){
   document.getElementById('proc-valor').value=p.valor_estimado??'';
   document.getElementById('proc-obs').value=p.observacao||'';
   preencherSelectStatusProcesso().then(()=>{document.getElementById('proc-status').value=p.status||'';});
-  preencherSelectSecoes('proc-secao', false, p.secao).then(()=>{document.getElementById('proc-secao').value=p.secao||'';});
+  preencherSelectSecoes('proc-secao', false, p.secao).then(()=>aplicarSecaoTextoFormulario('proc-secao',p.secao||''));
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
   procNaturezaChange();
   procRecalcServicoMensal();
@@ -392,6 +410,12 @@ function abrirEditarProcesso(id){
   document.getElementById('modal-processo').classList.add('active');
 }
 // SEI = somente números e separadores (. / -). CPL e demais tipos podem ter letras.
+function _procTipoChange(){
+  const outro=document.getElementById('proc-tipo')?.value==='OUTRO';
+  const wrap=document.getElementById('proc-tipo-outro-wrap');
+  if(wrap) wrap.style.display=outro?'flex':'none';
+  _procIdentFiltrar();
+}
 function _procIdentFiltrar(){
   const tipo=document.getElementById('proc-tipo')?.value;
   const inp=document.getElementById('proc-identificador'); if(!inp) return;
@@ -402,13 +426,17 @@ function _procIdentFiltrar(){
 }
 async function salvarProcesso(){
   const ident=document.getElementById('proc-identificador').value.trim();
-  const tipo=document.getElementById('proc-tipo').value;
+  const tipoSelecionado=document.getElementById('proc-tipo').value;
+  const tipoOutro=document.getElementById('proc-tipo-outro')?.value.trim()||'';
+  const tipo=tipoSelecionado==='OUTRO'?tipoOutro:tipoSelecionado;
+  const sc=document.getElementById('proc-sc')?.value.trim()||null;
   const status=document.getElementById('proc-status')?.value||null;
   const natureza=document.getElementById('proc-natureza').value;
   const tipoServico=document.getElementById('proc-tipo-servico')?.value||'';
   const servicoMensal=_procLerServicoMensal();
   const servicoDemandaMeses=Number(document.getElementById('proc-serv-demanda-meses')?.value||0);
   const secao=document.getElementById('proc-secao').value;
+  const secaoId=_secoesOrganizacionais.find(s=>s.sigla===secao)?.id||null;
   const objeto=document.getElementById('proc-objeto').value.trim();
   if(!ident||!tipo||!natureza||!secao||!objeto){showMsg('proc','Preencha os campos obrigatórios (*): Identificador, Tipo, Natureza, Seção e Objeto.','err');return;}
   if(natureza==='SERVIÇO'&&!tipoServico){showMsg('proc','Preencha o campo obrigatório (*): Tipo do serviço.','err');return;}
@@ -419,12 +447,14 @@ async function salvarProcesso(){
   const dados={
     identificador:ident,
     tipo,
+    sc,
     natureza,
     tipo_servico:natureza==='SERVIÇO'?tipoServico:null,
     objeto,
     modalidade:document.getElementById('proc-modalidade').value.trim()||null,
     status,
     secao,
+    secao_id:secaoId,
     valor_estimado:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_valor_global:(document.getElementById('proc-valor').value?Number(document.getElementById('proc-valor').value):null),
     servico_mensal_itens:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_itens:null,
     servico_mensal_meses:_procEhServicoMensalFixo()?servicoMensal.servico_mensal_meses:null,

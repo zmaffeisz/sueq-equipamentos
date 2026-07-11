@@ -118,6 +118,11 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .form-group input[readonly]{background:var(--surface2);color:var(--text3)}
 .form-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.proc-ident-grid{display:grid;grid-template-columns:minmax(140px,180px) minmax(0,1fr);gap:12px}
+.proc-ident-grid.full{grid-column:1/-1}
+.proc-tipo-outro{grid-column:1}
+.proc-sc{grid-column:2}
+@media(max-width:600px){.proc-ident-grid{grid-template-columns:1fr}.proc-tipo-outro,.proc-sc{grid-column:1}}
 
 /* selects estilizados (form-group / ne-item): remove o widget nativo (que no Windows em
    modo escuro ignora parte do background do autor) e desenha uma seta própria */

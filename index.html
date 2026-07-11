@@ -22,6 +22,11 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
+    <label id="org-context-wrap" style="display:none;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap">
+      Visualizando como
+      <select id="org-context-select" onchange="trocarContextoAdmin()" style="max-width:180px;font-size:12px;padding:5px 26px 5px 8px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:#153a66;color:#fff"></select>
+    </label>
+    <span id="org-context-label" style="display:none;font-size:11px;color:rgba(255,255,255,.85);padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px"></span>
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
     <button class="refresh-btn" id="tema-btn" onclick="alternarTema()" aria-label="Alternar tema" style="font-size:16px;padding:6px 11px">🌙</button>
     <span id="last-update" style="display:none"></span>
@@ -327,6 +332,7 @@
       <button onclick="fecharModalEdicao('nova-emenda')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3);line-height:1;padding:4px">✕</button>
     </div>
     <div class="form-grid">
+      <div class="form-group"><div class="form-label">Seção responsável *</div><select id="ne-secao"></select></div>
       <div class="form-group"><div class="form-label">Tipo *</div><select id="ne-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
       <div class="form-group"><div class="form-label">Ano</div><input type="number" id="ne-ano" placeholder="ex: 2026"></div>
@@ -1513,8 +1519,12 @@
       <button onclick="document.getElementById('modal-processo').classList.remove('active')" style="font-size:18px;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
     </div>
     <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
-      <div class="form-group full"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
-      <div class="form-group"><div class="form-label">Tipo * <span style="font-size:10px;color:var(--text3);font-weight:400">(origem do processo)</span></div><select id="proc-tipo" onchange="_procIdentFiltrar()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>SC</option><option>ADESÃO</option><option>ATA EXTERNA</option><option>OUTRO</option></select></div>
+      <div class="proc-ident-grid full">
+        <div class="form-group"><div class="form-label">Tipo *</div><select id="proc-tipo" onchange="_procTipoChange()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>OUTRO</option></select></div>
+        <div class="form-group"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
+        <div class="form-group proc-tipo-outro" id="proc-tipo-outro-wrap" style="display:none"><div class="form-label">Outro tipo *</div><input type="text" id="proc-tipo-outro" placeholder="Informe o tipo do processo"></div>
+        <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" placeholder="Número da Solicitação de Compra (opcional)"></div>
+      </div>
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
       <div class="form-group"><div class="form-label">Natureza *</div><select id="proc-natureza" onchange="procNaturezaChange()"><option value="">Selecione...</option><option>AQUISIÇÃO</option><option>SERVIÇO</option><option>LOCAÇÃO</option><option>ATA DE RP</option><option>OUTRO</option></select></div>
@@ -2720,6 +2730,16 @@
         <option value="admin">Administrador</option>
       </select>
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Usuário: o acesso de ver/editar é definido pelas caixinhas abaixo. Administrador: acesso total.</div>
+    </div>
+    <div class="form-grid" style="margin-bottom:1rem">
+      <div class="form-group">
+        <div class="form-label">Abrangência organizacional</div>
+        <select id="ud-escopo" onchange="_udEscopoChange()"><option value="secao">Seção específica</option><option value="divisao">Chefia da divisão</option></select>
+      </div>
+      <div class="form-group" id="ud-secao-wrap">
+        <div class="form-label">Seção do usuário *</div>
+        <select id="ud-secao"></select>
+      </div>
     </div>
     <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-bottom:.5rem">Permissões por aba</div>
     <label style="display:flex;align-items:center;gap:8px;margin:-.25rem 0 1rem;font-size:13px;color:var(--text2)">
