@@ -123,7 +123,9 @@ AF, empenho e prazos: aquisição contratada fica aguardando AF. AF exige empenh
 
 Empenhos: saldo = valor empenhado - valor anulado - vínculos. Empenho deve se vincular a contrato/itens; ATA usa vínculo por execução/emenda item; aquisição permite múltiplos vínculos. Se vínculo exceder o valor, o sistema alerta/força confirmação. Alterar empenho recalcula saldos e reflete em ATA/Emendas.
 
-NF e recebimento: NF tem valor total uma vez em notas_fiscais.valor_total; rateio fica em nota_fiscal_itens; unidade física referencia NF sem repetir valor. O sistema tenta detectar NF duplicada por chave ou número normalizado. Recebimento não cria empenho novo; herda o empenho da AF. Aquisição permite parcial/total; ATA exige AF antes do recebimento e grava unidades físicas em atas_execucao_unidades.
+NF e recebimento: NF tem valor total uma vez em notas_fiscais.valor_total; rateio fica em nota_fiscal_itens; unidade física referencia NF sem repetir valor. O sistema tenta detectar NF duplicada por chave ou número normalizado. Recebimento não cria empenho novo; herda o empenho da AF. Aquisição permite parcial/total; ATA exige AF antes do recebimento. Em ambos os fluxos, "Possui patrimônio?" é obrigatório: "Sim" grava uma unidade física por patrimônio; "Não" não cria unidades e mantém a quantidade consolidada. A escolha fica bloqueada após o primeiro recebimento do item. Em Atas Rp Vigentes, cada execução expande na própria tabela para listar seus patrimônios e oferecer a ficha completa "Ver tudo" por unidade física.
+
+Exclusão de solicitação de ATA: permitida somente antes da emissão da AF. O botão desaparece quando existe AF ou qualquer etapa posterior; o banco também bloqueia exclusões diretas nesses casos. Uma exclusão ainda permitida remove os vínculos da execução com empenhos e recalcula os respectivos saldos.
 
 Confirmação na unidade e inventário: só entra em Confirmação após recebimento interno com NF. Para confirmar entrega, exige data real, responsável e termo em PDF ou imagem. Termos vão para Storage. Inventário mostra consolidado antes de patrimônio/série; depois mostra uma linha por unidade física.
 

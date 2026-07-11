@@ -1389,6 +1389,14 @@
         <input type="text" id="rec-marca-modelo" disabled placeholder="—">
       </div>
       <div class="form-group" style="grid-column:1 / -1">
+        <div class="form-label">Possui patrimônio? *</div>
+        <div style="display:flex;gap:18px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm)">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-possui-patrimonio" value="sim" onchange="_recTogglePatrimonio()"> Sim</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="rec-possui-patrimonio" value="nao" onchange="_recTogglePatrimonio()"> Não</label>
+        </div>
+        <div id="rec-patrimonio-ajuda" style="font-size:11px;color:var(--text3);margin-top:4px">Selecione uma opção para continuar.</div>
+      </div>
+      <div class="form-group" id="rec-patrimonio-auto" style="grid-column:1 / -1;display:none">
         <div class="form-label">Preenchimento automático de patrimônio</div>
         <div style="background:var(--surface2);padding:8px;border-radius:var(--radius-sm)">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end">
@@ -1414,7 +1422,7 @@
           </div>
         </div>
       </div>
-      <div class="form-group" style="grid-column:1 / -1">
+      <div class="form-group" id="rec-patrimonio-unidades" style="grid-column:1 / -1;display:none">
         <div class="form-label">Unidades recebidas <span style="color:var(--text3);font-weight:400">(patrimônio e série por unidade)</span></div>
         <div id="rec-unidades" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>

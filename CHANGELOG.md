@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-11
+
+- **Exclusão segura de solicitações de ATA**: o botão Excluir agora aparece somente antes da emissão da AF. A interface revalida o estado no momento da ação e um trigger no banco bloqueia exclusão quando há AF, prazo, NF, recebimento, patrimônio, entrega, termo ou sanção. Solicitações ainda elegíveis são removidas por RPC transacional, com limpeza dos vínculos de empenho e recálculo dos saldos.
+- **Execuções de ATA expansíveis**: cada linha em Atas Rp Vigentes > Execuções/Solicitações agora expande no próprio quadro para mostrar dados completos da execução e todas as unidades físicas, patrimônios, séries, NF e recebimento. Cada patrimônio possui a ação "Ver tudo", com ficha completa e vínculos de ATA, fornecedor, empenho e Emenda.
+- **Solicitação de ATA com IDs UUID**: corrigido o gatilho de isolamento organizacional que tentava converter IDs UUID de Emendas, itens de ATA e outros pais para `bigint`. A resolução da seção agora aceita com segurança os dois tipos de chave e volta a permitir salvar novas solicitações/execuções.
+- **Patrimônio opcional e explicitamente definido no recebimento**: o modal compartilhado por Aquisições e ATAs agora exige a escolha "Possui patrimônio? Sim/Não" antes de salvar. Os campos por unidade permanecem ocultos até a escolha; "Sim" exige um patrimônio por unidade e mantém a individualização, enquanto "Não" preserva o item consolidado sem criar linhas vazias nas tabelas de unidades físicas. A decisão persiste no banco e fica coerente nos recebimentos parciais seguintes.
+
 Todas as mudanças relevantes deste projeto. Formato baseado em
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 

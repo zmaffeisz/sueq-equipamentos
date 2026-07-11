@@ -990,7 +990,7 @@ async function loadItensEntregas(){
     .order('af_data',{ascending:false});
   if(e1){ wrap.innerHTML='<div style="padding:1rem;color:var(--red)">Erro (aquisições): '+_sanEsc(e1.message)+'</div>'; return; }
   const {data:aqBase,error:e1b}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,recebido_por,recebimento_tipo,possui_patrimonio,patrimonio,numero_serie,empenho_id,empenho,nota_fiscal_id,nota_fiscal,nf_data')
     .order('af_data',{ascending:false});
   if(e1b) console.warn('AF base:',e1b.message);
   const aqCalc=(!e1b&&Array.isArray(aqBase))?aqBase:(aq||[]);
@@ -1038,7 +1038,7 @@ async function loadItensEntregas(){
       af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
       saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
       data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
-      recebimento_tipo:r.recebimento_tipo||'', patrimonio:r.patrimonio||'',
+      recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
       empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenhos?.numero||r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
       nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.notas_fiscais?.numero||r.nota_fiscal||'',
       nf_dataISO:_toISODate(r.notas_fiscais?.data_emissao||r.nf_data),
@@ -1100,7 +1100,7 @@ async function loadItensEntregas(){
       af_dataISO:_toISODate(r.data_af), qtde:r.qtde,
       limiteISO, recebido, cancelado:false, entregaISO:_toISODate(r.dt_entrega), prazo_entrega_dias:r.prazo_entrega_dias||ai.prazo_entrega||null,
       valor_item:(Number(r.valor)&&Number(r.qtde))?(Number(r.valor)/Number(r.qtde)):(Number(ai.valor_unit)||0),
-      nota_fiscal:r.nf||emInfo.nota_fiscal||'', patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta,
+      nota_fiscal:r.nf||emInfo.nota_fiscal||'', possui_patrimonio:r.possui_patrimonio, patrimonio:patrimonioAta||emInfo.patrimonio||'', numero_serie:seriesAta,
       empenho_vinculado:!!empAta,
       _ataPendenteAF:pendenteAF,
       status:pendenteAF?'aguardando AF':_prazoStatus(limiteISO,recebido,false)
@@ -1162,7 +1162,7 @@ async function loadItensEntregas(){
         af_dataISO:_toISODate(r.af_data), qtde:qtdeAut, qtde_recebida:qtdeRec,
         saldo_af:saldoAf, saldo_item:saldoItem, limiteISO, recebido, cancelado,
         data_recebimentoISO:_toISODate(r.data_recebimento), recebido_por:r.recebido_por||'',
-        recebimento_tipo:r.recebimento_tipo||'', patrimonio:r.patrimonio||'',
+        recebimento_tipo:r.recebimento_tipo||'', possui_patrimonio:r.possui_patrimonio, patrimonio:r.patrimonio||'',
         empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null, empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',
         nota_fiscal_id:r.nota_fiscal_id||null, nota_fiscal:r.nota_fiscal||'',
         nf_dataISO:_toISODate(r.nf_data),
@@ -1206,14 +1206,14 @@ async function loadItensEntregas(){
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   // RESGATE FINAL: query direta sem joins. Se RLS bloqueou o SELECT com joins
   // aninhados mas o INSERT passou, esta query resgata os registros órfãos.
   const _outIds2=new Set(out.map(r=>r.entrega_id).filter(Boolean));
   const {data:_resgate}=await sb.from('itens_entregas')
-    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,patrimonio,numero_serie')
+    .select('id,item_id,af_numero,af_data,qtde_autorizada,qtde_recebida,status,data_limite_entrega,data_recebimento,empenho_id,empenho,nota_fiscal,possui_patrimonio,patrimonio,numero_serie')
     .not('af_numero','is',null).neq('status','cancelada').order('af_data',{ascending:false});
   if(_resgate) _resgate.forEach(r=>{
     if(_outIds2.has(String(r.id))) return;
@@ -1226,7 +1226,7 @@ async function loadItensEntregas(){
       unidade:it.unidades?.nome||'',af_numero:r.af_numero||'',af_dataISO:_toISODate(r.af_data),
       qtde:qA,qtde_recebida:qR,saldo_af:qA-qR,limiteISO:_toISODate(r.data_limite_entrega),
       recebido:rec,cancelado:false,status:_prazoStatus(_toISODate(r.data_limite_entrega),rec,false),
-      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
+      empenho_id:r.empenho_id||empAqPorItem[String(r.item_id)]?.id||null,empenho:r.empenho||empAqPorItem[String(r.item_id)]?.label||'',nota_fiscal:r.nota_fiscal||'',possui_patrimonio:r.possui_patrimonio,patrimonio:r.patrimonio||'',numero_serie:r.numero_serie||'',
       valor_item:Number(it.valor_contratado)||Number(it.valor_estimado)||0});
   });
   entregasRows=out;
@@ -1651,6 +1651,7 @@ function verRecebimento(entregaId){
     ['Qtde recebida', r.qtde_recebida],
     ['Empenho', r.empenho],
     ['Nota fiscal', r.nota_fiscal],
+    ['Possui patrimônio', r.possui_patrimonio===true?'Sim':(r.possui_patrimonio===false?'Não':'Não informado')],
     ['Patrimônio', r.patrimonio],
     ['Número de série', r.numero_serie],
     ['Recebido por', r.recebido_por],
@@ -1661,8 +1662,35 @@ function verRecebimento(entregaId){
   alert(txt);
 }
 // Renderiza N linhas de unidade (patrimônio + série) conforme a quantidade recebida agora.
+function _recPossuiPatrimonio(){
+  return document.querySelector('input[name="rec-possui-patrimonio"]:checked')?.value||'';
+}
+function _recDefinirPatrimonio(valor, bloqueado){
+  document.querySelectorAll('input[name="rec-possui-patrimonio"]').forEach(el=>{
+    el.checked=valor===(el.value==='sim');
+    el.disabled=!!bloqueado;
+  });
+  window._recPatrimonioBloqueado=!!bloqueado;
+  _recTogglePatrimonio();
+}
+function _recTogglePatrimonio(){
+  const escolha=_recPossuiPatrimonio();
+  const possui=escolha==='sim';
+  const auto=document.getElementById('rec-patrimonio-auto');
+  const bloco=document.getElementById('rec-patrimonio-unidades');
+  if(auto) auto.style.display=possui?'block':'none';
+  if(bloco) bloco.style.display=possui?'block':'none';
+  const ajuda=document.getElementById('rec-patrimonio-ajuda');
+  if(ajuda) ajuda.textContent=!escolha?'Selecione uma opção para continuar.':(possui?'Informe um patrimônio para cada unidade recebida.':'O item permanecerá consolidado, sem criar unidades físicas.');
+  if(possui) _recRenderUnidades();
+  else{
+    const cont=document.getElementById('rec-unidades');
+    if(cont) cont.innerHTML='';
+  }
+}
 function _recRenderUnidades(){
   const cont=document.getElementById('rec-unidades'); if(!cont) return;
+  if(_recPossuiPatrimonio()!=='sim'){ cont.innerHTML=''; return; }
   const n=Math.max(0,Math.floor(Number(document.getElementById('rec-qtde')?.value)||0));
   const off=Number(window._recUnidadeOffset)||0;
   // preserva o que já foi digitado
@@ -1738,7 +1766,12 @@ async function _recVerificarDuplicidadePatrimonio(patrimonios){
   return [...achados];
 }
 // Valida ausência de duplicidade (interna à lista e contra o banco) antes de salvar o recebimento.
-async function _recValidarPatrimoniosAntesSalvar(unidades){
+async function _recValidarPatrimoniosAntesSalvar(unidades, obrigatorios=false){
+  if(obrigatorios){
+    if(!unidades.length) return 'Nenhuma unidade física foi gerada para o recebimento.';
+    const faltantes=unidades.reduce((acc,u,i)=>String(u.patrimonio||'').trim()?acc:acc.concat(i+1),[]);
+    if(faltantes.length) return 'Informe o patrimônio de todas as unidades. Pendente(s): '+faltantes.join(', ');
+  }
   const vals=(unidades||[]).map(u=>u.patrimonio).filter(Boolean).map(String);
   if(!vals.length) return null;
   const contagem={};
@@ -1786,7 +1819,7 @@ async function abrirRecebimento(entregaId){
   try{ const {count}=await sb.from('itens_entregas_unidades').select('id',{count:'exact',head:true}).eq('entrega_id',row.entrega_id); off=Number(count)||0; }catch(_){}
   window._recUnidadeOffset=off;
   document.getElementById('rec-pat-inicial').value='';
-  _recRenderUnidades();
+  _recDefinirPatrimonio(row.possui_patrimonio, row.possui_patrimonio!=null&&(Number(row.qtde_recebida)||0)>0);
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
   catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
   document.getElementById('modal-recebimento').classList.add('active');
@@ -1825,7 +1858,7 @@ async function abrirRecebimentoAta(execId){
   _recSetMsg('');
   window._recUnidadeOffset=0;
   document.getElementById('rec-pat-inicial').value='';
-  _recRenderUnidades();
+  _recDefinirPatrimonio(row.possui_patrimonio, row.possui_patrimonio!=null&&!!row.recebido);
   _recPreencherUnidades(unidadesExistentes);
   try{ await _recCarregarDocs(row); await _recCarregarEmpenhoHerdado(row); }
   catch(e){ _recSetMsg('Erro ao carregar documentos: '+e.message,'err'); }
@@ -1922,6 +1955,9 @@ async function salvarRecebimentoAta(){
   }
   const dataRec=document.getElementById('rec-data').value;
   if(!dataRec){ _recSetMsg('Informe a data do recebimento.','err'); return; }
+  const escolhaPatrimonio=_recPossuiPatrimonio();
+  if(!escolhaPatrimonio){ _recSetMsg('Informe se o item possui patrimônio.','err'); return; }
+  const possuiPatrimonio=escolhaPatrimonio==='sim';
   const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
   try{
@@ -1929,13 +1965,13 @@ async function salvarRecebimentoAta(){
     const emp=await _recCarregarEmpenhoHerdado(row);
     const empNumero=emp?.numero||row.empenho||null;
     if(!empNumero) throw new Error('Item sem empenho vinculado. Vincule o empenho antes do recebimento.');
-    const unidades=[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
+    const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map(r=>({
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim(),
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()
-    }));
-    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades);
+    })):[];
+    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
-    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero};
+    const patch={dt_entrega:dataRec,nf:nf.numero||null,empenho:empNumero,possui_patrimonio:possuiPatrimonio};
     const {error}=await sb.from('atas_execucao').update(patch).eq('id',execId);
     if(error) throw error;
     const {error:delU}=await sb.from('atas_execucao_unidades').delete().eq('exec_id',execId);
@@ -1991,6 +2027,9 @@ async function salvarRecebimento(){
   }
   const dataRec=document.getElementById('rec-data').value;
   if(!dataRec){ _recSetMsg('Informe a data do recebimento.','err'); return; }
+  const escolhaPatrimonio=_recPossuiPatrimonio();
+  if(!escolhaPatrimonio){ _recSetMsg('Informe se o item possui patrimônio.','err'); return; }
+  const possuiPatrimonio=escolhaPatrimonio==='sim';
   const btn=document.getElementById('rec-salvar'); const label=btn.textContent;
   btn.disabled=true; btn.textContent='Salvando...'; _recSetMsg('Salvando...');
   try{
@@ -2004,20 +2043,20 @@ async function salvarRecebimento(){
     const recPor=document.getElementById('rec-recebido-por').value.trim()||null;
     // coleta as unidades recebidas agora (patrimônio/série por unidade)
     const off=Number(window._recUnidadeOffset)||0;
-    const unidades=[...document.querySelectorAll('#rec-unidades .rec-u-row')].map((r,i)=>({
+    const unidades=possuiPatrimonio?[...document.querySelectorAll('#rec-unidades .rec-u-row')].map((r,i)=>({
       entrega_id:entregaId, item_id:row.item_id, unidade_seq:off+i+1,
       patrimonio:(r.querySelector('.rec-u-patr')?.value||'').trim()||null,
       numero_serie:(r.querySelector('.rec-u-serie')?.value||'').trim()||null,
       nota_fiscal_id:nf.id||null, recebido_em:dataRec, recebido_por:recPor
-    }));
-    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades);
+    })):[];
+    const erroPat=await _recValidarPatrimoniosAntesSalvar(unidades,possuiPatrimonio);
     if(erroPat) throw new Error(erroPat);
     const patch={
       empenho_id:empenho.id, empenho:empenho.numero||null,
       nota_fiscal_id:nf.id, nota_fiscal:nf.numero||null, nf_data:nf.data_emissao||document.getElementById('rec-nf-data').value||null,
       qtde_recebida:totalRecebido, data_recebimento:dataRec,
       recebido_por:recPor,
-      recebimento_tipo:tipo, status:tipo==='total'?'recebido':'recebido_parcial'
+      recebimento_tipo:tipo, possui_patrimonio:possuiPatrimonio, status:tipo==='total'?'recebido':'recebido_parcial'
     };
     const {error}=await sb.from('itens_entregas').update(patch).eq('id',entregaId);
     if(error) throw error;
@@ -2043,6 +2082,7 @@ async function salvarRecebimento(){
 window.abrirRecebimento=abrirRecebimento;
 window.abrirRecebimentoAta=abrirRecebimentoAta;
 window.salvarRecebimento=salvarRecebimento;
+window._recTogglePatrimonio=_recTogglePatrimonio;
 window._recToggleNovoDoc=_recToggleNovoDoc;
 window.normalizarNumeroDocumento=normalizarNumeroDocumento;
 

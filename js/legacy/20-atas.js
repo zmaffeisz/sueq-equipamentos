@@ -66,7 +66,20 @@ async function loadAtas(){
       prev_entrega:(r.prev_entrega||"").trim(),
       dt_entrega:(r.dt_entrega||"").trim(),
       nf:(r.nf||"").trim(),
-      obs_prazo:(r.obs_prazo||"").trim()
+      obs_prazo:(r.obs_prazo||"").trim(),
+      origem_recurso:(r.origem_recurso||"").trim(),
+      emenda_id:r.emenda_id||null,
+      emenda_item_id:r.emenda_item_id||null,
+      af_numero:(r.af_numero||"").trim(),
+      data_entrega_unidade:r.data_entrega_unidade||null,
+      termo_arquivo:r.termo_arquivo||"",
+      termo_responsavel:r.termo_responsavel||"",
+      termo_cargo:r.termo_cargo||"",
+      confirmacao_obs:r.confirmacao_obs||"",
+      possui_patrimonio:r.possui_patrimonio,
+      empresa:ata.empresa||"",
+      cnpj:ata.cnpj_fornecedor||ata.contrato?.cnpj||"",
+      contrato:ata.contrato||null
     };}).filter(Boolean);
     popularFiltrosAtas();
     filtrarAtas();
@@ -404,34 +417,7 @@ function filtrarAtas(){
     }
     return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
-  document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
-  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>`<tr>
-    ${_renderSancaoExecCheckbox(r)}
-    <td style="font-size:11px">${r.cpl}</td>
-    <td style="font-size:11px">${r.sim}</td>
-    <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
-    <td style="font-size:12px">${r.unidade}</td>
-    <td style="text-align:right">${r.qtde}</td>
-    <td style="text-align:right;font-size:11px">${r.valor?fmtFull(r.valor):"—"}</td>
-    <td style="font-size:11px">${r.empenho||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
-    ${(()=>{
-      const dias=calcDiasPrazo(r);
-      if(r.dt_entrega) return '<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
-      if(dias===null) return '<td style="font-size:11px;color:var(--text3)">—</td>';
-      if(dias<0) return `<td style="font-size:11px;color:var(--red);font-weight:500">⛔ ${Math.abs(dias)}d atraso</td>`;
-      if(dias<=7) return `<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
-      if(dias<=15) return `<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
-      return `<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
-    })()}
-    <td style="font-size:11px">${r.nf||"—"}</td>
-    <td style="white-space:nowrap">
-    <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação (também sai do Controle de Entregas)">🗑️ Excluir</button>
-  </td>
-  </tr>`).join("");
-  window._execRowsFiltered=execRows;
+  _renderExecRows(execRows);
   // Sincronizar busca de execuções
   const buscaExec=document.getElementById('exec-busca')?.value||'';
   if(buscaExec) filtrarExecs();
@@ -496,8 +482,15 @@ function filtrarExecs(){
     }
     return _sortExecAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
+  _renderExecRows(execRows);
+}
+
+const _atasExecExpandidas=new Set();
+const _atasExecDetalhes=new Map();
+
+function _renderExecRows(execRows){
   document.getElementById("exec-count").textContent=`${execRows.length} solicitações`;
-  document.getElementById("exec-body").innerHTML=execRows.map((r,i)=>{
+  document.getElementById("exec-body").innerHTML=execRows.map(r=>{
     const dias=calcDiasPrazo(r);
     let prazoCel;
     if(r.dt_entrega) prazoCel='<td style="font-size:11px;color:var(--green)">✓ Entregue</td>';
@@ -506,26 +499,144 @@ function filtrarExecs(){
     else if(dias<=7) prazoCel=`<td style="font-size:11px;color:var(--red);font-weight:500">⚠️ ${dias}d</td>`;
     else if(dias<=15) prazoCel=`<td style="font-size:11px;color:var(--amber);font-weight:500">⏰ ${dias}d</td>`;
     else prazoCel=`<td style="font-size:11px;color:var(--text2)">${dias}d</td>`;
-    return `<tr>
+    const aberta=_atasExecExpandidas.has(String(r.id));
+    const detalhe=aberta?_renderDetalheExecAta(r):'';
+    const excluirBtn=_execAtaPodeExcluir(r)?`<button onclick="event.stopPropagation();excluirExec('${_sanEsc(r.id)}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação ainda sem AF">🗑️ Excluir</button>`:'';
+    return `<tr class="ata-exec-row${aberta?' ata-exec-row-open':''}" data-exec-id="${_sanEsc(r.id)}" onclick="toggleDetalheExecAta('${_sanEsc(r.id)}',event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetalheExecAta('${_sanEsc(r.id)}',event)}" role="button" tabindex="0" aria-expanded="${aberta?'true':'false'}" title="Clique para ${aberta?'recolher':'ver todos os detalhes'}">
     ${_renderSancaoExecCheckbox(r)}
-    <td style="font-size:11px">${r.cpl}</td>
-    <td style="font-size:11px">${r.sim}</td>
-    <td class="td-trunc" style="max-width:180px" title="${r.item}">${r.item}</td>
-    <td style="font-size:12px">${r.unidade}</td>
+    <td style="font-size:11px">${_sanEsc(r.cpl)}</td>
+    <td style="font-size:11px">${_sanEsc(r.sim)}</td>
+    <td class="td-trunc" style="max-width:180px" title="${_sanEsc(r.item)}">${_sanEsc(r.item)}</td>
+    <td style="font-size:12px">${_sanEsc(r.unidade)}</td>
     <td style="text-align:right">${r.qtde}</td>
     <td style="text-align:right;font-size:11px">${r.valor?fmtFull(r.valor):"—"}</td>
-    <td style="font-size:11px">${r.empenho||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.data_af||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.prev_entrega||"—"}</td>
-    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega||'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
+    <td style="font-size:11px">${_sanEsc(r.empenho||"—")}</td>
+    <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.data_af||"—")}</td>
+    <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.prev_entrega||"—")}</td>
+    <td style="font-size:11px;white-space:nowrap">${r.dt_entrega?_sanEsc(r.dt_entrega):'<span style="color:var(--red);font-size:10px;font-weight:500">⚠️ AGUARD.</span>'}</td>
     ${prazoCel}
-    <td style="font-size:11px">${r.nf||"—"}</td>
-    <td style="white-space:nowrap">
-      <button onclick="excluirExec('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer" title="Excluir solicitação (também sai do Controle de Entregas)">🗑️ Excluir</button>
-    </td>
-  </tr>`;
+    <td style="font-size:11px">${_sanEsc(r.nf||"—")}</td>
+    <td style="white-space:nowrap">${excluirBtn}</td>
+  </tr>${detalhe}`;
   }).join("");
   window._execRowsFiltered=execRows;
+}
+
+async function toggleDetalheExecAta(execId,event){
+  if(event?.target?.closest?.('button,a,input,select,textarea,label')) return;
+  const key=String(execId);
+  if(_atasExecExpandidas.has(key)){
+    _atasExecExpandidas.delete(key);
+    _renderExecRows(window._execRowsFiltered||[]);
+    return;
+  }
+  _atasExecExpandidas.add(key);
+  _renderExecRows(window._execRowsFiltered||[]);
+  if(!_atasExecDetalhes.has(key)){
+    try{
+      const detalhe=await _carregarDetalheExecAta(key);
+      _atasExecDetalhes.set(key,detalhe);
+    }catch(e){
+      _atasExecDetalhes.set(key,{erro:e.message||String(e),unidades:[],notas:new Map(),emenda:null,empenhos:[]});
+    }
+    if(_atasExecExpandidas.has(key)) _renderExecRows(window._execRowsFiltered||[]);
+  }
+}
+
+async function _carregarDetalheExecAta(execId){
+  const exec=atasExec.find(r=>String(r.id)===String(execId));
+  if(!exec) throw new Error('Execução não encontrada.');
+  const vazio=()=>Promise.resolve({data:null,error:null});
+  const [rUnidades,rEmpExec,rEmenda,rEmpEmenda]=await Promise.all([
+    sb.from('atas_execucao_unidades').select('*').eq('exec_id',execId).order('unidade_seq',{ascending:true}),
+    sb.from('empenho_itens').select('*,empenhos(id,numero,ano,valor_empenhado,data_emissao,observacoes)').eq('exec_id',execId),
+    exec.emenda_item_id?sb.from('emenda_itens').select('*,emendas(tipo,emenda,numero,parlamentar,ano,objeto)').eq('id',exec.emenda_item_id).maybeSingle():vazio(),
+    exec.emenda_item_id?sb.from('empenho_itens').select('*,empenhos(id,numero,ano,valor_empenhado,data_emissao,observacoes)').eq('emenda_item_id',exec.emenda_item_id):vazio()
+  ]);
+  for(const resposta of [rUnidades,rEmpExec,rEmenda,rEmpEmenda]) if(resposta.error) throw resposta.error;
+  const unidades=rUnidades.data||[];
+  const nfIds=[...new Set(unidades.map(u=>u.nota_fiscal_id).filter(Boolean))];
+  const notas=new Map();
+  if(nfIds.length){
+    const {data,error}=await sb.from('notas_fiscais').select('*').in('id',nfIds);
+    if(error) throw error;
+    (data||[]).forEach(n=>notas.set(String(n.id),n));
+  }
+  const emenda=rEmenda.data||null;
+  const empenhos=[...(rEmpExec.data||[]),...(rEmpEmenda.data||[])].filter((v,i,a)=>a.findIndex(x=>String(x.id)===String(v.id))===i);
+  return {unidades,notas,emenda,empenhos};
+}
+
+function _ataDetalheCampo(label,valor){
+  if(valor==null||String(valor).trim()==='') return '';
+  return `<div class="ata-exec-detail-field"><span>${_sanEsc(label)}</span><strong>${_sanEsc(String(valor))}</strong></div>`;
+}
+
+function _renderDetalheExecAta(exec){
+  const detalhe=_atasExecDetalhes.get(String(exec.id));
+  if(!detalhe) return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-loading"><span class="spinner"></span> Carregando patrimônios e informações completas...</div></td></tr>`;
+  if(detalhe.erro) return `<tr class="ata-exec-detail-row"><td colspan="14"><div style="padding:12px;color:var(--red)">Erro ao carregar detalhes: ${_sanEsc(detalhe.erro)}</div></td></tr>`;
+  const em=detalhe.emenda||{};
+  const emendaCab=em.emendas||{};
+  const empenhos=[...new Set([exec.empenho,...detalhe.empenhos.map(v=>v.empenhos?.numero+(v.empenhos?.ano?'/'+v.empenhos.ano:''))].filter(Boolean))].join('; ');
+  const resumo=[
+    ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],
+    ['Empresa',exec.empresa],['CNPJ',exec.cnpj],['Contrato / ATA',exec.sim],['Processo / CPL',exec.cpl],
+    ['Item',exec.item],['Unidade',exec.unidade],['Quantidade',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
+    ['Empenho(s)',empenhos],['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],
+    ['Recebimento',exec.dt_entrega],['Nota fiscal',exec.nf],['Possui patrimônio',exec.possui_patrimonio===true?'Sim':exec.possui_patrimonio===false?'Não':'Não informado'],
+    ['Entrega na unidade',exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],
+    ['Emenda',emendaCab.emenda?`${emendaCab.emenda}${emendaCab.ano?'/'+emendaCab.ano:''}`:''],['Parlamentar',emendaCab.parlamentar],
+    ['Observações',exec.confirmacao_obs||exec.obs_prazo]
+  ];
+  const linhas=detalhe.unidades.map((u,i)=>{
+    const nf=detalhe.notas.get(String(u.nota_fiscal_id))||{};
+    return `<tr>
+      <td>${u.unidade_seq||i+1}</td><td><strong>${_sanEsc(u.patrimonio||'—')}</strong></td><td>${_sanEsc(u.numero_serie||'—')}</td>
+      <td>${_sanEsc(nf.numero||exec.nf||'—')}</td><td>${u.recebido_em?fmtDate(u.recebido_em):'—'}</td><td>${_sanEsc(u.recebido_por||'—')}</td>
+      <td><button type="button" class="btn-secondary" onclick="event.stopPropagation();verTudoUnidadeExecAta('${_sanEsc(exec.id)}','${_sanEsc(u.id)}')" style="font-size:11px;padding:3px 9px">🔎 Ver tudo</button></td>
+    </tr>`;
+  }).join('');
+  const unidadesHtml=detalhe.unidades.length?`<div class="ata-exec-units-wrap"><table class="ata-exec-units-table"><thead><tr><th>#</th><th>Patrimônio</th><th>Nº de série</th><th>NF</th><th>Recebido em</th><th>Recebido por</th><th>Ações</th></tr></thead><tbody>${linhas}</tbody></table></div>`:`<div class="ata-exec-consolidated">${exec.possui_patrimonio===false?'Item sem patrimônio: quantidade mantida consolidada.':'Nenhuma unidade física/patrimônio registrado nesta execução.'}</div>`;
+  return `<tr class="ata-exec-detail-row"><td colspan="14"><div class="ata-exec-detail-panel">
+    <div class="ata-exec-detail-title"><span>Detalhes completos da execução</span><span>${detalhe.unidades.length} unidade(s) física(s)</span></div>
+    <div class="ata-exec-detail-grid">${resumo.map(([l,v])=>_ataDetalheCampo(l,v)).join('')}</div>
+    <div class="ata-exec-units-title">Patrimônios e unidades recebidas</div>${unidadesHtml}
+  </div></td></tr>`;
+}
+
+function verTudoUnidadeExecAta(execId,unidadeId){
+  const exec=atasExec.find(r=>String(r.id)===String(execId));
+  const detalhe=_atasExecDetalhes.get(String(execId));
+  const u=detalhe?.unidades?.find(x=>String(x.id)===String(unidadeId));
+  if(!exec||!u) return;
+  const nf=detalhe.notas.get(String(u.nota_fiscal_id))||{};
+  const em=detalhe.emenda||{}, ec=em.emendas||{};
+  const campos=[
+    ['Item',exec.item],['Patrimônio',u.patrimonio],['Número de série',u.numero_serie],['Sequência da unidade',u.unidade_seq],
+    ['Unidade de destino',exec.unidade],['Empresa / Fornecedor',exec.empresa],['CNPJ',exec.cnpj],['Processo / CPL',exec.cpl],
+    ['Contrato / ATA',exec.sim],['Quantidade da execução',exec.qtde],['Valor total',exec.valor?fmtFull(exec.valor):''],
+    ['Origem do recurso',exec.origem_recurso==='emenda'?'Emenda parlamentar':'Recurso próprio'],['Empenho',exec.empenho],
+    ['AF',exec.af_numero],['Data da AF',exec.data_af],['Previsão de entrega',exec.prev_entrega],['Data do recebimento',u.recebido_em||exec.dt_entrega],
+    ['Recebido por',u.recebido_por],['Nota fiscal',nf.numero||exec.nf],['Data da NF',nf.data_emissao],['Valor da NF',nf.valor_total?_fmtBRL(nf.valor_total):''],
+    ['Emenda',ec.emenda?`${ec.emenda}${ec.ano?'/'+ec.ano:''}`:''],['Parlamentar',ec.parlamentar],['Item da Emenda',em.item],
+    ['Data de entrega na unidade',exec.data_entrega_unidade],['Responsável na unidade',exec.termo_responsavel],['Cargo',exec.termo_cargo],['Observações',u.obs||exec.confirmacao_obs]
+  ].filter(([,v])=>v!=null&&String(v).trim()!=='');
+  const modal=document.getElementById('modal-inv-detalhe');
+  document.body.appendChild(modal);
+  document.getElementById('inv-detalhe-content').innerHTML=`<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${_sanEsc(exec.item||'Item')} · Patrimônio ${_sanEsc(u.patrimonio||'—')}</div><div>${campos.map(([l,v])=>_invField(_sanEsc(l),_sanEsc(String(v)))).join('')}</div>`;
+  modal.classList.add('active');
+}
+
+window.toggleDetalheExecAta=toggleDetalheExecAta;
+window.verTudoUnidadeExecAta=verTudoUnidadeExecAta;
+
+function _execAtaPodeExcluir(r){
+  if(!r) return false;
+  return ![
+    r.af_numero,r.data_af,r.prev_entrega,r.nf,r.dt_entrega,r.data_entrega_unidade,
+    r.termo_arquivo,r.termo_responsavel,r.termo_cargo,r.confirmacao_obs,r.obs_prazo
+  ].some(v=>v!=null&&String(v).trim()!=='') && r.possui_patrimonio==null;
 }
 
 function calcDiasPrazo(r){
@@ -570,8 +681,8 @@ function _sancaoExecTitulo(r){
   return "Selecionar esta solicitação pendente";
 }
 function _renderSancaoExecCheckbox(r){
-  // Advertência foi movida para a aba "Controle de Entregas" (seleção multi-item). Aqui a planilha de Atas só permite excluir.
-  return `<td></td>`;
+  const aberta=typeof _atasExecExpandidas!=='undefined'&&_atasExecExpandidas.has(String(r.id));
+  return `<td style="text-align:center;color:var(--text3);font-size:16px"><span class="ata-exec-chevron${aberta?' open':''}">›</span></td>`;
 }
 function _execsSancaoSelecionadas(){
   return atasExec.filter(r=>sancaoSelecionados.has(_sancaoExecKey(r)));
@@ -930,18 +1041,23 @@ async function excluirExec(execId){
   if(bloquearSeVisualiz()) return;
   const exec=atasExec.find(r=>String(r.id)===String(execId));
   if(!exec) return;
-  if(!await uiConfirm(`Excluir esta solicitação?\n${exec.item} · ${exec.unidade}\n\nEsta ação não pode ser desfeita.`)) return;
-  const {data,error}=await sb.from("atas_execucao").delete().eq("id",exec.id).select("id");
-  if(error){alert("Erro ao excluir solicitação: "+error.message);return;}
-  if(!data?.length){alert("A solicitação não foi excluída. Verifique sua permissão na aba ATAs.");return;}
-  if(exec.termo_arquivo&&typeof removerTermosEntrega==='function'){
-    try{ await removerTermosEntrega([exec.termo_arquivo]); }
-    catch(cleanupError){
-      console.warn('Solicitação removida, mas o termo permaneceu no Storage',cleanupError);
-      alert('A solicitação foi excluída, mas não foi possível remover o termo do Storage.');
-    }
+  const {data:atual,error:erroConsulta}=await sb.from('atas_execucao').select('*').eq('id',exec.id).maybeSingle();
+  if(erroConsulta){ alert('Não foi possível conferir a solicitação: '+erroConsulta.message); return; }
+  if(!atual){ alert('Esta solicitação não existe mais.'); await loadAtas(); return; }
+  const {count:unidades,error:erroUnidades}=await sb.from('atas_execucao_unidades').select('id',{count:'exact',head:true}).eq('exec_id',exec.id);
+  if(erroUnidades){ alert('Não foi possível validar as unidades vinculadas antes da exclusão.'); return; }
+  if(!_execAtaPodeExcluir(atual)||(Number(unidades)||0)>0){
+    if(window.toast) toast('Exclusão bloqueada: esta solicitação já possui AF ou etapa posterior.','error');
+    await loadAtas();
+    return;
   }
+  if(!await uiConfirm(`Excluir esta solicitação?\n${exec.item} · ${exec.unidade}\n\nEsta ação não pode ser desfeita.`)) return;
+  const {data,error}=await sb.rpc('excluir_execucao_ata_pre_af',{p_exec_id:exec.id});
+  if(error){alert("Erro ao excluir solicitação: "+error.message);return;}
+  if(!data){alert("A solicitação não foi excluída. Verifique sua permissão na aba ATAs.");return;}
   atasExec=atasExec.filter(r=>String(r.id)!==String(exec.id));
+  _atasExecExpandidas.delete(String(exec.id));
+  _atasExecDetalhes.delete(String(exec.id));
   filtrarAtas();
 }
 
