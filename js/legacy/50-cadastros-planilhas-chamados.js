@@ -662,13 +662,13 @@ function filtrarChamadosNovos(){
     const pendente=ctrl.status==="Pendente";
     const rowBg=aguardando?'background:var(--amber-bg)':pendente?'background:color-mix(in srgb,var(--amber-bg) 60%,transparent)':'';
     return`<tr style="${rowBg}">
-      <td style="display:flex;align-items:center;gap:6px">
+      <td><div style="display:flex;align-items:center;gap:6px">
         ${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" class="btn-secondary btn-compact" title="Atualizar">✏️ Atualizar</button>`:""}
         ${kebabMenuHtml([
           {label:'📄 Gerar PDF',onclick:`gerarPDFChamadoNovo('${r.id}')`},
           {label:'📧 Enviar por e-mail',onclick:`enviarEmailChamadoNovo('${r.id}')`}
         ])}
-      </td>
+      </div></td>
       <td style="white-space:nowrap">${(r._anexos&&r._anexos.length>0)?r._anexos.map((a,i)=>a.apagado_em?`<span style="font-size:10px;color:var(--text3)">Removida</span>`:`<button onclick="verFotoChamado('${a.storage_path}')" style="font-size:11px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin:1px" title="${_sanEsc(a.nome_original||'')}">📷 Foto ${i+1}</button>`).join(''):'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.protocolo||"—")}</td>

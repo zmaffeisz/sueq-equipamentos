@@ -22,10 +22,30 @@ function toggleKebabMenu(ev,btn){
   if(!menu)return;
   const wasOpen=menu.classList.contains('open');
   closeAllKebabMenus();
-  if(!wasOpen)menu.classList.add('open');
+  if(!wasOpen){
+    menu.classList.add('open');
+    // Menus dentro de table-wrap não podem ficar presos ao overflow da tabela.
+    const rect=btn.getBoundingClientRect();
+    const width=menu.offsetWidth;
+    const left=Math.max(8,Math.min(rect.right-width,window.innerWidth-width-8));
+    const below=rect.bottom+4;
+    const top=below+menu.offsetHeight<=window.innerHeight-8
+      ? below
+      : Math.max(8,rect.top-menu.offsetHeight-4);
+    menu.style.position='fixed';
+    menu.style.left=left+'px';
+    menu.style.top=top+'px';
+    menu.style.right='auto';
+  }
 }
 function closeAllKebabMenus(){
-  document.querySelectorAll('.kebab-menu.open').forEach(function(m){m.classList.remove('open');});
+  document.querySelectorAll('.kebab-menu.open').forEach(function(m){
+    m.classList.remove('open');
+    m.style.position='';
+    m.style.left='';
+    m.style.top='';
+    m.style.right='';
+  });
 }
 document.addEventListener('click',closeAllKebabMenus);
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAllKebabMenus();});
