@@ -124,11 +124,11 @@ async function carregarRevisao(){
         </div>
         ${sugBtns}
         ${podeEd?`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px">
-          <button onclick="revAprovar('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer">✓ Aprovar (é novo)</button>
+          <button onclick="revAprovar('${e}','${r.id}')" class="btn-primary btn-compact" style="background:var(--green)">✓ Aprovar (é novo)</button>
           <span style="font-size:11px;color:var(--text3)">ou mesclar em:</span>
           <select id="rev-keep-${e}-${r.id}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);max-width:240px">${opts}</select>
-          <button onclick="revMesclar('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Mesclar</button>
-          <button onclick="revExcluir('${e}','${r.id}')" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--red);cursor:pointer">Excluir</button>
+          <button onclick="revMesclar('${e}','${r.id}')" class="btn-secondary btn-compact">Mesclar</button>
+          <button onclick="revExcluir('${e}','${r.id}')" class="btn-danger btn-compact">Excluir</button>
         </div>`:'<div style="font-size:11px;color:var(--text3);margin-top:4px">Apenas admin pode revisar.</div>'}
       </div>`;
     }
@@ -266,8 +266,8 @@ function _plEnsureFilterState(tipo){
 }
 function _plHeaderCell(tipo,c){
   return `<th style="padding:6px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);white-space:nowrap;width:${c.width};border-bottom:1px solid var(--border)">
-    <span style="display:inline-flex;align-items:center;gap:6px">
-      <span onclick="_plSortBy('${tipo}','${c.key}')" style="cursor:pointer;user-select:none">${_sanEsc(c.label)} <span class="sort-icon" id="pl-si-${tipo}-${c.key}"></span></span>
+    <span class="th-sortable-wrap">
+      <span onclick="_plSortBy('${tipo}','${c.key}')" class="th-sort-label">${_sanEsc(c.label)} <span class="sort-icon" id="pl-si-${tipo}-${c.key}"></span></span>
       <span class="hdr-filter-btn" id="pl-hf-${tipo}-${c.key}" onclick="openPlanilhaHeaderFilter(event,'${tipo}','${c.key}')" title="Filtrar">▾</span>
     </span>
   </th>`;
@@ -662,9 +662,13 @@ function filtrarChamadosNovos(){
     const pendente=ctrl.status==="Pendente";
     const rowBg=aguardando?'background:var(--amber-bg)':pendente?'background:color-mix(in srgb,var(--amber-bg) 60%,transparent)':'';
     return`<tr style="${rowBg}">
-      <td>${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar">✏️ Atualizar</button>`:"—"}</td>
-      <td><button onclick="gerarPDFChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar PDF">📄</button></td>
-      <td><button onclick="enviarEmailChamadoNovo('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
+      <td style="display:flex;align-items:center;gap:6px">
+        ${podeEditar('chamados-novos')?`<button onclick="abrirModalCN('${r.id}')" class="btn-secondary btn-compact" title="Atualizar">✏️ Atualizar</button>`:""}
+        ${kebabMenuHtml([
+          {label:'📄 Gerar PDF',onclick:`gerarPDFChamadoNovo('${r.id}')`},
+          {label:'📧 Enviar por e-mail',onclick:`enviarEmailChamadoNovo('${r.id}')`}
+        ])}
+      </td>
       <td style="white-space:nowrap">${(r._anexos&&r._anexos.length>0)?r._anexos.map((a,i)=>a.apagado_em?`<span style="font-size:10px;color:var(--text3)">Removida</span>`:`<button onclick="verFotoChamado('${a.storage_path}')" style="font-size:11px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin:1px" title="${_sanEsc(a.nome_original||'')}">📷 Foto ${i+1}</button>`).join(''):'<span style="font-size:10px;color:var(--text3)">—</span>'}</td>
       <td>${statusBadgeChamado(ctrl.status||"Aguardando abertura")}</td>
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.protocolo||"—")}</td>
@@ -685,7 +689,7 @@ function filtrarChamadosNovos(){
       <td style="font-size:11px">${_sanEsc(r.problema||"—")}</td>
       <td style="font-size:11px">${_sanEsc(r.rechamado||"—")}</td>
     </tr>`;
-  }).join("");
+  }).join("")||`<tr><td colspan="20"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum chamado encontrado</div></td></tr>`;
 }
 
 async function verFotoChamado(path){

@@ -230,7 +230,7 @@ function renderLicitacoes(){
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     let bloco=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
       <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface2)">
-        <span onclick="cpToggle(${p.id})" style="font-size:13px;color:var(--text3);cursor:pointer;transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
+        <span onclick="cpToggle(${p.id})" class="chevron${aberto?' open':''}" style="font-size:13px;color:var(--text3);cursor:pointer">▶</span>
         <div onclick="cpToggle(${p.id})" style="flex:1;min-width:0;cursor:pointer">
           <div style="font-weight:600;font-size:13px">${_sanEsc(p.identificador||('#'+p.id))} <span style="font-weight:400;color:var(--text3)">— ${_sanEsc((p.objeto||'').slice(0,64))}</span></div>
           <div style="font-size:11px;color:var(--text3)">${_sanEsc(p.tipo||'')} · ${_sanEsc(p.natureza||'')}${tipoServicoInfo} · ${totalItensExibidos} ${totalItensExibidos===1?'item':'itens'}</div>

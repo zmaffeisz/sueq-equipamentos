@@ -3,10 +3,7 @@ function itensShowSub(sub){
   document.querySelectorAll('.itens-sub').forEach(s=>s.style.display='none');
   const el=document.getElementById('itens-sub-'+sub); if(el) el.style.display='block';
   document.querySelectorAll('.itens-subtab-btn').forEach(b=>{
-    const on=b.dataset.sub===sub;
-    b.style.background=on?'var(--blue)':'var(--surface)';
-    b.style.color=on?'#fff':'var(--text2)';
-    b.style.borderColor=on?'var(--blue)':'var(--border)';
+    b.classList.toggle('active',b.dataset.sub===sub);
   });
   if(sub==='atas' && !itensAtasCarregado && typeof loadItensAtas==='function'){ loadItensAtas(); }
   if(sub==='entregas' && !itensEntregasCarregado && typeof loadItensEntregas==='function'){ loadItensEntregas(); }
@@ -1844,7 +1841,7 @@ async function abrirRecebimentoAta(execId){
   document.getElementById('rec-entrega-id').value='';
   document.getElementById('rec-item-id').value='';
   document.getElementById('rec-exec-id').value=row.exec_id;
-  document.getElementById('rec-info').innerHTML=`<b>${_sanEsc(row.item||'Item')}</b><br>AF ${_sanEsc(row.af_numero||'â€”')} Â· Processo ${_sanEsc(row.processo||'â€”')} Â· Fornecedor ${_sanEsc(row.empresa||'â€”')}`;
+  document.getElementById('rec-info').innerHTML=`<b>${_sanEsc(row.item||'Item')}</b><br>AF ${_sanEsc(row.af_numero||'—')} · Processo ${_sanEsc(row.processo||'—')} · Fornecedor ${_sanEsc(row.empresa||'—')}`;
   document.getElementById('rec-qtde-autorizada').value=qtde||0;
   document.getElementById('rec-ja-recebida').value=jaRecebida||0;
   document.getElementById('rec-saldo-af').value=saldo;

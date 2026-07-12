@@ -546,3 +546,25 @@ function ensureLib(name){
   }
   window.uiConfirm=function(msg){const ov=ovEl();ov.querySelector("#uiconfirm-msg").textContent=String(msg);ov.classList.add("show");return new Promise(r=>{_resolve=r;});};
 })();
+
+// ═══ FECHAMENTO GENÉRICO DE MODAIS: ESC e clique no backdrop (redesign visual) ═══
+// Rede de segurança para todo .modal-overlay: só remove a classe "active" (mesmo
+// efeito visual do botão de fechar). Onde já existe um fecharModalX() dedicado, ele
+// continua sendo chamado normalmente pelos botões/X existentes — isto não o substitui.
+(function(){
+  function topActiveOverlay(){
+    const list=document.querySelectorAll(".modal-overlay.active");
+    return list.length?list[list.length-1]:null;
+  }
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="Escape")return;
+    const ov=topActiveOverlay();
+    if(ov)ov.classList.remove("active");
+  });
+  document.addEventListener("click",function(e){
+    const t=e.target;
+    if(t&&t.classList&&t.classList.contains("modal-overlay")&&t.classList.contains("active")){
+      t.classList.remove("active");
+    }
+  });
+})();

@@ -238,8 +238,8 @@ function _renderFiscalizacao(){
     return `<tr>
       <td style="text-align:center"><input type="checkbox" class="fisc-check" data-protocolo="${r.protocolo}" style="accent-color:var(--blue);cursor:pointer"></td>
       <td style="white-space:nowrap">
-        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Fiscalizar OS">🔍 Fiscalizar</button>`:""}
-        <button onclick="abrirHistoricoOS('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-right:2px" title="Ver histórico">📋 Histórico</button>
+        ${podeEditar('fiscalizacao')?`<button onclick="abrirModalFiscOS('${r.protocolo}')" class="btn-secondary btn-compact" style="margin-right:4px" title="Fiscalizar OS">🔍 Fiscalizar</button>`:""}
+        <button onclick="abrirHistoricoOS('${r.protocolo}')" class="btn-ghost btn-compact" title="Ver histórico">📋 Histórico</button>
       </td>
       <td style="font-size:11px;white-space:nowrap">${r.protocolo||"—"}</td>
       <td style="font-size:11px;white-space:nowrap">${data}</td>
@@ -832,9 +832,9 @@ function filtrarSancoes(){
 function renderSancoes(){
   const tbody=document.getElementById("sa-body");
   if(!tbody) return;
-  if(!sancoesFiltradas.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma sanção encontrada</td></tr>`;return;}
+  if(!sancoesFiltradas.length){tbody.innerHTML=`<tr><td colspan="10"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhuma sanção encontrada</div></td></tr>`;return;}
   tbody.innerHTML=sancoesFiltradas.map(r=>`<tr>
-    <td style="white-space:nowrap">${podeEditar('sancoes')?`<button onclick="abrirModalSancao('${r.id}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Editar">✏️ Editar</button>`:"—"}</td>
+    <td style="white-space:nowrap">${podeEditar('sancoes')?`<button onclick="abrirModalSancao('${r.id}')" class="btn-secondary btn-compact" title="Editar">✏️ Editar</button>`:"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.processo||"—"}</td>
     <td class="td-trunc" style="max-width:220px" title="${r.empresa||''}">${r.empresa||"—"}</td>
     <td style="font-size:11px;white-space:nowrap">${r.contrato||"—"}</td>
@@ -2324,7 +2324,7 @@ function filtrarContratos(){
 
 function badgeStatusContrato(status,vencido){
   if(status==="VIGENTE"&&vencido){
-    return `<span class="badge" style="background:var(--red-bg);color:var(--red-text)" title="Vigência venceu mas o contrato ainda não foi encerrado — provavelmente em renovação">AGUARDANDO RENOVAÇÃO</span>`;
+    return `<span class="badge badge-danger" title="Vigência venceu mas o contrato ainda não foi encerrado — provavelmente em renovação">AGUARDANDO RENOVAÇÃO</span>`;
   }
   const cfg={VIGENTE:{bg:"var(--green-bg)",color:"var(--green-text)"},ENCERRADO:{bg:"var(--surface2)",color:"var(--text3)"},SUSPENSO:{bg:"var(--amber-bg)",color:"var(--amber-text)"},CONCLUIDO:{bg:"var(--blue-bg)",color:"var(--blue-text)"}};
   const c=cfg[status]||{bg:"var(--surface2)",color:"var(--text3)"};
@@ -2403,7 +2403,7 @@ function renderTabelaContratos(){
   const selectAll=document.getElementById('ct-select-all');
   if(selectAll){selectAll.disabled=!podeManter;selectAll.checked=false;}
   atualizarBotaoManterStatus();
-  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="${CT_TABLE_COLSPAN}" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado</td></tr>`;return;}
+  if(!contratosFiltrados.length){tbody.innerHTML=`<tr><td colspan="${CT_TABLE_COLSPAN}"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum contrato encontrado</div></td></tr>`;return;}
 
   let rows=[...contratosFiltrados];
   if(ctSortCol){

@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seção de Aquisição e Manutenção de Equipamentos e Mobiliários da Saúde · SMS Sorocaba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="dashboard.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -28,10 +31,16 @@
     </label>
     <span id="org-context-label" style="display:none;font-size:11px;color:rgba(255,255,255,.85);padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px"></span>
     <span id="user-greeting" style="font-size:12px;color:rgba(255,255,255,.8);display:none"></span>
-    <button class="refresh-btn" id="tema-btn" onclick="alternarTema()" aria-label="Alternar tema" style="font-size:16px;padding:6px 11px">🌙</button>
+    <button class="refresh-btn" id="tema-btn" onclick="alternarTema()" aria-label="Alternar tema">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
     <span id="last-update" style="display:none"></span>
     <a href="chamado.html" target="_blank" rel="noopener noreferrer" class="refresh-btn" style="text-decoration:none">Abertura de Chamados</a>
-    <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">🔑 Entrar</button>
+    <button class="refresh-btn" id="btn-login-header" onclick="abrirModalLogin()" style="display:none;background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);font-weight:600">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.5 12.5L19 4M19 4h-4M19 4v4"/></svg>
+      Entrar
+    </button>
     <span class="pill pill-loading" id="conn-pill" style="display:none">⏳ Conectando</span>
   </div>
 </div>
@@ -39,37 +48,37 @@
 <aside class="sidebar" id="sidebar" aria-label="Menu lateral">
   <nav class="sidebar-nav">
     <div class="sidebar-section">
-      <div class="sidebar-item active" id="sidebar-dashboard" onclick="showTab('dashboard')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Emendas</span></div>
-      <div class="sidebar-item" id="sidebar-saldo-emendas" style="display:none" onclick="showTab('saldo-emendas')"><span class="sidebar-icon">💰</span><span class="sidebar-label">Saldo das Emendas</span></div>
-      <div class="sidebar-item" id="sidebar-consulta" style="display:none" onclick="showTab('consulta')"><span class="sidebar-icon">🔍</span><span class="sidebar-label">Consulta rápida</span></div>
+      <div class="sidebar-item active" id="sidebar-dashboard" onclick="showTab('dashboard')" title="Emendas"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/></svg></span><span class="sidebar-label">Emendas</span></div>
+      <div class="sidebar-item" id="sidebar-saldo-emendas" style="display:none" onclick="showTab('saldo-emendas')" title="Saldo das Emendas"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18" stroke-linecap="round"/><circle cx="16.5" cy="14" r="1"/></svg></span><span class="sidebar-label">Saldo das Emendas</span></div>
+      <div class="sidebar-item" id="sidebar-consulta" style="display:none" onclick="showTab('consulta')" title="Consulta rápida"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg></span><span class="sidebar-label">Consulta rápida</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Chamados</div>
-      <div class="sidebar-item" id="sidebar-chamados" style="display:none" onclick="showTab('chamados')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Chamados Antigos</span></div>
-      <div class="sidebar-item" id="sidebar-chamados-novos" style="display:none" onclick="showTab('chamados-novos')"><span class="sidebar-icon">🆕</span><span class="sidebar-label">Chamados novos</span><span id="badge-chamados-novos" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px">0</span></div>
-      <div class="sidebar-item" id="sidebar-fiscalizacao" style="display:none" onclick="showTab('fiscalizacao')"><span class="sidebar-icon">🔍</span><span class="sidebar-label">Fiscalização</span><span id="badge-fiscalizacao" style="display:none;background:var(--amber);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px">0</span></div>
+      <div class="sidebar-item" id="sidebar-chamados" style="display:none" onclick="showTab('chamados')" title="Chamados Antigos"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><path d="M10 13h4" stroke-linecap="round"/></svg></span><span class="sidebar-label">Chamados Antigos</span></div>
+      <div class="sidebar-item" id="sidebar-chamados-novos" style="display:none" onclick="showTab('chamados-novos')" title="Chamados novos"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M4 12h4l2 3h4l2-3h4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12l1.5-6.5A2 2 0 017.45 4h9.1a2 2 0 011.95 1.5L20 12"/><path d="M4 12v6a2 2 0 002 2h12a2 2 0 002-2v-6"/></svg></span><span class="sidebar-label">Chamados novos</span><span id="badge-chamados-novos" class="badge badge-danger" style="display:none">0</span></div>
+      <div class="sidebar-item" id="sidebar-fiscalizacao" style="display:none" onclick="showTab('fiscalizacao')" title="Fiscalização"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="sidebar-label">Fiscalização</span><span id="badge-fiscalizacao" class="badge badge-warning" style="display:none">0</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Equipamentos</div>
-      <div class="sidebar-item" id="sidebar-inventario-ac" onclick="showTab('inventario-ac')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Inventário</span></div>
+      <div class="sidebar-item" id="sidebar-inventario-ac" onclick="showTab('inventario-ac')" title="Inventário"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span><span class="sidebar-label">Inventário</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Itens</div>
-      <div class="sidebar-item" id="sidebar-itens" style="display:none" onclick="showTab('itens')"><span class="sidebar-icon">📦</span><span class="sidebar-label">Controle de Entregas</span></div>
-      <div class="sidebar-item" id="sidebar-empenhos" style="display:none" onclick="showTab('empenhos')"><span class="sidebar-icon">💵</span><span class="sidebar-label">Empenhos</span></div>
+      <div class="sidebar-item" id="sidebar-itens" style="display:none" onclick="showTab('itens')" title="Controle de Entregas"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="1" y="7" width="14" height="9" rx="1"/><path d="M15 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg></span><span class="sidebar-label">Controle de Entregas</span></div>
+      <div class="sidebar-item" id="sidebar-empenhos" style="display:none" onclick="showTab('empenhos')" title="Empenhos"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6" stroke-linecap="round"/></svg></span><span class="sidebar-label">Empenhos</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Contratos</div>
-      <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')"><span class="sidebar-icon">📄</span><span class="sidebar-label">Atas Rp Vigentes</span></div>
-      <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')"><span class="sidebar-icon">📋</span><span class="sidebar-label">Contratos em execução</span></div>
-      <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')"><span class="sidebar-icon">🧭</span><span class="sidebar-label">Licitações em andamento</span></div>
-      <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')"><span class="sidebar-icon">⚖️</span><span class="sidebar-label">Sanções</span></div>
+      <div class="sidebar-item" id="sidebar-atas" style="display:none" onclick="showTab('atas')" title="Atas Rp Vigentes"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6" stroke-linecap="round"/></svg></span><span class="sidebar-label">Atas Rp Vigentes</span></div>
+      <div class="sidebar-item" id="sidebar-contratos" style="display:none" onclick="showTab('contratos')" title="Contratos em execução"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="sidebar-label">Contratos em execução</span></div>
+      <div class="sidebar-item" id="sidebar-licitacoes" style="display:none" onclick="showTab('licitacoes')" title="Licitações em andamento"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-6 2 2-6z" stroke-linejoin="round"/></svg></span><span class="sidebar-label">Licitações em andamento</span></div>
+      <div class="sidebar-item" id="sidebar-sancoes" style="display:none" onclick="showTab('sancoes')" title="Sanções"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 21h14" stroke-linecap="round"/><path d="M5 7h6M13 7h6" stroke-linecap="round"/><path d="M3 7l3 6a3 3 0 006 0L9 7"/><path d="M15 7l3 6a3 3 0 006 0l-3-6"/></svg></span><span class="sidebar-label">Sanções</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Configurações</div>
-      <div class="sidebar-item" id="sidebar-cadastros" style="display:none" onclick="showTab('cadastros')"><span class="sidebar-icon">🗂️</span><span class="sidebar-label">Cadastros</span></div>
-      <div class="sidebar-item" id="sidebar-usuarios" style="display:none" onclick="showTab('usuarios')"><span class="sidebar-icon">⚙️</span><span class="sidebar-label">Usuários</span></div>
-      <div class="sidebar-item" id="sidebar-planilhas" style="display:none" onclick="showTab('planilhas')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Planilhas</span></div>
+      <div class="sidebar-item" id="sidebar-cadastros" style="display:none" onclick="showTab('cadastros')" title="Cadastros"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></span><span class="sidebar-label">Cadastros</span></div>
+      <div class="sidebar-item" id="sidebar-usuarios" style="display:none" onclick="showTab('usuarios')" title="Usuários"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke-linecap="round"/></svg></span><span class="sidebar-label">Usuários</span></div>
+      <div class="sidebar-item" id="sidebar-planilhas" style="display:none" onclick="showTab('planilhas')" title="Planilhas"><span class="sidebar-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></span><span class="sidebar-label">Planilhas</span></div>
     </div>
   </nav>
 </aside>
@@ -128,27 +137,27 @@
           <thead>
             <tr>
               <th style="white-space:nowrap">Ações</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('ano')">Ano <span class="sort-icon" id="si-ano"></span></span><span class="hdr-filter-btn" id="hf-ano" onclick="openHeaderFilter(event,'ano')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></span><span class="hdr-filter-btn" id="hf-item" onclick="openHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></span><span class="hdr-filter-btn" id="hf-qtde" onclick="openHeaderFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario_cadastrado" onclick="openHeaderFilter(event,'vl_unitario_cadastrado')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_total_cadastrado" onclick="openHeaderFilter(event,'vl_total_cadastrado')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_unitario')">Vl. unit. exec. <span class="sort-icon" id="si-vl_unitario"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario" onclick="openHeaderFilter(event,'vl_unitario')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('vl_total')">Vl. total exec. <span class="sort-icon" id="si-vl_total"></span></span><span class="hdr-filter-btn" id="hf-vl_total" onclick="openHeaderFilter(event,'vl_total')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></span><span class="hdr-filter-btn" id="hf-cpl" onclick="openHeaderFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></span><span class="hdr-filter-btn" id="hf-status_cat" onclick="openHeaderFilter(event,'status_cat')" title="Filtrar">▾</span></span></th>
-              <th style="min-width:200px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('status_raw')">Status completo <span class="sort-icon" id="si-status_raw"></span></span><span class="hdr-filter-btn" id="hf-status_raw" onclick="openHeaderFilter(event,'status_raw')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('data_atualizacao')">Atualização <span class="sort-icon" id="si-data_atualizacao"></span></span><span class="hdr-filter-btn" id="hf-data_atualizacao" onclick="openHeaderFilter(event,'data_atualizacao')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('nota_fiscal')">Nota fiscal <span class="sort-icon" id="si-nota_fiscal"></span></span><span class="hdr-filter-btn" id="hf-nota_fiscal" onclick="openHeaderFilter(event,'nota_fiscal')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('empenho')">Empenho <span class="sort-icon" id="si-empenho"></span></span><span class="hdr-filter-btn" id="hf-empenho" onclick="openHeaderFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('patrimonio')">Patrimônio <span class="sort-icon" id="si-patrimonio"></span></span><span class="hdr-filter-btn" id="hf-patrimonio" onclick="openHeaderFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('unidade_entrega')">Un. entrega <span class="sort-icon" id="si-unidade_entrega"></span></span><span class="hdr-filter-btn" id="hf-unidade_entrega" onclick="openHeaderFilter(event,'unidade_entrega')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('data_entrega')">Dt. entrega <span class="sort-icon" id="si-data_entrega"></span></span><span class="hdr-filter-btn" id="hf-data_entrega" onclick="openHeaderFilter(event,'data_entrega')" title="Filtrar">▾</span></span></th>
-              <th id="th-saldo-emenda" style="white-space:nowrap;display:none"><span style="display:inline-flex;align-items:center;gap:6px"><span style="cursor:pointer" onclick="sortTable('saldo_emenda')">Saldo emenda <span class="sort-icon" id="si-saldo_emenda"></span></span><span class="hdr-filter-btn" id="hf-saldo_emenda" onclick="openHeaderFilter(event,'saldo_emenda')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('tipo')">Tipo <span class="sort-icon" id="si-tipo"></span></span><span class="hdr-filter-btn" id="hf-tipo" onclick="openHeaderFilter(event,'tipo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('emenda')">Emenda <span class="sort-icon" id="si-emenda"></span></span><span class="hdr-filter-btn" id="hf-emenda" onclick="openHeaderFilter(event,'emenda')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('ano')">Ano <span class="sort-icon" id="si-ano"></span></span><span class="hdr-filter-btn" id="hf-ano" onclick="openHeaderFilter(event,'ano')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('parlamentar')">Parlamentar <span class="sort-icon" id="si-parlamentar"></span></span><span class="hdr-filter-btn" id="hf-parlamentar" onclick="openHeaderFilter(event,'parlamentar')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('unidade')">Unidade <span class="sort-icon" id="si-unidade"></span></span><span class="hdr-filter-btn" id="hf-unidade" onclick="openHeaderFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('item')">Item <span class="sort-icon" id="si-item"></span></span><span class="hdr-filter-btn" id="hf-item" onclick="openHeaderFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></span><span class="hdr-filter-btn" id="hf-qtde" onclick="openHeaderFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario_cadastrado" onclick="openHeaderFilter(event,'vl_unitario_cadastrado')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_total_cadastrado" onclick="openHeaderFilter(event,'vl_total_cadastrado')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_unitario')">Vl. unit. exec. <span class="sort-icon" id="si-vl_unitario"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario" onclick="openHeaderFilter(event,'vl_unitario')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_total')">Vl. total exec. <span class="sort-icon" id="si-vl_total"></span></span><span class="hdr-filter-btn" id="hf-vl_total" onclick="openHeaderFilter(event,'vl_total')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></span><span class="hdr-filter-btn" id="hf-cpl" onclick="openHeaderFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('status_cat')">Status <span class="sort-icon" id="si-status_cat"></span></span><span class="hdr-filter-btn" id="hf-status_cat" onclick="openHeaderFilter(event,'status_cat')" title="Filtrar">▾</span></span></th>
+              <th style="min-width:200px;white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('status_raw')">Status completo <span class="sort-icon" id="si-status_raw"></span></span><span class="hdr-filter-btn" id="hf-status_raw" onclick="openHeaderFilter(event,'status_raw')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('data_atualizacao')">Atualização <span class="sort-icon" id="si-data_atualizacao"></span></span><span class="hdr-filter-btn" id="hf-data_atualizacao" onclick="openHeaderFilter(event,'data_atualizacao')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('nota_fiscal')">Nota fiscal <span class="sort-icon" id="si-nota_fiscal"></span></span><span class="hdr-filter-btn" id="hf-nota_fiscal" onclick="openHeaderFilter(event,'nota_fiscal')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('empenho')">Empenho <span class="sort-icon" id="si-empenho"></span></span><span class="hdr-filter-btn" id="hf-empenho" onclick="openHeaderFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('patrimonio')">Patrimônio <span class="sort-icon" id="si-patrimonio"></span></span><span class="hdr-filter-btn" id="hf-patrimonio" onclick="openHeaderFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('unidade_entrega')">Un. entrega <span class="sort-icon" id="si-unidade_entrega"></span></span><span class="hdr-filter-btn" id="hf-unidade_entrega" onclick="openHeaderFilter(event,'unidade_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('data_entrega')">Dt. entrega <span class="sort-icon" id="si-data_entrega"></span></span><span class="hdr-filter-btn" id="hf-data_entrega" onclick="openHeaderFilter(event,'data_entrega')" title="Filtrar">▾</span></span></th>
+              <th id="th-saldo-emenda" style="white-space:nowrap;display:none"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('saldo_emenda')">Saldo emenda <span class="sort-icon" id="si-saldo_emenda"></span></span><span class="hdr-filter-btn" id="hf-saldo_emenda" onclick="openHeaderFilter(event,'saldo_emenda')" title="Filtrar">▾</span></span></th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>
@@ -232,7 +241,7 @@
       <div class="metric"><div class="metric-label">Total de emendas</div><div class="metric-value" id="se-kpi-total">—</div></div>
       <div class="metric"><div class="metric-label">Valor total cedido</div><div class="metric-value" id="se-kpi-cedido">—</div></div>
       <div class="metric"><div class="metric-label">Total comprometido</div><div class="metric-value" id="se-kpi-comprometido">—</div></div>
-      <div class="metric" style="border-left-color:var(--green)"><div class="metric-label">Saldo total disponível</div><div class="metric-value" id="se-kpi-saldo">—</div></div>
+      <div class="metric metric-success"><div class="metric-label">Saldo total disponível</div><div class="metric-value" id="se-kpi-saldo">—</div></div>
     </div>
     <div class="filters" style="align-items:center">
       <div class="fg" style="flex:1;min-width:240px">
@@ -516,10 +525,10 @@
     <!-- Métricas chamados -->
     <div class="metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cm-total">—</div><div class="metric-sub">chamados</div></div>
-      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cm-abertos" style="color:var(--red)">—</div><div class="metric-sub">sem atendimento</div></div>
-      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="cm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">aguardando</div></div>
-      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
-      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="cm-pendentes" style="color:var(--purple)">—</div><div class="metric-sub">com pendência</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Abertos</div><div class="metric-value" id="cm-abertos" style="color:var(--red)">—</div><div class="metric-sub">sem atendimento</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Em andamento</div><div class="metric-value" id="cm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric metric-success"><div class="metric-label">Concluídos</div><div class="metric-value" id="cm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+      <div class="metric" style="border-left-color:var(--purple)"><div class="metric-label">Pendentes</div><div class="metric-value" id="cm-pendentes" style="color:var(--purple)">—</div><div class="metric-sub">com pendência</div></div>
     </div>
 
     <div class="table-card">
@@ -556,8 +565,6 @@
               <th>Nº OS</th>
               <th>O que foi feito</th>
               <th>Ações</th>
-              <th>📧</th>
-              <th>PDF</th>
             </tr>
           </thead>
           <tbody id="chamados-body"></tbody>
@@ -658,9 +665,9 @@
 
     <div class="metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cnm-total">—</div><div class="metric-sub">chamados</div></div>
-      <div class="metric"><div class="metric-label">Aguardando abertura</div><div class="metric-value" id="cnm-abertos" style="color:var(--red)">—</div><div class="metric-sub">não enviados</div></div>
-      <div class="metric"><div class="metric-label">Abertos</div><div class="metric-value" id="cnm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">em atendimento</div></div>
-      <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" id="cnm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Aguardando abertura</div><div class="metric-value" id="cnm-abertos" style="color:var(--red)">—</div><div class="metric-sub">não enviados</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Abertos</div><div class="metric-value" id="cnm-andamento" style="color:var(--amber)">—</div><div class="metric-sub">em atendimento</div></div>
+      <div class="metric metric-success"><div class="metric-label">Concluídos</div><div class="metric-value" id="cnm-concluidos" style="color:var(--green)">—</div><div class="metric-sub">atendidos</div></div>
     </div>
 
     <div class="table-card">
@@ -675,7 +682,7 @@
         <table>
           <thead>
             <tr>
-              <th>Ações</th><th>PDF</th><th>E-mail</th><th>Fotos</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
+              <th>Ações</th><th>Fotos</th><th>Status</th><th>Protocolo</th><th>Data/Hora</th><th>Unidade</th>
               <th>Equipamento</th><th>Descrição</th><th>Endereço</th>
               <th>Telefone</th><th>Responsável</th><th>E-mail</th><th>Urgência</th><th>Patrimônio</th>
               <th>Fabricante/Modelo</th><th>Série</th>
@@ -747,9 +754,9 @@
     <!-- KPIs -->
     <div class="metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Total OS</div><div class="metric-value" id="fm-total">—</div><div class="metric-sub">na seleção</div></div>
-      <div class="metric"><div class="metric-label">Não fiscalizados</div><div class="metric-value" id="fm-nao" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
-      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="fm-pend" style="color:var(--amber)">—</div><div class="metric-sub">em aberto</div></div>
-      <div class="metric"><div class="metric-label">Conformes</div><div class="metric-value" id="fm-conf" style="color:var(--green)">—</div><div class="metric-sub">ok</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Não fiscalizados</div><div class="metric-value" id="fm-nao" style="color:var(--red)">—</div><div class="metric-sub">aguardando</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Pendentes</div><div class="metric-value" id="fm-pend" style="color:var(--amber)">—</div><div class="metric-sub">em aberto</div></div>
+      <div class="metric metric-success"><div class="metric-label">Conformes</div><div class="metric-value" id="fm-conf" style="color:var(--green)">—</div><div class="metric-sub">ok</div></div>
     </div>
 
     <!-- Ações -->
@@ -768,20 +775,20 @@
             <tr>
               <th style="width:32px"><input type="checkbox" id="fisc-check-all" onchange="selecionarTodasFisc(this.checked)" style="accent-color:var(--blue);cursor:pointer"></th>
               <th>Ações</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('protocolo')" style="cursor:pointer;user-select:none">Protocolo <span id="sort-fisc-protocolo"></span></span><span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('data')" style="cursor:pointer;user-select:none">Data <span id="sort-fisc-data"></span></span><span class="hdr-filter-btn" id="hff-data" onclick="openFiscFilter(event,'data')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-fisc-unidade"></span></span><span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('equipamento')" style="cursor:pointer;user-select:none">Equipamento <span id="sort-fisc-equipamento"></span></span><span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('patrimonio')" style="cursor:pointer;user-select:none">Patrimônio <span id="sort-fisc-patrimonio"></span></span><span class="hdr-filter-btn" id="hff-patrimonio" onclick="openFiscFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('cpl')" style="cursor:pointer;user-select:none">CPL / Contrato <span id="sort-fisc-cpl"></span></span><span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('os')" style="cursor:pointer;user-select:none">Nº OS <span id="sort-fisc-os"></span></span><span class="hdr-filter-btn" id="hff-os" onclick="openFiscFilter(event,'os')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('servico')" style="cursor:pointer;user-select:none">Serviço realizado <span id="sort-fisc-servico"></span></span><span class="hdr-filter-btn" id="hff-servico" onclick="openFiscFilter(event,'servico')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('situacao')" style="cursor:pointer;user-select:none">Situação <span id="sort-fisc-situacao"></span></span><span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('competencia')" style="cursor:pointer;user-select:none">Competência <span id="sort-fisc-competencia"></span></span><span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('nf')" style="cursor:pointer;user-select:none">NF Referência <span id="sort-fisc-nf"></span></span><span class="hdr-filter-btn" id="hff-nf" onclick="openFiscFilter(event,'nf')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('sla')" style="cursor:pointer;user-select:none">Dias p/ atend. <span id="sort-fisc-sla"></span></span><span class="hdr-filter-btn" id="hff-sla" onclick="openFiscFilter(event,'sla')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('fiscalizado_por')" style="cursor:pointer;user-select:none">Fiscalizado por <span id="sort-fisc-fiscalizado_por"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_por" onclick="openFiscFilter(event,'fiscalizado_por')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="ordenarFiscalizacao('fiscalizado_em')" style="cursor:pointer;user-select:none">Fiscalizado em <span id="sort-fisc-fiscalizado_em"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_em" onclick="openFiscFilter(event,'fiscalizado_em')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('protocolo')" class="th-sort-label">Protocolo <span id="sort-fisc-protocolo"></span></span><span class="hdr-filter-btn" id="hff-protocolo" onclick="openFiscFilter(event,'protocolo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('data')" class="th-sort-label">Data <span id="sort-fisc-data"></span></span><span class="hdr-filter-btn" id="hff-data" onclick="openFiscFilter(event,'data')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('unidade')" class="th-sort-label">Unidade <span id="sort-fisc-unidade"></span></span><span class="hdr-filter-btn" id="hff-unidade" onclick="openFiscFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('equipamento')" class="th-sort-label">Equipamento <span id="sort-fisc-equipamento"></span></span><span class="hdr-filter-btn" id="hff-equipamento" onclick="openFiscFilter(event,'equipamento')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('patrimonio')" class="th-sort-label">Patrimônio <span id="sort-fisc-patrimonio"></span></span><span class="hdr-filter-btn" id="hff-patrimonio" onclick="openFiscFilter(event,'patrimonio')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('cpl')" class="th-sort-label">CPL / Contrato <span id="sort-fisc-cpl"></span></span><span class="hdr-filter-btn" id="hff-cpl" onclick="openFiscFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('os')" class="th-sort-label">Nº OS <span id="sort-fisc-os"></span></span><span class="hdr-filter-btn" id="hff-os" onclick="openFiscFilter(event,'os')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('servico')" class="th-sort-label">Serviço realizado <span id="sort-fisc-servico"></span></span><span class="hdr-filter-btn" id="hff-servico" onclick="openFiscFilter(event,'servico')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('situacao')" class="th-sort-label">Situação <span id="sort-fisc-situacao"></span></span><span class="hdr-filter-btn" id="hff-situacao" onclick="openFiscFilter(event,'situacao')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('competencia')" class="th-sort-label">Competência <span id="sort-fisc-competencia"></span></span><span class="hdr-filter-btn" id="hff-competencia" onclick="openFiscFilter(event,'competencia')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('nf')" class="th-sort-label">NF Referência <span id="sort-fisc-nf"></span></span><span class="hdr-filter-btn" id="hff-nf" onclick="openFiscFilter(event,'nf')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('sla')" class="th-sort-label">Dias p/ atend. <span id="sort-fisc-sla"></span></span><span class="hdr-filter-btn" id="hff-sla" onclick="openFiscFilter(event,'sla')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('fiscalizado_por')" class="th-sort-label">Fiscalizado por <span id="sort-fisc-fiscalizado_por"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_por" onclick="openFiscFilter(event,'fiscalizado_por')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="ordenarFiscalizacao('fiscalizado_em')" class="th-sort-label">Fiscalizado em <span id="sort-fisc-fiscalizado_em"></span></span><span class="hdr-filter-btn" id="hff-fiscalizado_em" onclick="openFiscFilter(event,'fiscalizado_em')" title="Filtrar">▾</span></span></th>
               <th>Editar</th>
             </tr>
           </thead>
@@ -1105,10 +1112,10 @@
       <button onclick="loadItens()" title="Recarregar" style="font-size:12px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">↻ Atualizar</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
-      <button class="itens-subtab-btn" data-sub="aquisicoes" onclick="itensShowSub('aquisicoes')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Itens de Aquisições</button>
-      <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="display:none;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Itens de Atas</button>
-      <button class="itens-subtab-btn" data-sub="entregas" onclick="itensShowSub('entregas')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer">Controle de Entregas / Prazos</button>
-      <button class="itens-subtab-btn" data-sub="confirmacao" onclick="itensShowSub('confirmacao')" style="font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">Confirmação de Entrega na Unidade</button>
+      <button class="itens-subtab-btn" data-sub="aquisicoes" onclick="itensShowSub('aquisicoes')" style="display:none">Itens de Aquisições</button>
+      <button class="itens-subtab-btn" data-sub="atas" onclick="itensShowSub('atas')" style="display:none">Itens de Atas</button>
+      <button class="itens-subtab-btn active" data-sub="entregas" onclick="itensShowSub('entregas')">Controle de Entregas / Prazos</button>
+      <button class="itens-subtab-btn" data-sub="confirmacao" onclick="itensShowSub('confirmacao')">Confirmação de Entrega na Unidade</button>
     </div>
 
     <div id="itens-sub-aquisicoes" class="itens-sub">
@@ -1612,9 +1619,9 @@
     <!-- Métricas -->
     <div class="metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Itens de ata</div><div class="metric-value" id="at-total">—</div><div class="metric-sub">cadastrados</div></div>
-      <div class="metric"><div class="metric-label">Saldo total</div><div class="metric-value" id="at-saldo" style="color:var(--green)">—</div><div class="metric-sub">unidades disponíveis</div></div>
+      <div class="metric metric-success"><div class="metric-label">Saldo total</div><div class="metric-value" id="at-saldo" style="color:var(--green)">—</div><div class="metric-sub">unidades disponíveis</div></div>
       <div class="metric"><div class="metric-label">Executado</div><div class="metric-value" id="at-exec">—</div><div class="metric-sub">unidades solicitadas</div></div>
-      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="at-vence" style="color:var(--red)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="at-vence" style="color:var(--red)">—</div><div class="metric-sub">contratos</div></div>
     </div>
 
     <!-- Tabela de itens das ATAs -->
@@ -1632,17 +1639,17 @@
         <table>
           <thead>
             <tr>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-atas-cpl"></span></span><span class="hdr-filter-btn" id="hfa-cpl" onclick="openAtaFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-atas-sim"></span></span><span class="hdr-filter-btn" id="hfa-sim" onclick="openAtaFilter(event,'sim')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('item')" style="cursor:pointer;user-select:none">Item <span id="sort-atas-item"></span></span><span class="hdr-filter-btn" id="hfa-item" onclick="openAtaFilter(event,'item')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('marca')" style="cursor:pointer;user-select:none">Marca/Modelo <span id="sort-atas-marca"></span></span><span class="hdr-filter-btn" id="hfa-marca" onclick="openAtaFilter(event,'marca')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('qtde_contratada')" style="cursor:pointer;user-select:none">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></span><span class="hdr-filter-btn" id="hfa-qtde_contratada" onclick="openAtaFilter(event,'qtde_contratada')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('exec')" style="cursor:pointer;user-select:none">Executado <span id="sort-atas-exec"></span></span><span class="hdr-filter-btn" id="hfa-exec" onclick="openAtaFilter(event,'exec')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('saldo')" style="cursor:pointer;user-select:none">Saldo <span id="sort-atas-saldo"></span></span><span class="hdr-filter-btn" id="hfa-saldo" onclick="openAtaFilter(event,'saldo')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('valor_unit')" style="cursor:pointer;user-select:none">Valor unit. <span id="sort-atas-valor_unit"></span></span><span class="hdr-filter-btn" id="hfa-valor_unit" onclick="openAtaFilter(event,'valor_unit')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('vencimento')" style="cursor:pointer;user-select:none">Vencimento <span id="sort-atas-vencimento"></span></span><span class="hdr-filter-btn" id="hfa-vencimento" onclick="openAtaFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('status')" style="cursor:pointer;user-select:none">Status <span id="sort-atas-status"></span></span><span class="hdr-filter-btn" id="hfa-status" onclick="openAtaFilter(event,'status')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortAtas('empresa')" style="cursor:pointer;user-select:none">Empresa <span id="sort-atas-empresa"></span></span><span class="hdr-filter-btn" id="hfa-empresa" onclick="openAtaFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('cpl')" class="th-sort-label">CPL <span id="sort-atas-cpl"></span></span><span class="hdr-filter-btn" id="hfa-cpl" onclick="openAtaFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('sim')" class="th-sort-label">SIM <span id="sort-atas-sim"></span></span><span class="hdr-filter-btn" id="hfa-sim" onclick="openAtaFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('item')" class="th-sort-label">Item <span id="sort-atas-item"></span></span><span class="hdr-filter-btn" id="hfa-item" onclick="openAtaFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('marca')" class="th-sort-label">Marca/Modelo <span id="sort-atas-marca"></span></span><span class="hdr-filter-btn" id="hfa-marca" onclick="openAtaFilter(event,'marca')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('qtde_contratada')" class="th-sort-label">Qtde contrat. <span id="sort-atas-qtde_contratada"></span></span><span class="hdr-filter-btn" id="hfa-qtde_contratada" onclick="openAtaFilter(event,'qtde_contratada')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('exec')" class="th-sort-label">Executado <span id="sort-atas-exec"></span></span><span class="hdr-filter-btn" id="hfa-exec" onclick="openAtaFilter(event,'exec')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('saldo')" class="th-sort-label">Saldo <span id="sort-atas-saldo"></span></span><span class="hdr-filter-btn" id="hfa-saldo" onclick="openAtaFilter(event,'saldo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortAtas('valor_unit')" class="th-sort-label">Valor unit. <span id="sort-atas-valor_unit"></span></span><span class="hdr-filter-btn" id="hfa-valor_unit" onclick="openAtaFilter(event,'valor_unit')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('vencimento')" class="th-sort-label">Vencimento <span id="sort-atas-vencimento"></span></span><span class="hdr-filter-btn" id="hfa-vencimento" onclick="openAtaFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('status')" class="th-sort-label">Status <span id="sort-atas-status"></span></span><span class="hdr-filter-btn" id="hfa-status" onclick="openAtaFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortAtas('empresa')" class="th-sort-label">Empresa <span id="sort-atas-empresa"></span></span><span class="hdr-filter-btn" id="hfa-empresa" onclick="openAtaFilter(event,'empresa')" title="Filtrar">▾</span></span></th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -1673,18 +1680,18 @@
           <thead>
             <tr>
               <th style="width:34px" title="Selecione solicitações pendentes da mesma empresa e CPL">Sel.</th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('cpl')" style="cursor:pointer;user-select:none">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('sim')" style="cursor:pointer;user-select:none">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('item')" style="cursor:pointer;user-select:none">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('unidade')" style="cursor:pointer;user-select:none">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('qtde')" style="cursor:pointer;user-select:none">Qtde <span id="sort-exec-qtde"></span></span><span class="hdr-filter-btn" id="hfe-qtde" onclick="openExecFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('valor')" style="cursor:pointer;user-select:none">Valor total <span id="sort-exec-valor"></span></span><span class="hdr-filter-btn" id="hfe-valor" onclick="openExecFilter(event,'valor')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('empenho')" style="cursor:pointer;user-select:none">Empenho <span id="sort-exec-empenho"></span></span><span class="hdr-filter-btn" id="hfe-empenho" onclick="openExecFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('data_af')" style="cursor:pointer;user-select:none">Data AF <span id="sort-exec-data_af"></span></span><span class="hdr-filter-btn" id="hfe-data_af" onclick="openExecFilter(event,'data_af')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('prev_entrega')" style="cursor:pointer;user-select:none">Prev. entrega <span id="sort-exec-prev_entrega"></span></span><span class="hdr-filter-btn" id="hfe-prev_entrega" onclick="openExecFilter(event,'prev_entrega')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('dt_entrega')" style="cursor:pointer;user-select:none">Dt. entrega <span id="sort-exec-dt_entrega"></span></span><span class="hdr-filter-btn" id="hfe-dt_entrega" onclick="openExecFilter(event,'dt_entrega')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortExecs('dias_prazo')" style="cursor:pointer;user-select:none">Prazo <span id="sort-exec-dias_prazo"></span></span><span class="hdr-filter-btn" id="hfe-dias_prazo" onclick="openExecFilter(event,'dias_prazo')" title="Filtrar">▾</span></span></th>
-              <th style="white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">NF<span class="hdr-filter-btn" id="hfe-nf" onclick="openExecFilter(event,'nf')" title="Filtrar">▾</span></span></th><th>Ações</th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('cpl')" class="th-sort-label">CPL <span id="sort-exec-cpl"></span></span><span class="hdr-filter-btn" id="hfe-cpl" onclick="openExecFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('sim')" class="th-sort-label">SIM <span id="sort-exec-sim"></span></span><span class="hdr-filter-btn" id="hfe-sim" onclick="openExecFilter(event,'sim')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('item')" class="th-sort-label">Item <span id="sort-exec-item"></span></span><span class="hdr-filter-btn" id="hfe-item" onclick="openExecFilter(event,'item')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('unidade')" class="th-sort-label">Unidade <span id="sort-exec-unidade"></span></span><span class="hdr-filter-btn" id="hfe-unidade" onclick="openExecFilter(event,'unidade')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortExecs('qtde')" class="th-sort-label">Qtde <span id="sort-exec-qtde"></span></span><span class="hdr-filter-btn" id="hfe-qtde" onclick="openExecFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap;text-align:right"><span class="th-sortable-wrap"><span onclick="sortExecs('valor')" class="th-sort-label">Valor total <span id="sort-exec-valor"></span></span><span class="hdr-filter-btn" id="hfe-valor" onclick="openExecFilter(event,'valor')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('empenho')" class="th-sort-label">Empenho <span id="sort-exec-empenho"></span></span><span class="hdr-filter-btn" id="hfe-empenho" onclick="openExecFilter(event,'empenho')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('data_af')" class="th-sort-label">Data AF <span id="sort-exec-data_af"></span></span><span class="hdr-filter-btn" id="hfe-data_af" onclick="openExecFilter(event,'data_af')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('prev_entrega')" class="th-sort-label">Prev. entrega <span id="sort-exec-prev_entrega"></span></span><span class="hdr-filter-btn" id="hfe-prev_entrega" onclick="openExecFilter(event,'prev_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('dt_entrega')" class="th-sort-label">Dt. entrega <span id="sort-exec-dt_entrega"></span></span><span class="hdr-filter-btn" id="hfe-dt_entrega" onclick="openExecFilter(event,'dt_entrega')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortExecs('dias_prazo')" class="th-sort-label">Prazo <span id="sort-exec-dias_prazo"></span></span><span class="hdr-filter-btn" id="hfe-dias_prazo" onclick="openExecFilter(event,'dias_prazo')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap">NF<span class="hdr-filter-btn" id="hfe-nf" onclick="openExecFilter(event,'nf')" title="Filtrar">▾</span></span></th><th>Ações</th>
             </tr>
           </thead>
           <tbody id="exec-body"></tbody>
@@ -2034,16 +2041,18 @@
       <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
     </div>
 
-    <div class="metrics" style="margin-bottom:1rem">
+    <div class="metrics" style="margin-bottom:.625rem">
       <div class="metric"><div class="metric-label">Total contratos</div><div class="metric-value" id="ct-m-total">—</div><div class="metric-sub">cadastrados</div></div>
-      <div class="metric"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
-      <div class="metric"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
-      <div class="metric"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric"><div class="metric-label">Sem fiscal</div><div class="metric-value" id="ct-m-sem-fiscal" style="color:var(--red)">—</div><div class="metric-sub">precisam revisar</div></div>
-      <div class="metric"><div class="metric-label">Medição pendente</div><div class="metric-value" id="ct-m-med-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric"><div class="metric-label">NF pendente</div><div class="metric-value" id="ct-m-nf-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric"><div class="metric-label">Evento em rascunho</div><div class="metric-value" id="ct-m-evento-rascunho" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric metric-success"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Sem fiscal</div><div class="metric-value" id="ct-m-sem-fiscal" style="color:var(--red)">—</div><div class="metric-sub">precisam revisar</div></div>
       <div class="metric"><div class="metric-label">Valor atual</div><div class="metric-value" id="ct-m-valor-atual" style="font-size:20px">—</div><div class="metric-sub">contratos filtrados</div></div>
+    </div>
+    <div class="metrics-secondary">
+      <div class="metric metric-neutral"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Medição pendente</div><div class="metric-value" id="ct-m-med-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric metric-warning"><div class="metric-label">NF pendente</div><div class="metric-value" id="ct-m-nf-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+      <div class="metric metric-neutral"><div class="metric-label">Evento em rascunho</div><div class="metric-value" id="ct-m-evento-rascunho" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
     </div>
 
     <div class="table-card">
@@ -2061,24 +2070,24 @@
               <th style="width:22px"></th>
               <th style="width:36px;text-align:center"><input type="checkbox" id="ct-select-all" onchange="selecionarTodosContratos(this)" title="Selecionar contratos visíveis"></th>
               <th style="width:220px">Ações</th>
-              <th style="width:120px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('numero_contrato')" style="cursor:pointer;user-select:none">Nº Contrato <span id="sort-ct-numero_contrato"></span></span><span class="hdr-filter-btn" id="hfc-numero_contrato" onclick="openContratoFilter(event,'numero_contrato')" title="Filtrar">▾</span></span></th>
-              <th style="width:115px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('cpl')" style="cursor:pointer;user-select:none">Processo/CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
-              <th style="width:160px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('modelo_contrato')" style="cursor:pointer;user-select:none">Modelo <span id="sort-ct-modelo_contrato"></span></span><span class="hdr-filter-btn" id="hfc-modelo_contrato" onclick="openContratoFilter(event,'modelo_contrato')" title="Filtrar">▾</span></span></th>
-              <th style="width:130px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('origem_contratacao')" style="cursor:pointer;user-select:none">Origem <span id="sort-ct-origem_contratacao"></span></span><span class="hdr-filter-btn" id="hfc-origem_contratacao" onclick="openContratoFilter(event,'origem_contratacao')" title="Filtrar">▾</span></span></th>
-              <th style="width:170px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('prestador')" style="cursor:pointer;user-select:none">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('objeto')" style="width:260px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('vigencia_atual')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('vencimento')" style="width:100px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('dias')" style="width:70px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
-              <th style="width:150px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('status')" style="cursor:pointer;user-select:none">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
-              <th style="width:80px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px"><span onclick="sortContratos('secao')" style="cursor:pointer;user-select:none">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('fiscalizacao')" style="width:150px;cursor:pointer;user-select:none"><span style="display:inline-flex;align-items:center;gap:6px">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('valor_inicial')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor inicial <span id="sort-ct-valor_inicial"></span></span></th>
-              <th onclick="sortContratos('valor_reajustado')" style="width:140px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Inicial reajustado <span id="sort-ct-valor_reajustado"></span></span></th>
-              <th onclick="sortContratos('valor_total')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">Valor atual <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
-              <th onclick="sortContratos('aditivo_usado')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px">% aditivo <span id="sort-ct-aditivo_usado"></span></span></th>
+              <th style="width:120px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('numero_contrato')" class="th-sort-label">Nº Contrato <span id="sort-ct-numero_contrato"></span></span><span class="hdr-filter-btn" id="hfc-numero_contrato" onclick="openContratoFilter(event,'numero_contrato')" title="Filtrar">▾</span></span></th>
+              <th style="width:115px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('cpl')" class="th-sort-label">Processo/CPL <span id="sort-ct-cpl"></span></span><span class="hdr-filter-btn" id="hfc-cpl" onclick="openContratoFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
+              <th style="width:160px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('modelo_contrato')" class="th-sort-label">Modelo <span id="sort-ct-modelo_contrato"></span></span><span class="hdr-filter-btn" id="hfc-modelo_contrato" onclick="openContratoFilter(event,'modelo_contrato')" title="Filtrar">▾</span></span></th>
+              <th style="width:130px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('origem_contratacao')" class="th-sort-label">Origem <span id="sort-ct-origem_contratacao"></span></span><span class="hdr-filter-btn" id="hfc-origem_contratacao" onclick="openContratoFilter(event,'origem_contratacao')" title="Filtrar">▾</span></span></th>
+              <th style="width:170px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('prestador')" class="th-sort-label">Prestador <span id="sort-ct-prestador"></span></span><span class="hdr-filter-btn" id="hfc-prestador" onclick="openContratoFilter(event,'prestador')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('objeto')" style="width:260px;cursor:pointer;user-select:none"><span class="th-sortable-wrap">Objeto <span id="sort-ct-objeto"></span><span class="hdr-filter-btn" id="hfc-objeto" onclick="openContratoFilter(event,'objeto')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vigencia_atual')" style="width:150px;cursor:pointer;user-select:none"><span class="th-sortable-wrap">Vigência atual <span id="sort-ct-vigencia_atual"></span><span class="hdr-filter-btn" id="hfc-vigencia_atual" onclick="openContratoFilter(event,'vigencia_atual')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('vencimento')" style="width:100px;cursor:pointer;user-select:none"><span class="th-sortable-wrap">Vencimento <span id="sort-ct-vencimento"></span><span class="hdr-filter-btn" id="hfc-vencimento" onclick="openContratoFilter(event,'vencimento')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('dias')" style="width:70px;cursor:pointer;user-select:none"><span class="th-sortable-wrap">Dias <span id="sort-ct-dias"></span><span class="hdr-filter-btn" id="hfc-dias" onclick="openContratoFilter(event,'dias')" title="Filtrar">▾</span></span></th>
+              <th style="width:150px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('status')" class="th-sort-label">Status <span id="sort-ct-status"></span></span><span class="hdr-filter-btn" id="hfc-status" onclick="openContratoFilter(event,'status')" title="Filtrar">▾</span></span></th>
+              <th style="width:80px;white-space:nowrap"><span class="th-sortable-wrap"><span onclick="sortContratos('secao')" class="th-sort-label">Seção <span id="sort-ct-secao"></span></span><span class="hdr-filter-btn" id="hfc-secao" onclick="openContratoFilter(event,'secao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('fiscalizacao')" style="width:150px;cursor:pointer;user-select:none"><span class="th-sortable-wrap">Fiscalização <span id="sort-ct-fiscalizacao"></span><span class="hdr-filter-btn" id="hfc-fiscalizacao" onclick="openContratoFilter(event,'fiscalizacao')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('valor_inicial')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span class="th-sortable-wrap">Valor inicial <span id="sort-ct-valor_inicial"></span></span></th>
+              <th onclick="sortContratos('valor_reajustado')" style="width:140px;cursor:pointer;user-select:none;text-align:right"><span class="th-sortable-wrap">Inicial reajustado <span id="sort-ct-valor_reajustado"></span></span></th>
+              <th onclick="sortContratos('valor_total')" style="width:120px;cursor:pointer;user-select:none;text-align:right"><span class="th-sortable-wrap">Valor atual <span id="sort-ct-valor_total"></span><span class="hdr-filter-btn" id="hfc-valor_total" onclick="openContratoFilter(event,'valor_total')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('aditivo_usado')" style="width:110px;cursor:pointer;user-select:none;text-align:right"><span class="th-sortable-wrap">% aditivo <span id="sort-ct-aditivo_usado"></span></span></th>
               <th style="width:120px;white-space:nowrap">Alertas</th>
-              <th onclick="sortContratos('atualizado_em')" style="width:120px;cursor:pointer;user-select:none;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:6px">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
+              <th onclick="sortContratos('atualizado_em')" style="width:120px;cursor:pointer;user-select:none;white-space:nowrap"><span class="th-sortable-wrap">Atualizado em <span id="sort-ct-atualizado_em"></span><span class="hdr-filter-btn" id="hfc-atualizado_em" onclick="openContratoFilter(event,'atualizado_em')" title="Filtrar">▾</span></span></th>
               <th style="width:90px;white-space:nowrap">Editar</th>
             </tr>
           </thead>
@@ -2636,9 +2645,9 @@
 
     <div class="metrics" style="margin-bottom:1rem">
       <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="sa-m-total">—</div><div class="metric-sub">registros</div></div>
-      <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value" id="sa-m-abertas" style="color:var(--amber)">—</div><div class="metric-sub">pendentes</div></div>
-      <div class="metric"><div class="metric-label">Aplicadas</div><div class="metric-value" id="sa-m-aplicadas" style="color:var(--red)">—</div><div class="metric-sub">sanções</div></div>
-      <div class="metric"><div class="metric-label">Encerradas</div><div class="metric-value" id="sa-m-encerradas" style="color:var(--green)">—</div><div class="metric-sub">concluídas</div></div>
+      <div class="metric metric-warning"><div class="metric-label">Em andamento</div><div class="metric-value" id="sa-m-abertas" style="color:var(--amber)">—</div><div class="metric-sub">pendentes</div></div>
+      <div class="metric metric-danger"><div class="metric-label">Aplicadas</div><div class="metric-value" id="sa-m-aplicadas" style="color:var(--red)">—</div><div class="metric-sub">sanções</div></div>
+      <div class="metric metric-success"><div class="metric-label">Encerradas</div><div class="metric-value" id="sa-m-encerradas" style="color:var(--green)">—</div><div class="metric-sub">concluídas</div></div>
     </div>
 
     <div class="table-card">
@@ -2800,6 +2809,7 @@
   Desenvolvido por <strong style="color:var(--text2)">Patrick Santos Maffei</strong> · Secretaria da Saúde · Prefeitura de Sorocaba
 </div>
 
+<script src="js/components/kebab-menu.js"></script>
 <script src="js/legacy/00-core.js"></script>
 <script src="js/legacy/10-chamados-inventario.js"></script>
 <script src="js/legacy/20-atas.js"></script>

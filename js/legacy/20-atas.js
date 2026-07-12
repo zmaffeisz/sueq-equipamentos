@@ -373,18 +373,22 @@ function filtrarAtas(){
       <td style="font-size:11px">${r.empresa||"—"}</td>
       <td>
         ${r.status&&r.status.toUpperCase().startsWith("ENCERRADO")?`
-        <button onclick="verExecsItem('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Ver solicitações deste item">📋 Solicitações</button>
+        <button onclick="verExecsItem('${r.id}')" class="btn-secondary btn-compact" title="Ver solicitações deste item">📋 Solicitações</button>
         `:`
-        <button onclick="abrirModalEditAta('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Adicionar solicitação">✏️ Solicitação</button>
-        <button onclick="renovarAta('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);color:var(--blue-text);background:var(--blue-bg);cursor:pointer;margin-left:3px" title="Prorrogar vigência do contrato">🔄 Prorrogar</button>
-        <button onclick="encerrarContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--red-bg);color:var(--red-text);background:var(--red-bg);cursor:pointer;margin-left:3px" title="Encerrar contrato">⛔ Encerrar</button>
-        <button onclick="verExecsItem('${r.id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;margin-left:3px" title="Ver solicitações deste item">📋 Solicitações</button>
+        <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="abrirModalEditAta('${r.id}')" class="btn-secondary btn-compact" title="Adicionar solicitação">✏️ Solicitação</button>
+        ${kebabMenuHtml([
+          {label:'🔄 Prorrogar',onclick:`renovarAta('${r.id}')`,title:'Prorrogar vigência do contrato'},
+          {label:'📋 Solicitações',onclick:`verExecsItem('${r.id}')`,title:'Ver solicitações deste item'},
+          _isAdmin()?{label:'✏️ Editar',onclick:`_ataAbrirEditarContrato('${r.contrato_id}')`,title:'Editar dados do contrato (fiscalização, seção, empresa, objeto...)'}:null,
+          podeEditar('contratos')?{label:'🔗 Vinculações',onclick:`_ataAbrirEmailContrato('${r.contrato_id}')`,title:'Configurar e-mail e prefixo de chamado'}:null,
+          {label:'⛔ Encerrar',onclick:`encerrarContrato('${r.contrato_id}')`,title:'Encerrar contrato',danger:true,divider:true}
+        ])}
+        </div>
         `}
-        ${_isAdmin()?`<button onclick="_ataAbrirEditarContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin-left:3px" title="Editar dados do contrato (fiscalização, seção, empresa, objeto...)">✏️ Editar</button>`:''}
-        ${podeEditar('contratos')?`<button onclick="_ataAbrirEmailContrato('${r.contrato_id}')" style="font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer;margin-left:3px" title="Configurar e-mail e prefixo de chamado">🔗 Vinculações</button>`:''}
       </td>
     </tr>`;
-  }).join("");
+  }).join("")||`<tr><td colspan="12"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item de ata encontrado</div></td></tr>`;
 
   // Tabela de execuções filtradas
   let execRows=atasExec.filter(r=>{

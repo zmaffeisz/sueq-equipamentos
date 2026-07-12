@@ -73,6 +73,7 @@ Mais detalhes (incluindo Supabase local opcional) em
 
 | Documento | Conteúdo |
 |---|---|
+| [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Design system: tokens, componentes (botões, badges, KPIs, tabelas, modais, kebab-menu), ícones, responsivo — seguir antes de criar/editar HTML/CSS. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Visão geral, stack, organização do código. |
 | [docs/SCHEMA.md](docs/SCHEMA.md) | Tabelas, colunas, relacionamentos, campos monetários e de status. |
 | [docs/DATABASE.md](docs/DATABASE.md) | Migrations, views, funções, triggers, RLS, FKs. |

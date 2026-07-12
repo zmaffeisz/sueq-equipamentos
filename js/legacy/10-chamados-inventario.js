@@ -350,7 +350,7 @@ function filtrarChamados(){
       <td style="font-size:11px;white-space:nowrap">${_sanEsc(r.telefone||"—")}</td>
       <td style="font-size:11px" class="td-trunc">${_sanEsc(r.responsavel||"—")}</td>
       <td style="font-size:11px">${_sanEsc(r.grau_urgencia||"—")}</td>
-      <td style="font-size:11px">${_sanEsc(r.patrimonio||"—")}${temAC?' <span class="badge" style="background:var(--blue-bg);color:var(--blue-text)">AC</span>':''}</td>
+      <td style="font-size:11px">${_sanEsc(r.patrimonio||"—")}${temAC?' <span class="badge badge-info">AC</span>':''}</td>
       <td class="td-trunc" title="${_sanEsc(r.equipamento||'')}">${_sanEsc(r.equipamento||"—")}</td>
       <td style="font-size:11px">${_sanEsc(r.fabricante||"—")}</td>
       <td style="font-size:11px">${_sanEsc(r.serie||"—")}</td>
@@ -364,11 +364,15 @@ function filtrarChamados(){
       <td style="font-size:11px">${_sanEsc(ctrl.empresa||"—")}</td>
       <td style="font-size:11px">${_sanEsc(ctrl.os||"—")}</td>
       <td class="td-trunc" style="max-width:160px" title="${_sanEsc(ctrl.feito||'')}">${_sanEsc(ctrl.feito||"—")}</td>
-      <td>${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer" title="Atualizar atendimento">✏️ Atualizar</button>`:"—"}</td>
-      <td><button onclick="enviarEmailChamado('${r.protocolo}')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue-text);cursor:pointer" title="Enviar por e-mail">📧 E-mail</button></td>
-      <td><button onclick="gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}' )" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red-text);cursor:pointer" title="Gerar OS em PDF">📄 PDF</button></td>
+      <td style="display:flex;align-items:center;gap:6px">
+        ${podeEditar('chamados')?`<button onclick="abrirModalChamado('${r.protocolo.replace(/'/g,"\'")}','${r.equipamento.replace(/'/g,"\'")}','${r.unidade.replace(/'/g,"\'")}','${r.patrimonio}')" class="btn-secondary btn-compact" title="Atualizar atendimento">✏️ Atualizar</button>`:""}
+        ${kebabMenuHtml([
+          {label:'📧 Enviar por e-mail',onclick:`enviarEmailChamado('${r.protocolo}')`},
+          {label:'📄 Gerar OS em PDF',onclick:`gerarPDFChamado('${r.protocolo.replace(/'/g,"\'")}')`}
+        ])}
+      </td>
     </tr>`;
-  }).join("");
+  }).join("")||`<tr><td colspan="25"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum chamado encontrado</div></td></tr>`;
 }
 
 function enviarEmailChamado(protocolo){
@@ -686,7 +690,7 @@ function filtrarInventario(){
 function renderInventario(){
   const tbody=document.getElementById('inv-body');
   if(!_invFiltered.length){
-    tbody.innerHTML='<tr><td colspan="10" style="padding:1.5rem;text-align:center;color:var(--text3)">Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="10"><div class="table-empty"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Nenhum item no inventário ainda. Confirme a entrega na unidade para que os itens apareçam aqui.</div></td></tr>';
     return;
   }
   tbody.innerHTML=_invFiltered.map((r,i)=>{

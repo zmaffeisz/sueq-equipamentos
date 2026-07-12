@@ -76,6 +76,32 @@ explicitamente; qualquer escrita continua restrita ao `contratos-dag`.
 - **Chamados:** "Chamados Antigos" (Google Sheets) é **somente leitura**; chamado órfão sem
   controle = "não aberto" (não criar controle automático).
 
+## Design visual — regras obrigatórias
+
+Guia completo (tokens, componentes, ícones, responsivo): **[docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) — leia antes de criar ou editar qualquer HTML/CSS.** Não criar
+componente novo (botão, badge, card, modal, tabela) sem antes conferir se já existe um
+padrão lá. Resumo do que mais importa:
+
+- **Nunca escrever `*/` dentro do texto de um comentário CSS** (ex.: `funcaoA*/funcaoB`
+  como separador) — fecha o comentário mais cedo do que o pretendido e o navegador
+  descarta silenciosamente a próxima regra real, sem erro em `node --check` nem no
+  console. Já aconteceu uma vez e derrubou `.modal-overlay{display:none}`, abrindo
+  todos os modais ao mesmo tempo. Depois de editar CSS, rode o snippet de
+  balanceamento de chaves descrito em docs/DESIGN_SYSTEM.md.
+- Reaproveitar os tokens de `styles.css` (`--primary`, `--space-*`, `--text-*`,
+  `--radius*`, `--shadow*`, semânticas `--green/--amber/--red/--blue/--neutral` +
+  `-bg`/`-text`) — nunca hardcode cor/espaçamento/raio soltos num componente novo.
+- Componentes já existentes a reutilizar: `.btn-primary/.btn-secondary/.btn-ghost/
+  .btn-danger/.btn-compact/.btn-icon`, `.badge` + `.badge-success/-warning/-danger/
+  -info/-neutral`, `.metrics`/`.metric` (+ `.metric-success/-warning/-danger`),
+  `.filters`/`.fg`, `.table-card`/`.th-sortable-wrap`/`.th-sort-label`/`.table-empty`,
+  `.modal-overlay`/`.modal-box`/`.modal-title`/`.modal-actions`, menu kebab
+  (`js/components/kebab-menu.js`, use quando uma linha de tabela tiver 3+ ações).
+- Ícones: SVG inline monocromático (sem CDN, sem emoji novo em navegação/sidebar).
+- Tema dark é o padrão — todo CSS novo deve funcionar nos dois temas via `var(--token)`.
+- Depois de qualquer mudança visual, testar de fato no navegador (não só
+  `node --check`) — bug de CSS que quebra em runtime não aparece em nenhum lint.
+
 ## Como rodar
 
 ```bash
