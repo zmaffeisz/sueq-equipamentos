@@ -1,5 +1,12 @@
 # Changelog
 
+- **Campos obrigatórios no cadastro de Emendas**: `Ano`, `Parlamentar` e `Objeto geral da emenda`
+  agora são identificados como obrigatórios no modal e validados antes do salvamento.
+
+- **Licitações já contratadas com status visual correto**: na aba Licitações, processos
+  cujos itens já possuem contrato vinculado agora exibem o selo `CONTRATADO`, sem alterar
+  o status de licitação armazenado nem a apresentação em outras abas.
+
 ## 2026-07-11
 
 - **Exclusão segura de solicitações de ATA**: o botão Excluir agora aparece somente antes da emissão da AF. A interface revalida o estado no momento da ação e um trigger no banco bloqueia exclusão quando há AF, prazo, NF, recebimento, patrimônio, entrega, termo ou sanção. Solicitações ainda elegíveis são removidas por RPC transacional, com limpeza dos vínculos de empenho e recálculo dos saldos.

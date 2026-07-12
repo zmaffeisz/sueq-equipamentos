@@ -344,13 +344,13 @@
       <div class="form-group"><div class="form-label">Seção responsável *</div><select id="ne-secao"></select></div>
       <div class="form-group"><div class="form-label">Tipo *</div><select id="ne-tipo"><option value="">Selecione...</option><option>ESTADUAL</option><option>FEDERAL</option><option>MUNICIPAL</option></select></div>
       <div class="form-group"><div class="form-label">Nº da emenda *</div><input type="text" id="ne-emenda" placeholder="ex: 202300546528"></div>
-      <div class="form-group"><div class="form-label">Ano</div><input type="number" id="ne-ano" placeholder="ex: 2026"></div>
-      <div class="form-group"><div class="form-label">Parlamentar</div>
-        <select id="ne-parlamentar-sel"><option value="">Selecione...</option></select>
+      <div class="form-group"><div class="form-label">Ano *</div><input type="number" id="ne-ano" placeholder="ex: 2026" required></div>
+      <div class="form-group"><div class="form-label">Parlamentar *</div>
+        <select id="ne-parlamentar-sel" required><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><div class="form-label">Processo SEI da emenda</div><input type="text" id="ne-sei" placeholder="ex: 12345/2026"></div>
       <div class="form-group"><div class="form-label">Valor cedido GLOBAL (R$) *</div><input type="number" id="ne-valor" placeholder="ex: 50000" oninput="neRecalc()"></div>
-      <div class="form-group full"><div class="form-label">Objeto geral da emenda</div><input type="text" id="ne-objeto" placeholder="ex: Aquisição de equipamentos para UBS X"></div>
+      <div class="form-group full"><div class="form-label">Objeto geral da emenda *</div><input type="text" id="ne-objeto" placeholder="ex: Aquisição de equipamentos para UBS X" required></div>
     </div>
 
     <!-- ITENS DA EMENDA (inline) -->

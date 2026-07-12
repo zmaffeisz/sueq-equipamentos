@@ -687,8 +687,13 @@ function renderEmPorEmenda(){
       <div onclick="emTogglePorEmenda(decodeURIComponent('${emEnc}'))" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:var(--surface2)">
         <span style="font-size:13px;color:var(--text3);transform:rotate(${aberto?90:0}deg);transition:.15s">▶</span>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:14px">${_sanEsc(r0.tipo||'—')} - ${_sanEsc(em)}${r0.ano?('/'+_sanEsc(r0.ano)):''} - ${_sanEsc(r0.parlamentar||'—')} - ${fmtFull(r0.valor_cedido||0)} - ${_sanEsc(r0.objeto||'—')}</div>
-          <div style="font-size:11px;color:var(--text3)">${total} ${total===1?'item':'itens'} · ${entregues} entregue${entregues!==1?'s':''}</div>
+          <div style="font-size:14px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${_sanEsc(r0.objeto||'')}">
+            <span>${_sanEsc(r0.tipo||'—')}</span> -
+            <b>${_sanEsc(em)}${r0.ano?`/${_sanEsc(r0.ano)}`:''}</b> -
+            <span>${_sanEsc(r0.objeto||'—')}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">${_sanEsc(r0.parlamentar||'—')} · ${fmtFull(r0.valor_cedido||0)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${total} ${total===1?'item':'itens'} · ${entregues} entregue${entregues!==1?'s':''}</div>
         </div>
         <div style="width:170px;flex-shrink:0">
           <div style="height:9px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green)"></div></div>
@@ -1725,8 +1730,9 @@ async function salvarNovaEmenda(){
   const emenda=document.getElementById("ne-emenda").value.trim();
   const valor=document.getElementById("ne-valor").value;
   const anoStr=document.getElementById("ne-ano").value.trim();
+  const objeto=document.getElementById("ne-objeto").value.trim();
   const parlamentarNome=(document.getElementById("ne-parlamentar-sel")?.value)||null;
-  if(!secaoId||!tipo||!emenda||!valor){showMsg("ne","Preencha os campos obrigatórios (*): seção, tipo, nº da emenda e valor cedido global.","err");return}
+  if(!secaoId||!tipo||!emenda||!valor||!anoStr||!objeto||!parlamentarNome){showMsg("ne","Preencha os campos obrigatórios (*): seção, tipo, nº da emenda, ano, parlamentar, valor cedido global e objeto geral da emenda.","err");return}
   // coleta e valida itens inline
   const itens=[];
   for(const it of document.querySelectorAll('#ne-itens .ne-item')){
@@ -1757,9 +1763,9 @@ async function salvarNovaEmenda(){
     const {data:em,error:e1}=await sb.from("emendas").insert({
       secao_id:secaoId, tipo, emenda, parlamentar:parlamentarNome,
       sei_emenda:document.getElementById("ne-sei").value.trim()||null,
-      objeto:document.getElementById("ne-objeto").value.trim()||null,
+      objeto,
       valor_cedido:valorGlobal,
-      ano: anoStr?parseInt(anoStr):null,
+      ano:parseInt(anoStr),
       unidade: nomesUnid.length===1?nomesUnid[0]:('Várias ('+nomesUnid.length+')'),
       unidade_id: idsUnid.length===1?idsUnid[0]:null
     }).select("id").single();

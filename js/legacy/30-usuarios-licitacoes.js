@@ -225,7 +225,11 @@ function renderLicitacoes(){
     const items=x.naLic;
     const itensServico=_procServicoMensalItensFromValor(p.servico_mensal_itens);
     const totalItensExibidos=items.length||itensServico.length;
-    const roll=items.length?_cpRollup(items):(itensServico.length?{nome:'Serviço mensal',orgao:null,auto:false}:{nome:'sem itens',orgao:null,auto:false});
+    // Nesta aba, o contrato vinculado prevalece apenas na apresentação do processo.
+    // O status original continua intacto no banco e nas demais telas/fluxos.
+    const roll=x.fullyContratado
+      ? {nome:'CONTRATADO',orgao:null,auto:false,contratado:true}
+      : (items.length?_cpRollup(items):(itensServico.length?{nome:'Serviço mensal',orgao:null,auto:false}:{nome:'sem itens',orgao:null,auto:false}));
     const aberto=!!_cpExpanded[p.id];
     const tipoServicoInfo=(p.natureza==='SERVIÇO'&&p.tipo_servico)?` · ${_sanEsc(p.tipo_servico)}`:'';
     let bloco=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--surface)">
@@ -317,7 +321,7 @@ function _cpRollup(items){
   return {nome:'Vários', orgao:null, auto:false};
 }
 function _cpStatusBadge(r){
-  const cor = r.nome==='Indefinido' ? 'var(--text3)' : (r.nome==='Vários' ? 'var(--text2)' : _cpOrgaoCor(r.orgao));
+  const cor = r.contratado ? 'var(--green)' : (r.nome==='Indefinido' ? 'var(--text3)' : (r.nome==='Vários' ? 'var(--text2)' : _cpOrgaoCor(r.orgao)));
   const dot = r.auto?'<span style="width:7px;height:7px;border-radius:50%;background:var(--blue);display:inline-block;margin-right:5px"></span>':'';
   return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;color:${cor};background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:20px">${dot}${_sanEsc(r.nome)}</span>`;
 }
