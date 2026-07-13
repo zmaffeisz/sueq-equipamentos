@@ -146,6 +146,8 @@
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('qtde')">Qtde <span class="sort-icon" id="si-qtde"></span></span><span class="hdr-filter-btn" id="hf-qtde" onclick="openHeaderFilter(event,'qtde')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_unitario_cadastrado')">Vl. unit. plan. <span class="sort-icon" id="si-vl_unitario_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario_cadastrado" onclick="openHeaderFilter(event,'vl_unitario_cadastrado')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_total_cadastrado')">Vl. total plan. <span class="sort-icon" id="si-vl_total_cadastrado"></span></span><span class="hdr-filter-btn" id="hf-vl_total_cadastrado" onclick="openHeaderFilter(event,'vl_total_cadastrado')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('valor_licitacao_unit')">Vl. unit. licit. <span class="sort-icon" id="si-valor_licitacao_unit"></span></span><span class="hdr-filter-btn" id="hf-valor_licitacao_unit" onclick="openHeaderFilter(event,'valor_licitacao_unit')" title="Filtrar">▾</span></span></th>
+              <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('valor_licitacao')">Vl. total licit. <span class="sort-icon" id="si-valor_licitacao"></span></span><span class="hdr-filter-btn" id="hf-valor_licitacao" onclick="openHeaderFilter(event,'valor_licitacao')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_unitario')">Vl. unit. exec. <span class="sort-icon" id="si-vl_unitario"></span></span><span class="hdr-filter-btn" id="hf-vl_unitario" onclick="openHeaderFilter(event,'vl_unitario')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('vl_total')">Vl. total exec. <span class="sort-icon" id="si-vl_total"></span></span><span class="hdr-filter-btn" id="hf-vl_total" onclick="openHeaderFilter(event,'vl_total')" title="Filtrar">▾</span></span></th>
               <th style="white-space:nowrap"><span class="th-sortable-wrap"><span class="th-sort-label" onclick="sortTable('cpl')">CPL / Processo <span class="sort-icon" id="si-cpl"></span></span><span class="hdr-filter-btn" id="hf-cpl" onclick="openHeaderFilter(event,'cpl')" title="Filtrar">▾</span></span></th>
@@ -268,6 +270,7 @@
             <th onclick="sortSaldoEmendas('unidade')">Unidade <span class="sort-icon" id="se-si-unidade"></span><button class="hdr-filter-btn" id="se-hf-unidade" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'unidade')" title="Filtrar">▾</button></th>
             <th onclick="sortSaldoEmendas('valor_cedido')">Valor cedido <span class="sort-icon" id="se-si-valor_cedido"></span><button class="hdr-filter-btn" id="se-hf-valor_cedido" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'valor_cedido')" title="Filtrar">▾</button></th>
             <th onclick="sortSaldoEmendas('total_planejado')">Total planejado <span class="sort-icon" id="se-si-total_planejado"></span><button class="hdr-filter-btn" id="se-hf-total_planejado" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_planejado')" title="Filtrar">▾</button></th>
+            <th onclick="sortSaldoEmendas('total_estimado_licitacao')">Estimado licitação <span class="sort-icon" id="se-si-total_estimado_licitacao"></span><button class="hdr-filter-btn" id="se-hf-total_estimado_licitacao" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_estimado_licitacao')" title="Filtrar">▾</button></th>
             <th onclick="sortSaldoEmendas('total_executado')">Total executado <span class="sort-icon" id="se-si-total_executado"></span><button class="hdr-filter-btn" id="se-hf-total_executado" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_executado')" title="Filtrar">▾</button></th>
             <th onclick="sortSaldoEmendas('total_comprometido')">Comprometido <span class="sort-icon" id="se-si-total_comprometido"></span><button class="hdr-filter-btn" id="se-hf-total_comprometido" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'total_comprometido')" title="Filtrar">▾</button></th>
             <th onclick="sortSaldoEmendas('saldo_remanescente')">Saldo disponível <span class="sort-icon" id="se-si-saldo_remanescente"></span><button class="hdr-filter-btn" id="se-hf-saldo_remanescente" onclick="event.stopPropagation();openSaldoHeaderFilter(event,'saldo_remanescente')" title="Filtrar">▾</button></th>
@@ -573,7 +576,7 @@
     </div>
 
     <!-- Modal de atualização de chamado -->
-    <div class="modal-overlay" id="modal-chamado" onclick="fecharModalChamadoFora(event)">
+    <div class="modal-overlay" id="modal-chamado">
       <div class="modal-box" style="width:500px">
         <div class="modal-title">✏️ Atualizar chamado</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:1rem" id="mc-info"></div>
@@ -1124,10 +1127,8 @@
         <select id="itens-f-fonte" onchange="renderItensAquisicoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)">
           <option value="">Todas as fontes</option>
           <option value="emenda">Emenda</option>
-          <option value="sem_emenda">Não há emenda</option>
           <option value="recurso_proprio">Recurso próprio</option>
-          <option value="municipal">Fonte municipal</option>
-          <option value="outra">Outra</option>
+          <option value="outra">Outro</option>
         </select>
         <select id="itens-f-status" onchange="renderItensAquisicoes()" style="font-size:12px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)"><option value="">Todos os status</option></select>
         <span id="itens-count" style="font-size:12px;color:var(--text3)"></span>
@@ -1538,7 +1539,7 @@
         <div class="form-group"><div class="form-label">Tipo *</div><select id="proc-tipo" onchange="_procTipoChange()"><option value="">Selecione...</option><option>CPL</option><option>SEI</option><option>OUTRO</option></select></div>
         <div class="form-group"><div class="form-label">Identificador (CPL / SEI) *</div><input type="text" id="proc-identificador" oninput="_procIdentFiltrar()" placeholder="ex: CPL 086/2025 ou 3552205.404.../2026-14"></div>
         <div class="form-group proc-tipo-outro" id="proc-tipo-outro-wrap" style="display:none"><div class="form-label">Outro tipo *</div><input type="text" id="proc-tipo-outro" placeholder="Informe o tipo do processo"></div>
-        <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" placeholder="Número da Solicitação de Compra (opcional)"></div>
+        <div class="form-group proc-sc"><div class="form-label">SC</div><input type="text" id="proc-sc" inputmode="text" oninput="this.value=this.value.replace(/[^0-9/]/g,'')" placeholder="Número da Solicitação de Compra (opcional)"></div>
       </div>
       <div class="form-group" style="display:none"><div class="form-label">Status</div><select id="proc-status"><option value="">—</option></select></div>
       <div class="form-group"><div class="form-label">Status</div><div style="font-size:12px;color:var(--text3);padding:8px 0">O status agora é por item, em <b>🧭 Licitações em andamento</b>.</div></div>
@@ -1574,6 +1575,7 @@
       <div id="proc-import-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem;margin-bottom:.5rem"></div>
       <div id="proc-itens-lista" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="proc-itens-vazio" style="font-size:12px;color:var(--text3);padding:.5rem 0">Nenhum item adicionado. Use "Adicionar item" ou "Puxar de emenda".</div>
+      <div id="proc-emenda-saldo-resumo" style="display:none;margin-top:.75rem"></div>
     </div>
     <div class="form-actions" style="margin-top:1.25rem">
       <button class="btn-primary" onclick="salvarProcesso()">Salvar processo</button>

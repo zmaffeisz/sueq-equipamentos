@@ -174,6 +174,8 @@ async function carregarUsuarios(){
 // ═══ ABA LICITAÇÕES (processos) ═══
 let _licitacoesCache=[];
 let _procEditId=null;
+let _procSaldoCache={};
+let _procEditOldByEmenda={};
 async function loadLicitacoes(){
   const box=document.getElementById('lic-lista');
   if(box) box.innerHTML='<div style="padding:1rem;color:var(--text3)"><span class="spinner"></span> Carregando...</div>';
@@ -376,7 +378,10 @@ async function abrirNovoProcesso(){
   await preencherSelectSecoes('proc-secao', false);
   aplicarSecaoTextoFormulario('proc-secao');
   _procItensLoaded=[];
+  _procSaldoCache={};
+  _procEditOldByEmenda={};
   document.getElementById('proc-itens-lista').innerHTML='';
+  const saldoResumo=document.getElementById('proc-emenda-saldo-resumo'); if(saldoResumo){saldoResumo.style.display='none';saldoResumo.innerHTML='';}
   const _impBox=document.getElementById('proc-import-box'); if(_impBox){_impBox.style.display='none';_impBox.innerHTML='';}
   procNaturezaChange();
   _renderProcItensVazio();
@@ -386,6 +391,8 @@ async function abrirNovoProcesso(){
 function abrirEditarProcesso(id){
   const p=_licitacoesCache.find(x=>String(x.id)===String(id)); if(!p) return;
   _procEditId=p.id;
+  _procSaldoCache={};
+  _procEditOldByEmenda={};
   document.getElementById('proc-titulo').textContent='✏️ Editar processo';
   document.getElementById('proc-identificador').value=p.identificador||'';
   const tipoPadrao=['CPL','SEI'].includes(p.tipo)?p.tipo:(p.tipo?'OUTRO':'');
@@ -485,7 +492,7 @@ async function salvarProcesso(){
 // ═══ ITENS PREVISTOS DO PROCESSO (Fase 1) ═══
 let _procItensLoaded=[];
 const PROC_TIPO_SERVICO_DEMANDA_NORM='servico por demanda/execucao';
-const PROC_FONTES=[['emenda','Emenda'],['sem_emenda','Não há emenda'],['recurso_proprio','Recurso próprio'],['municipal','Fonte municipal'],['outra','Outra']];
+const PROC_FONTES=[['emenda','Emenda'],['recurso_proprio','Recurso próprio'],['outra','Outro']];
 const PROC_TIPO_SERVICO_MENSAL_FIXO='Serviço mensal valor fixo';
 function _procServicoMensalIds(){
   return ['proc-serv-mensal-meses','proc-serv-mensal-valor-mensal','proc-serv-mensal-valor-global'];
@@ -663,6 +670,7 @@ function _recalcProcValorEstimado(){
     soma+=q*v;
   });
   const el=document.getElementById('proc-valor'); if(el) el.value=soma?soma.toFixed(2):'';
+  _renderProcEmendaSaldoResumo();
 }
 function _renderProcItensVazio(){
   const has=document.querySelectorAll('#proc-itens-lista .proc-item-card').length>0;
@@ -686,7 +694,7 @@ function _procAplicarModoAta(){
     const f=c.querySelector('.pi-fonte-row'); if(f) f.style.display=(ata||demanda)?'none':'';
   });
 }
-function _procFonteOpts(sel){return PROC_FONTES.map(([v,l])=>`<option value="${v}"${sel===v?' selected':''}>${l}</option>`).join('');}
+function _procFonteOpts(sel){const fonte=(sel==='sem_emenda'||sel==='municipal')?'outra':sel;return PROC_FONTES.map(([v,l])=>`<option value="${v}"${fonte===v?' selected':''}>${l}</option>`).join('');}
 function _procEmendaOpts(sel){return '<option value="">Selecione a emenda...</option>'+(cachedEmendas||[]).map(e=>`<option value="${e.id}"${String(sel)===String(e.id)?' selected':''}>${_sanEsc(String(e.emenda))}${e.parlamentar?(' — '+_sanEsc(e.parlamentar)):''}</option>`).join('');}
 function _procUnidadeOpts(sel){return '<option value="">— Unidade destino —</option>'+(cachedUnidades||[]).map(u=>`<option value="${u.id}"${String(sel)===String(u.id)?' selected':''}>${_sanEsc(u.nome)}</option>`).join('');}
 
@@ -698,7 +706,10 @@ function procAddItemRow(data){
   div.className='proc-item-card';
   div.dataset.itemId=data.id||'';
   div.dataset.grupo=data.grupo_item_id||'';
+  div.dataset.emendaId=data.emenda_id||'';
   div.dataset.emendaItemId=data.emenda_item_id||'';
+  div.dataset.emendaNumero=data.emenda_numero||'';
+  div.dataset.emendaSaldo=data.emenda_saldo_atual??'';
   div.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.6rem .75rem';
   const fonte=data.fonte_tipo||'';
   const isEm=fonte==='emenda';
@@ -724,20 +735,50 @@ function procAddItemRow(data){
       <div class="pi-emenda-wrap" style="display:${isEm?'block':'none'}"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Emenda *</div><select class="pi-emenda"${dis} style="${inp};${ro}">${_procEmendaOpts(data.emenda_id)}</select></div>
       <div class="pi-fonte-desc-wrap" style="display:${showDesc?'block':'none'}"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">Detalhe da fonte</div><input type="text" class="pi-fonte-desc" placeholder="ex: recurso próprio 2026" value="${_sanEsc(String(data.fonte_descricao||'')).replace(/"/g,'&quot;')}" style="${inp}"></div>
     </div>`;
+  div.querySelector('.pi-emenda-wrap')?.remove();
   lista.appendChild(div);
   _renderProcItensVazio();
   _recalcProcValorEstimado();
   _procAplicarModoAta();
 }
 function procRemoveItemCard(btn){const c=btn.closest('.proc-item-card');if(c)c.remove();_renderProcItensVazio();_recalcProcValorEstimado();}
+
+async function _procSaldoAtual(emendaId){
+  if(!emendaId) return null;
+  if(Object.prototype.hasOwnProperty.call(_procSaldoCache,emendaId)) return _procSaldoCache[emendaId];
+  const {data,error}=await sb.from('vw_emendas_saldo').select('id,numero_emenda,valor_cedido,saldo_remanescente').eq('id',emendaId).maybeSingle();
+  if(error){ console.warn('Saldo da emenda no processo:',error.message); _procSaldoCache[emendaId]=null; return null; }
+  _procSaldoCache[emendaId]=data||null; return _procSaldoCache[emendaId];
+}
+function _procMoney(v){return fmtFull(Number(v)||0);}
+function _procRenderSaldoRows(groups){
+  const rows=Object.values(groups); if(!rows.length) return '';
+  return `<div style="font-size:12px;font-weight:700;margin-bottom:6px">Saldo das emendas após vinculação</div><div style="display:flex;flex-direction:column;gap:6px">${rows.map(g=>{
+    const saldoAntes=Number(g.baseSaldo)||0, novo=Number(g.novoTotal)||0, saldoApos=saldoAntes-novo;
+    const cor=saldoApos<0?'var(--red)':(saldoApos===0?'var(--amber)':'var(--green)');
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;background:var(--surface2)"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-weight:600">Emenda ${_sanEsc(g.numero||'—')}</span><span style="color:${cor};font-weight:700">Saldo após: ${_procMoney(saldoApos)}</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px;margin-top:5px;color:var(--text2);font-size:11px"><span>Saldo atual: <b>${_procMoney(saldoAntes)}</b></span><span>Valor desta licitação: <b>${_procMoney(novo)}</b></span><span style="color:${cor}">${saldoApos<0?'Ultrapassa o saldo':'Dentro do saldo'}</span></div></div>`;
+  }).join('')}</div>`;
+}
+async function _renderProcEmendaSaldoResumo(){
+  const box=document.getElementById('proc-emenda-saldo-resumo'); if(!box) return;
+  const cards=[...document.querySelectorAll('#proc-itens-lista .proc-item-card')].filter(c=>c.dataset.emendaId);
+  if(!cards.length){box.style.display='none';box.innerHTML='';return;}
+  const groups={};
+  for(const card of cards){
+    const id=String(card.dataset.emendaId), saldo=await _procSaldoAtual(id);
+    const g=groups[id]||(groups[id]={numero:card.dataset.emendaNumero||saldo?.numero_emenda||id,baseSaldo:(Number(saldo?.saldo_remanescente)||Number(card.dataset.emendaSaldo)||0)+(_procEditOldByEmenda[id]||0),novoTotal:0});
+    g.novoTotal+=(Number(card.querySelector('.pi-qtde')?.value)||0)*(Number(card.querySelector('.pi-valor')?.value)||0);
+  }
+  box.innerHTML=_procRenderSaldoRows(groups); box.style.display='block';
+}
 function procFonteChange(sel){
   const card=sel.closest('.proc-item-card');
-  const emWrap=card.querySelector('.pi-emenda-wrap');
   const descWrap=card.querySelector('.pi-fonte-desc-wrap');
-  const isEm=sel.value==='emenda';
-  if(emWrap) emWrap.style.display=isEm?'block':'none';
   if(descWrap) descWrap.style.display=(sel.value && sel.value!=='emenda' && sel.value!=='sem_emenda')?'block':'none';
-  if(!isEm) card.dataset.emendaItemId='';
+  if(sel.value!=='emenda'){
+    card.dataset.emendaId='';
+    card.dataset.emendaItemId='';
+  }
 }
 
 async function procImportarDeEmenda(){
@@ -757,10 +798,11 @@ async function _procListarItensEmenda(){
   cont.innerHTML='<span class="spinner"></span> Carregando...';
   const {data,error}=await sb
     .from('emenda_itens')
-    .select('id,item,item_cadastrado,qtde,qtde_cadastrada,vl_unitario,vl_unitario_cadastrado,unidade_beneficiada,unidade_beneficiada_id')
+    .select('id,item,item_cadastrado,qtde,qtde_cadastrada,vl_unitario,vl_unitario_cadastrado,vl_total_cadastrado,unidade_beneficiada,unidade_beneficiada_id')
     .eq('emenda_id',emendaId)
     .order('created_at');
   if(error){ cont.innerHTML='<span style="color:var(--red)">Erro: '+_sanEsc(error.message)+'</span>'; return; }
+  const saldoRes=await sb.from('vw_emendas_saldo').select('id,numero_emenda,valor_cedido,saldo_remanescente').eq('id',emendaId).maybeSingle();
   const usadosSet=await _neEmendaItensJaUsados((data||[]).map(i=>i.id));
   document.querySelectorAll('#proc-itens-lista .proc-item-card').forEach(c=>{ if(c.dataset.emendaItemId) usadosSet.add(String(c.dataset.emendaItemId)); });
   const itens=data||[];
@@ -776,7 +818,7 @@ async function _procListarItensEmenda(){
       if(usadosSet.has(String(it.id))){
         return `<label style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 4px;opacity:.5"><input type="checkbox" disabled style="width:14px;height:14px;flex-shrink:0"> <span style="text-decoration:line-through">${_sanEsc(String(desc))}</span> <span style="color:var(--amber);white-space:nowrap">· já vinculado</span></label>`;
       }
-      return `<label style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 4px;cursor:pointer"><input type="checkbox" class="proc-imp-chk" data-id="${it.id}" data-desc="${sd}" data-qtde="${q}" data-valor="${v}" data-unidade="${uid||''}" style="width:14px;height:14px;flex-shrink:0"> <span>${_sanEsc(String(desc))} <span style="color:var(--text3)">· qtd ${q||'—'}${un} · ${v?fmtFull(v):'—'}</span></span></label>`;
+      return `<label style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 4px;cursor:pointer"><input type="checkbox" class="proc-imp-chk" data-id="${it.id}" data-desc="${sd}" data-qtde="${q}" data-valor="${v}" data-planejado="${Number(it.vl_total_cadastrado)||((Number(q)||0)*(Number(v)||0))}" data-emenda-numero="${_sanEsc(String(saldoRes.data?.numero_emenda||''))}" data-emenda-saldo="${Number(saldoRes.data?.saldo_remanescente)||0}" data-unidade="${uid||''}" style="width:14px;height:14px;flex-shrink:0"> <span>${_sanEsc(String(desc))} <span style="color:var(--text3)">· qtd ${q||'—'}${un} · ${v?fmtFull(v):'—'}</span></span></label>`;
     }).join('')}</div>
     <button type="button" onclick="procConfirmImport()" style="margin-top:6px;font-size:12px;padding:5px 12px;border:none;border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer">Adicionar selecionados</button>`;
 }
@@ -784,7 +826,7 @@ function procConfirmImport(){
   const emendaId=document.getElementById('proc-import-emenda').value;
   const chks=[...document.querySelectorAll('.proc-imp-chk:checked')];
   if(!chks.length){ return; }
-  chks.forEach(ch=>procAddItemRow({descricao:ch.dataset.desc, qtde:ch.dataset.qtde||'', valor_estimado:ch.dataset.valor||'', unidade_destino_id:ch.dataset.unidade||'', fonte_tipo:'emenda', emenda_id:emendaId, emenda_item_id:ch.dataset.id, fromEmenda:true}));
+  chks.forEach(ch=>procAddItemRow({descricao:ch.dataset.desc, qtde:ch.dataset.qtde||'', valor_estimado:ch.dataset.valor||'', unidade_destino_id:ch.dataset.unidade||'', fonte_tipo:'emenda', emenda_id:emendaId, emenda_item_id:ch.dataset.id, emenda_numero:ch.dataset.emendaNumero, emenda_saldo_atual:ch.dataset.emendaSaldo, fromEmenda:true}));
   const box=document.getElementById('proc-import-box'); box.style.display='none'; box.innerHTML='';
 }
 
@@ -793,6 +835,7 @@ async function _carregarProcItens(processoId){
   document.getElementById('proc-itens-lista').innerHTML='';
   if(processoId){
     const {data}=await sb.from('itens').select('*').eq('processo_id',processoId).order('created_at');
+    (data||[]).forEach(it=>{ if(it.emenda_id){ const valor=it.valor_contratado!==null&&it.valor_contratado!==undefined?Number(it.valor_contratado):Number(it.valor_estimado)||0; _procEditOldByEmenda[it.emenda_id]=(_procEditOldByEmenda[it.emenda_id]||0)+(Number(it.qtde)||0)*valor; } });
     (data||[]).forEach(it=>{ _procItensLoaded.push(String(it.id)); procAddItemRow({id:it.id, descricao:it.descricao, qtde:it.qtde, valor_estimado:it.valor_estimado, prazo_entrega_dias:it.prazo_entrega_dias, unidade_destino_id:it.unidade_destino_id, fonte_tipo:it.fonte_tipo, emenda_id:it.emenda_id, emenda_item_id:it.emenda_item_id, grupo_item_id:it.grupo_item_id, fonte_descricao:it.fonte_descricao}); });
   }
   _renderProcItensVazio();
@@ -817,7 +860,11 @@ async function _persistProcItens(processoId, natureza){
       if(!descricao||!qtde||!fonte_tipo) throw new Error('Cada item precisa de descrição, quantidade e fonte de recurso.');
     }
     let emenda_id=null, emenda_item_id=null, fonte_descricao=null;
-    if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){ emenda_id=g('pi-emenda').value||null; if(!emenda_id) throw new Error('Selecione a emenda dos itens com fonte = Emenda.'); emenda_item_id=c.dataset.emendaItemId||null; }
+    if(!ehAta && !ehDemanda && fonte_tipo==='emenda'){
+      emenda_id=c.dataset.emendaId||null;
+      emenda_item_id=c.dataset.emendaItemId||null;
+      if(!emenda_item_id && !c.dataset.itemId) throw new Error('Itens com fonte = Emenda devem ser adicionados pelo botÃ£o Puxar de emenda.');
+    }
     else if(!ehAta && !ehDemanda){ fonte_descricao=(g('pi-fonte-desc')?.value||'').trim()||null; }
     current.push({id:c.dataset.itemId||null, row:{
       processo_id:processoId, origem, fonte_tipo:(ehAta||ehDemanda)?'sem_emenda':(fonte_tipo||'sem_emenda'), emenda_id, emenda_item_id, fonte_descricao,

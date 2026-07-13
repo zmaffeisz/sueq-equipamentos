@@ -1070,7 +1070,7 @@ async function _carregarFluxoEmendaItens(eiIds){
   if(ataData){
   const {_ataExecByEiid,_ataItemInf,_ataUnidadesByExec}=ataData;
   Object.entries(_ataExecByEiid).forEach(([eid,execs])=>{
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
     let qAta=0, vAta=0;
     execs.forEach(r=>{
       const ai=_ataItemInf[r.ata_item_id]||{};
@@ -1100,7 +1100,7 @@ async function _carregarFluxoEmendaItens(eiIds){
       });
     });
     if(qAta>0) f.qtde+=qAta;
-    if(vAta>0) f.valor+=vAta;
+    if(vAta>0){ f.valor+=vAta; f.valorComprometido+=vAta; f.valorContratado+=vAta; f.qtdeContratado+=qAta; }
     if(vAta>0 && qAta>0 && f.valorUnit===null){
       f.valorUnit=Number((vAta/qAta).toFixed(2));
       f._qtdeRef=qAta;
@@ -1111,18 +1111,20 @@ async function _carregarFluxoEmendaItens(eiIds){
   }
   itensFlow.forEach(it=>{
     const eid=it.emenda_item_id; if(!eid) return;
-    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,qtde:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
+    const f=flow[eid]=flow[eid]||{cpl:"",sim:"",fornecedor:"",unidade:"",valor:0,valorComprometido:0,valorLicitacao:0,valorContratado:0,qtde:0,qtdeLicitacao:0,qtdeContratado:0,valorUnit:null,af:{aut:0,rec:0,conf:0,afNumero:"",afData:"",dataRecebimento:"",dataEntregaUnidade:""},empenhos:new Set(),notas:new Set(),patrimonios:new Set(),series:new Set(),unidadesFisicas:0,unidades:[],temContrato:false,temProcesso:false};
     if(!f.cpl) f.cpl=it.contratos?.cpl||it.processos?.identificador||"";
     if(!f.sim && it.contratos?.numero_contrato) f.sim=it.contratos.numero_contrato;
     if(!f.fornecedor && it.fornecedores?.razao_social) f.fornecedor=it.fornecedores.razao_social;
     if(!f.unidade && it.unidades?.nome) f.unidade=it.unidades.nome;
     const itQtde=Number(it.qtde)||0;
-    const itVlUnit=Number(it.valor_contratado)||Number(it.valor_estimado)||0;
+    const temContratado=it.valor_contratado!==null&&it.valor_contratado!==undefined;
+    const itVlUnit=temContratado?Number(it.valor_contratado)||0:Number(it.valor_estimado)||0;
     f.qtde += itQtde;
-    f.valor += itVlUnit * itQtde;
+    if(temContratado){ f.valor += itVlUnit * itQtde; f.valorComprometido += itVlUnit * itQtde; f.valorContratado += itVlUnit * itQtde; f.qtdeContratado += itQtde; }
+    else { f.valorComprometido += itVlUnit * itQtde; f.valorLicitacao += itVlUnit * itQtde; f.qtdeLicitacao += itQtde; }
     // Armazena o valor unitário do item contratado para derivar vl_unitario na aba Emendas
     // Se houver apenas um item no fluxo, o unitário é direto; caso contrário, usamos o do maior qtde
-    if(it.valor_contratado!=null && itVlUnit>0){
+    if(temContratado && itVlUnit>0){
       if(f.valorUnit===null || itQtde>(f._qtdeRef||0)){
         f.valorUnit=itVlUnit;
         f._qtdeRef=itQtde;

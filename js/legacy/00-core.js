@@ -475,9 +475,12 @@ async function exportarExcel(){
     "NOTA FISCAL","Nº DE EMPENHO","Nº DE PATRIMONIO",
     "UNIDADE DE ENTREGA","DATA DE ENTREGA NA UNIDADE","ORDEM DE PAGAMENTO"
   ];
+  colunas.splice(8,0,"VALOR UNITARIO (R$) PLANEJADO","VALOR TOTAL (R$) PLANEJADO","VALOR UNITARIO (R$) LICITACAO","VALOR TOTAL (R$) LICITACAO");
   const dados=filtered.map(r=>[
     r.tipo, r.emenda, r.parlamentar, r.sei_emenda, r.valor_cedido,
     r.unidade, r.item, r.qtde,
+    r.vl_unitario_cadastrado, r.vl_total_cadastrado,
+    r.valor_licitacao_unit, r.valor_licitacao,
     r.vl_unitario, r.vl_total,
     r.cpl, r.status_raw,
     r.nota_fiscal, r.empenho, r.patrimonio,
@@ -540,8 +543,6 @@ function ensureLib(name){
     document.body.appendChild(_ov);
     _ov.querySelector("#uiconfirm-no").onclick=()=>_close(false);
     _ov.querySelector("#uiconfirm-yes").onclick=()=>_close(true);
-    _ov.onclick=e=>{if(e.target===_ov)_close(false);};
-    document.addEventListener("keydown",e=>{if(_ov&&_ov.classList.contains("show")&&e.key==="Escape")_close(false);});
     return _ov;
   }
   window.uiConfirm=function(msg){const ov=ovEl();ov.querySelector("#uiconfirm-msg").textContent=String(msg);ov.classList.add("show");return new Promise(r=>{_resolve=r;});};
@@ -552,19 +553,5 @@ function ensureLib(name){
 // efeito visual do botão de fechar). Onde já existe um fecharModalX() dedicado, ele
 // continua sendo chamado normalmente pelos botões/X existentes — isto não o substitui.
 (function(){
-  function topActiveOverlay(){
-    const list=document.querySelectorAll(".modal-overlay.active");
-    return list.length?list[list.length-1]:null;
-  }
-  document.addEventListener("keydown",function(e){
-    if(e.key!=="Escape")return;
-    const ov=topActiveOverlay();
-    if(ov)ov.classList.remove("active");
-  });
-  document.addEventListener("click",function(e){
-    const t=e.target;
-    if(t&&t.classList&&t.classList.contains("modal-overlay")&&t.classList.contains("active")){
-      t.classList.remove("active");
-    }
-  });
+  // O fechamento ocorre somente pelos controles explícitos do próprio modal.
 })();

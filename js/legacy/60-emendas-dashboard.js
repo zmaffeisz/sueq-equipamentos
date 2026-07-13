@@ -79,6 +79,11 @@ async function loadData(){
         qtde:(i.qtde!=null?i.qtde:"").toString().trim(),
         vl_unitario:vlUnitExec,
         vl_total:vlTotalFinal,
+        valor_comprometido:f?Number((f.valorComprometido||0).toFixed(2)):0,
+        valor_licitacao:f?Number((f.valorLicitacao||0).toFixed(2)):0,
+        valor_contratado:f?Number((f.valorContratado||0).toFixed(2)):0,
+        valor_licitacao_unit:f&&f.qtdeLicitacao?Number((f.valorLicitacao/f.qtdeLicitacao).toFixed(2)):0,
+        valor_contratado_unit:f&&f.qtdeContratado?Number((f.valorContratado/f.qtdeContratado).toFixed(2)):0,
         // ── plano de trabalho aprovado (cadastrado/planejado) ──
         item_cadastrado:(i.item_cadastrado||"").toString().trim(),
         qtde_cadastrada:(i.qtde_cadastrada!=null?i.qtde_cadastrada:"").toString().trim(),
@@ -160,6 +165,8 @@ const HDR_FILTER_COLS = {
   qtde:{label:'Qtde', get:r=>r.qtde, disp:v=>v||'(vazio)'},
   vl_unitario_cadastrado:{label:'Vl. unit. plan.', get:r=>r.vl_unitario_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_total_cadastrado:{label:'Vl. total plan.', get:r=>r.vl_total_cadastrado, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  valor_licitacao_unit:{label:'Vl. unit. licit.', get:r=>r.valor_licitacao_unit, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
+  valor_licitacao:{label:'Vl. total licit.', get:r=>r.valor_licitacao, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_unitario:{label:'Vl. unit. exec.', get:r=>r.vl_unitario, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   vl_total:{label:'Vl. total exec.', get:r=>r.vl_total, disp:v=>(Number(v)||Number(v)===0)?fmtFull(Number(v)):'(vazio)'},
   cpl:{label:'CPL / Processo', get:r=>r.cpl, disp:v=>v||'(vazio)'},
@@ -701,19 +708,30 @@ function renderEmPorEmenda(){
         </div>
       </div>`;
     if(aberto){
-      h+=`<table style="width:100%;border-collapse:collapse;font-size:12px"><tbody>`;
+      h+=`<div style="overflow-x:auto"><table style="width:100%;min-width:1280px;border-collapse:collapse;font-size:12px"><thead><tr style="border-top:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.035em"><th style="padding:7px 14px;text-align:left">Item</th><th style="padding:7px 8px;text-align:left">Unidade</th><th style="padding:7px 8px;text-align:right">Qtde</th><th style="padding:7px 8px;text-align:right">Valor planejado</th><th style="padding:7px 8px;text-align:right">Em licitação</th><th style="padding:7px 8px;text-align:right">Contratado / executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th><th style="padding:7px 8px;text-align:left">Empenho</th><th style="padding:7px 8px;text-align:left">Patrimônio</th><th style="padding:7px 8px;text-align:left">Status</th><th style="padding:7px 8px;text-align:left">Processo</th><th style="padding:7px 14px;text-align:right">Ações</th></tr></thead><tbody>`;
       items.forEach(i=>{
         h+=`<tr style="border-top:1px solid var(--border)">
           <td style="padding:8px 14px">${_sanEsc(i.item||'—')}</td>
-          <td style="padding:8px 8px;color:var(--text3);width:55px;text-align:center">${i.qtde??''}</td>
-          <td style="padding:8px 8px;width:150px">${_emStatusChip(i)}</td>
-          <td style="padding:8px 8px;color:var(--text3);font-size:11px">${_sanEsc(i.cpl||'')}</td>
+          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.unidade||'â€”')}</td>
+          <td style="padding:8px;color:var(--text3);text-align:right;white-space:nowrap">${i.qtde??'â€”'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap">${Number(i.vl_unitario_cadastrado)>0?fmtFull(i.vl_unitario_cadastrado):'—'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--blue)">${Number(i.valor_licitacao_unit)>0?fmtFull(i.valor_licitacao_unit):'—'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${Number(i.valor_contratado_unit)>0?fmtFull(i.valor_contratado_unit):'—'}</td>
+          <td style="padding:8px;text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${Number(i.vl_total)>0?fmtFull(i.vl_total):'—'}</td>
+          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.nota_fiscal||'â€”')}</td>
+          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.empenho||'â€”')}</td>
+          <td style="padding:8px;color:var(--text2);white-space:nowrap">${_sanEsc(i.patrimonio||'â€”')}</td>
+          <td style="padding:8px;white-space:nowrap">${_emStatusChip(i)}</td>
+          <td style="padding:8px;color:var(--text3);font-size:11px;white-space:nowrap">${_sanEsc(i.cpl||'â€”')}</td>
           <td style="padding:8px 14px;text-align:right;white-space:nowrap"><button onclick="verTudoEmendaItem(decodeURIComponent('${encodeURIComponent(String(i.id))}'))" style="font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer">🔎 Ver tudo</button></td>
         </tr>`;
       });
-      h+=`</tbody></table>`;
+      h+=`</tbody></table></div>`;
     }
+    h=h.replace(/>Em [^<]*<\/th>/, '>Valor unit. licitação</th>').replace('>Valor planejado</th>','>Valor unit. planejado</th>').replace('>Contratado / executado</th>','>Valor unit. contratado</th>');
+    h=h.replace('<th style="padding:7px 8px;text-align:left">Nota fiscal</th>','<th style="padding:7px 8px;text-align:right">Total executado</th><th style="padding:7px 8px;text-align:left">Nota fiscal</th>');
     h+=`</div>`;
+    h=h.replace(/(?:â€”|—)/g,'-');
     return h;
   }).join('');
 }
@@ -769,6 +787,8 @@ let saldoEmendaCarregado = false;
 let saldoEmendasRows = [];
 
 function _valorComprometidoItem(r){
+  const fluxo=Number(r?.valor_comprometido)||0;
+  if(fluxo>0) return fluxo;
   const executado=Number(r?.vl_total)||0;
   return executado>0?executado:(Number(r?.vl_total_cadastrado)||0);
 }
@@ -792,7 +812,7 @@ function _saldoStatusBadge(status){
       :'background:var(--surface2);color:var(--text2);border:1px solid var(--border)';
   return `<span class="badge" style="${estilo}">${_sanEsc(s)}</span>`;
 }
-function _renderSaldoDetalhes(emendaId){
+function _renderSaldoDetalhesLegacy(emendaId){
   const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
   if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
   return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="font-size:11px;background:var(--surface)">
@@ -802,6 +822,24 @@ function _renderSaldoDetalhes(emendaId){
       <td>${_sanEsc(r.item||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total)||0)}</td>
       <td style="text-align:right;white-space:nowrap;font-weight:600">${fmtFull(_valorComprometidoItem(r))}</td><td>${_sanEsc(r.cpl||'—')}</td><td>${statusBadge(r.status_cat)}</td>
     </tr>`).join('')}</tbody></table></div>`;
+}
+function _renderSaldoDetalhesLegacy2(emendaId){
+  const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
+  if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
+  return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1250px;font-size:11px;background:var(--surface)">
+    <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor planejado</th><th style="text-align:right">Em licitação</th><th style="text-align:right">Contratado / executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
+    <tbody>${itens.map(r=>`<tr>
+      <td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.vl_total_cadastrado)||0)}</td>
+      <td style="text-align:right;white-space:nowrap;color:var(--blue)">${fmtFull(Number(r.valor_licitacao)||0)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${fmtFull(Number(r.valor_contratado)||0)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${statusBadge(r.status_cat)}</td><td>${_sanEsc(r.cpl||'—')}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+function _renderSaldoDetalhes(emendaId){
+  const itens=allRows.filter(r=>String(r.emenda_id)===String(emendaId));
+  if(!itens.length) return '<div style="padding:12px;color:var(--text3)">Nenhum item encontrado para esta emenda.</div>';
+  const money=(v)=>Number(v)>0?fmtFull(v):'—';
+  return `<div style="padding:10px 14px;background:var(--surface2);overflow-x:auto"><table style="min-width:1400px;font-size:11px;background:var(--surface)">
+    <thead><tr><th>Item</th><th>Unidade</th><th style="text-align:right">Qtde</th><th style="text-align:right">Valor unit. planejado</th><th style="text-align:right">Valor unit. licitação</th><th style="text-align:right">Valor unit. contratado</th><th style="text-align:right">Total executado</th><th>Nota fiscal</th><th>Empenho</th><th>Patrimônio</th><th>Status</th><th>Processo</th></tr></thead>
+    <tbody>${itens.map(r=>`<tr><td>${_sanEsc(r.item||r.item_cadastrado||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td><td style="text-align:right">${_sanEsc(r.qtde||r.qtde_cadastrada||'—')}</td><td style="text-align:right;white-space:nowrap">${money(r.vl_unitario_cadastrado)}</td><td style="text-align:right;white-space:nowrap;color:var(--blue)">${money(r.valor_licitacao_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.valor_contratado_unit)}</td><td style="text-align:right;white-space:nowrap;color:var(--green);font-weight:600">${money(r.vl_total)}</td><td>${_sanEsc(r.nota_fiscal||'—')}</td><td>${_sanEsc(r.empenho||'—')}</td><td>${_sanEsc(r.patrimonio||'—')}</td><td>${statusBadge(r.status_cat)}</td><td>${_sanEsc(r.cpl||'—')}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function toggleSaldoEmenda(emendaId,button){
   const detalhe=document.getElementById(_seDomId(emendaId));
@@ -814,7 +852,7 @@ function toggleSaldoEmenda(emendaId,button){
 const SALDO_FILTER_COLS={
   numero_emenda:{label:'Nº Emenda',get:r=>r.numero_emenda},tipo:{label:'Tipo',get:r=>r.tipo},
   parlamentar:{label:'Parlamentar',get:r=>r.parlamentar},unidade:{label:'Unidade',get:r=>r.unidade},
-  valor_cedido:{label:'Valor cedido',get:r=>r.valor_cedido,numeric:true},total_planejado:{label:'Total planejado',get:r=>r.total_planejado,numeric:true},
+  valor_cedido:{label:'Valor cedido',get:r=>r.valor_cedido,numeric:true},total_planejado:{label:'Total planejado',get:r=>r.total_planejado,numeric:true},total_estimado_licitacao:{label:'Estimado licitação',get:r=>r.total_estimado_licitacao,numeric:true},
   total_executado:{label:'Total executado',get:r=>r.total_executado,numeric:true},total_comprometido:{label:'Comprometido',get:r=>r.total_comprometido,numeric:true},
   saldo_remanescente:{label:'Saldo disponível',get:r=>r.saldo_remanescente,numeric:true},_percentual:{label:'% exec.',get:r=>r._percentual,numeric:true},
   status_execucao:{label:'Status',get:r=>r.status_execucao},qtd_itens:{label:'Itens',get:r=>r.qtd_itens,numeric:true}
@@ -901,7 +939,7 @@ function _saldoRowsVisiveis(){
   const rows=saldoEmendasRows.map(_saldoComPercentual).filter(r=>{
     // municipais históricas ficam ocultas por padrão e aparecem só pelo botão do respectivo ano
     if(!_municipalAntigaVisivel('se',r)) return false;
-    if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
+    if(busca&&!normalizar([r.numero_emenda,r.tipo,r.parlamentar,r.unidade,r.status_execucao,r.valor_cedido,r.total_planejado,r.total_estimado_licitacao,r.total_executado,r.total_comprometido,r.saldo_remanescente,r.qtd_itens].join(' ')).includes(busca)) return false;
     return Object.entries(saldoHeaderFilters).every(([col,selecionados])=>selecionados.includes(_saldoFilterValue(col,r)));
   });
   if(saldoSortCol){
@@ -934,11 +972,11 @@ function renderSaldoEmendas(){
     const saldoCor=saldo>0?'var(--green)':saldo<0?'var(--red)':'var(--text2)';
     return `<tr>
       <td style="white-space:nowrap;font-weight:600">${_sanEsc(r.numero_emenda||'—')}</td><td>${tipoBadge(r.tipo)}</td><td>${_sanEsc(r.parlamentar||'—')}</td><td>${_sanEsc(r.unidade||'—')}</td>
-      <td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.valor_cedido)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_planejado)||0)}</td>
+      <td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.valor_cedido)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_planejado)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_estimado_licitacao)||0)}</td>
       <td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_executado)||0)}</td><td style="text-align:right;white-space:nowrap">${fmtFull(Number(r.total_comprometido)||0)}</td>
       <td style="text-align:right;white-space:nowrap;font-weight:600;color:${saldoCor}">${fmtFull(saldo)}</td><td style="text-align:right">${pct}%</td><td>${_saldoStatusBadge(r.status_execucao)}</td>
       <td style="text-align:right">${Number(r.qtd_itens)||0}</td><td><button onclick="toggleSaldoEmenda(decodeURIComponent('${encodeURIComponent(id)}'),this)" aria-label="Expandir itens" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 8px;cursor:pointer">▶</button></td>
-    </tr><tr id="${_seDomId(id)}" style="display:none"><td colspan="13" style="padding:0">${_renderSaldoDetalhes(id)}</td></tr>`;
+    </tr><tr id="${_seDomId(id)}" style="display:none"><td colspan="14" style="padding:0">${_renderSaldoDetalhes(id).replace(/(?:â€”|—)/g,'-')}</td></tr>`;
   }).join('');
 }
 async function loadSaldoEmendas(){
@@ -1088,7 +1126,7 @@ function renderTable(){
     rows.sort((a,b)=>{
       let va=sortCol==="saldo_emenda"?_saldoEmendaValor(a.emenda_id):a[sortCol],vb=sortCol==="saldo_emenda"?_saldoEmendaValor(b.emenda_id):b[sortCol];
       // Numérico
-      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="saldo_emenda"||sortCol==="ano"){
+      if(sortCol==="vl_total"||sortCol==="vl_unitario"||sortCol==="valor_cedido"||sortCol==="vl_unitario_cadastrado"||sortCol==="vl_total_cadastrado"||sortCol==="valor_licitacao_unit"||sortCol==="valor_licitacao"||sortCol==="saldo_emenda"||sortCol==="ano"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
       } else if(sortCol==="qtde"){
         va=parseFloat(va)||0;vb=parseFloat(vb)||0;
@@ -1132,6 +1170,11 @@ function renderTable(){
     ${podeVerSaldo?`<td>${getSaldoEmenda(r.emenda_id)}</td>`:''}
   </tr>`;}).join("");
   document.querySelectorAll("#table-body tr").forEach((tr,idx)=>{
+    const r=rows[idx];
+    const licCell=(value)=>{const td=document.createElement('td');td.style.cssText='text-align:right;white-space:nowrap';td.textContent=Number(value)>0?fmtFull(value):'-';return td;};
+    const ref=tr.cells[9];
+    tr.insertBefore(licCell(r?.valor_licitacao_unit),ref);
+    tr.insertBefore(licCell(r?.valor_licitacao),ref);
     const td=document.createElement("td");
     td.style.fontSize="11px";
     td.style.color="var(--text3)";

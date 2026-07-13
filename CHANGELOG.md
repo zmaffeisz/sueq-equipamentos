@@ -1,5 +1,21 @@
 # Changelog
 
+- **Modo Planilha com valores de licitação**: a planilha agora exibe e permite filtrar/ordenar o valor unitário e o valor total da licitação, além dos valores planejados e executados; a exportação Excel também foi atualizada.
+
+- **Campos vazios no detalhamento de Emendas**: NF, empenho e patrimônio sem valor agora aparecem como `-`, evitando caracteres corrompidos de codificação.
+
+- **Detalhamento financeiro por item de Emenda**: a expansão agora separa valor unitário planejado, valor unitário em licitação, valor unitário contratado e total executado; campos sem aplicação aparecem como `—` em vez de `R$ 0,00`.
+
+- **Saldo de Emendas por estágio do processo**: o planejado continua vindo do cadastro da Emenda; durante a licitação o saldo passa a considerar o valor estimado dos itens e, após gerar o contrato, passa a considerar o valor contratado. O modal de novo processo agora exibe o saldo de cada Emenda após a vinculação em tempo real.
+
+- **Itens de emenda no processo**: removido o seletor manual de emenda dentro do item; a vinculação passa a ocorrer pelo botão `Puxar de emenda`, usando o item específico da emenda.
+
+- **Modais sem fechamento pelo fundo**: clicar fora de qualquer modal ou pressionar `Escape` não o fecha mais; o fechamento continua nos controles explícitos do modal.
+
+- **Fontes de recurso simplificadas**: os itens agora permitem somente `Emenda`, `Recurso próprio` e `Outro`; valores antigos sem emenda ou municipais são tratados como `Outro` na edição.
+
+- **SC com barra**: o campo Solicitação de Compra agora aceita números e `/`, permitindo referências como `63456/2025`.
+
 - **Campos obrigatórios no cadastro de Emendas**: `Ano`, `Parlamentar` e `Objeto geral da emenda`
   agora são identificados como obrigatórios no modal e validados antes do salvamento.
 

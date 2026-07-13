@@ -202,6 +202,18 @@ table.resizable-table{table-layout:fixed;width:auto;min-width:100%}
 .hdr-filter-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--blue);box-shadow:0 2px 6px rgba(0,0,0,.18);transform:translateY(-1px)}
 .hdr-filter-btn.active{color:#fff;background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg)}
 
+/* Saldo das Emendas: os cabeçalhos numéricos acompanham o alinhamento dos valores. */
+#panel-saldo-emendas table thead th:nth-child(5),
+#panel-saldo-emendas table thead th:nth-child(6),
+#panel-saldo-emendas table thead th:nth-child(7),
+#panel-saldo-emendas table thead th:nth-child(8),
+#panel-saldo-emendas table thead th:nth-child(9),
+#panel-saldo-emendas table thead th:nth-child(10),
+#panel-saldo-emendas table thead th:nth-child(11),
+#panel-saldo-emendas table thead th:nth-child(13){text-align:right}
+#panel-saldo-emendas table thead th:nth-child(14){text-align:center}
+#panel-saldo-emendas table tbody td{vertical-align:middle}
+
 /* ── TOGGLE DE ABAS ── */
 .sheet-toggle-btn{font-size:12px;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
 .sheet-toggle-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:600}
