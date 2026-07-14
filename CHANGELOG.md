@@ -1,5 +1,7 @@
 # Changelog
 
+- **Seção herdada ao gerar contrato**: ao gerar um contrato a partir de uma licitação, a seção já definida no processo é carregada automaticamente e fica bloqueada no modal, evitando uma segunda seleção e divergências entre licitação e contrato.
+
 - **Modo Planilha com valores de licitação**: a planilha agora exibe e permite filtrar/ordenar o valor unitário e o valor total da licitação, além dos valores planejados e executados; a exportação Excel também foi atualizada.
 
 - **Campos vazios no detalhamento de Emendas**: NF, empenho e patrimônio sem valor agora aparecem como `-`, evitando caracteres corrompidos de codificação.

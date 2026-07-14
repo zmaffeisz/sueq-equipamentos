@@ -225,17 +225,26 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 .badge .tabular-nums,.badge-num{font-variant-numeric:tabular-nums}
 
 /* Contratos: visão resumida e detalhes apenas após abrir o cartão. */
-.ct-contract-card{width:100%;box-sizing:border-box;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
-.ct-contract-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(15,23,42,.09);transform:translateY(-1px)}
-.ct-contract-card.is-expanded{border-color:var(--blue);box-shadow:0 5px 18px rgba(15,23,42,.11)}
-.ct-contract-summary{display:grid;grid-template-columns:minmax(170px,.75fr) minmax(300px,2.25fr) minmax(155px,.65fr);gap:22px;align-items:center;padding:17px 20px 14px}
-.ct-contract-identity,.ct-contract-object,.ct-contract-status{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ct-contract-card{position:relative;width:100%;min-height:88px;box-sizing:border-box;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.10);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.ct-contract-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(15,23,42,.18);transform:translateY(-1px)}
+.ct-contract-card.is-expanded{border-color:var(--blue);box-shadow:0 5px 18px rgba(15,23,42,.20)}
+.ct-contract-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:14px 20px 12px}
+.ct-contract-summary.has-status{grid-template-columns:auto minmax(0,1fr) 220px}
+.ct-contract-summary>.ct-contract-status{align-self:center}
+.ct-contract-summary:not(.has-status) .ct-contract-status{display:none}
+.ct-contract-object,.ct-contract-status{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ct-contract-identity{min-width:0;display:flex;flex-direction:row;align-items:center;gap:12px}
+.ct-contract-identity-info{min-width:0;display:flex;flex-direction:column;gap:4px}
+.ct-contract-icon{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;background:var(--blue-bg);color:var(--blue-text)}
+.ct-contract-icon svg{width:20px;height:20px}
 .ct-contract-kicker{font-size:10px;font-weight:700;letter-spacing:.065em;text-transform:uppercase;color:var(--text3)}
-.ct-contract-identity strong{font-size:15px;line-height:1.2;color:var(--text)}
+.ct-contract-identity-info strong{font-size:15px;line-height:1.2;color:var(--text)}
 .ct-contract-number{font-size:11px;color:var(--text3)}
-.ct-contract-object strong{font-size:15px;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ct-contract-object strong{font-size:14px;font-weight:400;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ct-contract-status{align-items:flex-end;text-align:right;font-size:12px;font-weight:700;line-height:1.15}.ct-contract-status small{font-size:11px;font-weight:500}
-.ct-contract-disclosure{display:flex;align-items:center;gap:10px;padding:8px 20px;border-top:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600}.ct-contract-disclosure>span:first-child{margin-right:auto}.ct-contract-disclosure>span:last-child{font-size:17px;line-height:.75;color:var(--text3)}.ct-contract-alerts{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:3px;text-align:right}.ct-contract-alerts .badge{margin-right:0!important;font-size:10px;line-height:1.2}
+.ct-contract-status .ct-contract-alerts{position:absolute;top:50%;transform:translateY(-50%);right:250px;left:auto;bottom:auto;justify-content:flex-end;text-align:right;max-width:280px;pointer-events:none}
+.ct-contract-status .ct-contract-alerts .badge{pointer-events:auto}
+.ct-contract-alerts{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:3px;text-align:right}.ct-contract-alerts .badge{margin-right:0!important;font-size:10px;line-height:1.2}
 .ct-contract-details{padding:16px 20px 18px;background:var(--surface)}
 .ct-contract-items-table{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
 .ct-contract-items-table table{min-width:0!important;table-layout:fixed}.ct-contract-items-table th,.ct-contract-items-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -244,14 +253,20 @@ button[style*="background:none"],button[style*="background: none"]{color:var(--t
 #confirmacao-wrap table{table-layout:fixed}
 #confirmacao-wrap th,#confirmacao-wrap td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
 /* Gestão do contrato: a tabela de medições ocupa o modal sem rolagem lateral. */
-.ct-medicoes-table{overflow-x:hidden!important}.ct-medicoes-table table{width:100%;table-layout:fixed}.ct-medicoes-table th,.ct-medicoes-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+.ct-medicoes-table{overflow-x:auto!important}.ct-medicoes-table table{width:100%;min-width:1200px;table-layout:fixed}.ct-medicoes-table th,.ct-medicoes-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}.ct-medicoes-table th:nth-child(8),.ct-medicoes-table td:nth-child(8){width:165px;min-width:165px}
 /* Fiscalizadores no modal do contrato: sem rolagem lateral desnecessária. */
 .ct-fiscais-table{overflow-x:hidden!important}.ct-fiscais-table table{width:100%;table-layout:fixed}.ct-fiscais-table th,.ct-fiscais-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
 /* Itens do contrato: distribuição pela largura do modal, sem barra lateral. */
 .ct-itens-table{overflow-x:hidden!important}.ct-itens-table table{width:100%;table-layout:fixed}.ct-itens-table th,.ct-itens-table td{overflow:hidden;text-overflow:ellipsis;word-break:break-word}
 .ct-contract-meta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 20px;padding-bottom:15px}.ct-contract-meta{min-width:0;display:flex;flex-direction:column;gap:4px}.ct-contract-meta span{font-size:10px;font-weight:700;letter-spacing:.055em;text-transform:uppercase;color:var(--text3)}.ct-contract-meta strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.3;color:var(--text)}
 .ct-contract-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--border)}
-@media(max-width:820px){.ct-contract-summary{grid-template-columns:1fr;gap:12px;padding:16px}.ct-contract-status{align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap;align-items:center}.ct-contract-disclosure,.ct-contract-details{padding-left:16px;padding-right:16px}.ct-contract-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Contratos em execução: cards soltos sobre o fundo da página. */
+#contratos-main>.table-card{background:transparent;border:0;box-shadow:none;overflow:visible;margin-bottom:0}
+#contratos-main>.table-card>.table-hdr{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.10);margin-bottom:12px}
+#contratos-main>.table-card>.table-wrap{background:transparent;overflow:visible;max-height:none}
+#contratos-main #ct-table{background:transparent}
+#contratos-main #ct-table>tbody>tr,#contratos-main #ct-table>tbody>tr>td{background:transparent!important;border:0!important}
+@media(max-width:820px){.ct-contract-summary{grid-template-columns:1fr;gap:12px;padding:16px}.ct-contract-status{align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap;align-items:center}.ct-contract-details{padding-left:16px;padding-right:16px}.ct-contract-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.ct-contract-meta-grid{grid-template-columns:1fr}.ct-contract-object strong{font-size:14px}}
 
 /* ── PILL (header) ── */

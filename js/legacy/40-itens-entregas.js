@@ -2386,7 +2386,7 @@ function _ncFixarProcessoContrato(proc){
 async function preencherSelectProcessos(currentId){
   const sel=document.getElementById('nc-processo'); if(!sel) return;
   const {data,error}=await sb.from('vw_processos_resumo')
-    .select('id,identificador,objeto,natureza,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global,servico_demanda_meses')
+    .select('id,identificador,objeto,natureza,secao,secao_id,n_contratos,gera_mais_contratos,tipo_servico,servico_mensal_itens,servico_mensal_meses,servico_mensal_valor_mensal,servico_mensal_valor_global,servico_demanda_meses')
     .order('identificador');
   if(error){ sel.innerHTML='<option value="">Erro ao carregar processos</option>'; return; }
   let lista=(data||[]).filter(p=>Number(p.n_contratos||0)===0 || p.gera_mais_contratos);
@@ -2410,6 +2410,8 @@ function ncProcessoChange(){
     window._gerarContratoProcesso=null;
     if(cplH) cplH.value='';
     if(gm) gm.checked=false;
+    const secSel=document.getElementById('nc-secao');
+    if(secSel) secSel.disabled=false;
     if(itensWrap) itensWrap.style.display='none';
     const lit=document.getElementById('nc-itens-lista'); if(lit) lit.innerHTML='';
     return;
@@ -2422,6 +2424,17 @@ function ncProcessoChange(){
   if(cplH) cplH.value=p.identificador||'';
   const objEl=document.getElementById('nc-objeto'); if(objEl) objEl.value=p.objeto||'';
   if(gm) gm.checked=!!p.gera_mais_contratos;
+  // A seção já foi definida na licitação. Herdá-la evita uma segunda seleção no contrato.
+  const secSel=document.getElementById('nc-secao');
+  const secaoProc=p.secao||(_secoesOrganizacionais.find(s=>String(s.id)===String(p.secao_id||''))?.sigla)||'';
+  if(secSel && secaoProc){
+    secSel.value=secaoProc;
+    secSel.disabled=true;
+    const secNovo=document.getElementById('nc-secao-novo');
+    if(secNovo){ secNovo.value=''; secNovo.style.display='none'; }
+  }else if(secSel){
+    secSel.disabled=false;
+  }
   // Fase 10: tipo de instrumento herdado da natureza do processo
   const tipoHid=document.getElementById('nc-tipo');
   const natDisp=document.getElementById('nc-natureza-display');

@@ -2043,18 +2043,26 @@
       <button class="clear-btn" onclick="clearAllContratos()">✕ Limpar</button>
     </div>
 
-    <div class="metrics" style="margin-bottom:.625rem">
-      <div class="metric"><div class="metric-label">Total contratos</div><div class="metric-value" id="ct-m-total">—</div><div class="metric-sub">cadastrados</div></div>
-      <div class="metric metric-success"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
-      <div class="metric metric-warning"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
-      <div class="metric metric-danger"><div class="metric-label">Sem fiscal</div><div class="metric-value" id="ct-m-sem-fiscal" style="color:var(--red)">—</div><div class="metric-sub">precisam revisar</div></div>
-      <div class="metric"><div class="metric-label">Valor atual</div><div class="metric-value" id="ct-m-valor-atual" style="font-size:20px">—</div><div class="metric-sub">contratos filtrados</div></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem">
+      <button type="button" id="ct-metrics-toggle" class="btn-ghost btn-compact" onclick="toggleContratosMetrics()" aria-expanded="false" aria-controls="ct-metrics-wrap" style="display:inline-flex;align-items:center;gap:6px">
+        <svg id="ct-metrics-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <span id="ct-metrics-toggle-label">Ver dashboard</span>
+      </button>
     </div>
-    <div class="metrics-secondary">
-      <div class="metric metric-neutral"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric metric-warning"><div class="metric-label">Medição pendente</div><div class="metric-value" id="ct-m-med-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric metric-warning"><div class="metric-label">NF pendente</div><div class="metric-value" id="ct-m-nf-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
-      <div class="metric metric-neutral"><div class="metric-label">Evento em rascunho</div><div class="metric-value" id="ct-m-evento-rascunho" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+    <div id="ct-metrics-wrap" hidden>
+      <div class="metrics" style="margin-bottom:.625rem">
+        <div class="metric"><div class="metric-label">Total contratos</div><div class="metric-value" id="ct-m-total">—</div><div class="metric-sub">cadastrados</div></div>
+        <div class="metric metric-success"><div class="metric-label">Vigentes</div><div class="metric-value" id="ct-m-vigentes" style="color:var(--green)">—</div><div class="metric-sub">em vigor</div></div>
+        <div class="metric metric-warning"><div class="metric-label">Vencendo em 90d</div><div class="metric-value" id="ct-m-vencendo" style="color:var(--amber)">—</div><div class="metric-sub">requerem atenção</div></div>
+        <div class="metric metric-danger"><div class="metric-label">Sem fiscal</div><div class="metric-value" id="ct-m-sem-fiscal" style="color:var(--red)">—</div><div class="metric-sub">precisam revisar</div></div>
+        <div class="metric"><div class="metric-label">Valor atual</div><div class="metric-value" id="ct-m-valor-atual" style="font-size:20px">—</div><div class="metric-sub">contratos filtrados</div></div>
+      </div>
+      <div class="metrics-secondary">
+        <div class="metric metric-neutral"><div class="metric-label">Encerrados</div><div class="metric-value" id="ct-m-encerrados" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+        <div class="metric metric-warning"><div class="metric-label">Medição pendente</div><div class="metric-value" id="ct-m-med-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+        <div class="metric metric-warning"><div class="metric-label">NF pendente</div><div class="metric-value" id="ct-m-nf-pendente" style="color:var(--amber)">—</div><div class="metric-sub">contratos</div></div>
+        <div class="metric metric-neutral"><div class="metric-label">Evento em rascunho</div><div class="metric-value" id="ct-m-evento-rascunho" style="color:var(--text3)">—</div><div class="metric-sub">contratos</div></div>
+      </div>
     </div>
 
     <div class="table-card">

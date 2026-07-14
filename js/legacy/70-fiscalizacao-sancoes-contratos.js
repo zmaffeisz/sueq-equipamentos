@@ -1085,7 +1085,7 @@ function _ctStatusSelectHtml(status,map,entity,id){
   const current=String(status||'').toLowerCase();
   const options=Object.entries(map).map(([key,label])=>`<option value="${key}"${key===current?' selected':''}>${_sanEsc(label)}</option>`).join('');
   const handler=entity==='medicao'?'alterarStatusMedicaoContrato':'alterarStatusNotaFiscalContrato';
-  return `<select aria-label="Alterar status" data-entity-id="${_sanEsc(String(id))}" onchange="${handler}(this.dataset.entityId,this.value)" style="max-width:165px;font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer">${options}</select>`;
+  return `<select aria-label="Alterar status" data-entity-id="${_sanEsc(String(id))}" onchange="${handler}(this.dataset.entityId,this.value)" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer">${options}</select>`;
 }
 function _ctTodayISO(){return new Date().toISOString().slice(0,10);}
 function _ctMonthISO(){return new Date().toISOString().slice(0,7);}
@@ -2253,6 +2253,29 @@ async function salvarNovoContrato(){
   }
 }
 
+const CT_METRICS_LS_KEY='ct.metricsOpen';
+function applyContratosMetricsState(open){
+  const wrap=document.getElementById('ct-metrics-wrap');
+  const btn=document.getElementById('ct-metrics-toggle');
+  const label=document.getElementById('ct-metrics-toggle-label');
+  const icon=document.getElementById('ct-metrics-toggle-icon');
+  if(!wrap||!btn) return;
+  wrap.hidden=!open;
+  btn.setAttribute('aria-expanded',open?'true':'false');
+  if(label) label.textContent=open?'Ocultar dashboard':'Ver dashboard';
+  if(icon) icon.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+}
+function toggleContratosMetrics(){
+  const open=document.getElementById('ct-metrics-wrap')?.hidden!==false;
+  applyContratosMetricsState(open);
+  try{ localStorage.setItem(CT_METRICS_LS_KEY, open?'1':'0'); }catch{}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  let open=false;
+  try{ open=localStorage.getItem(CT_METRICS_LS_KEY)==='1'; }catch{}
+  applyContratosMetricsState(open);
+});
+
 function clearAllContratos(){
   const el=document.getElementById("ct-busca");if(el)el.value="";
   const alerta=document.getElementById("ct-alerta");if(alerta)alerta.value="";
@@ -2417,10 +2440,11 @@ function renderTabelaContratos(){
   if(selectAll) selectAll.checked=rows.length>0&&rows.every(r=>contratosSelecionados.has(String(r.id)));
 
   tbody.innerHTML=`<tr style="display:block;width:100%"><td colspan="${CT_TABLE_COLSPAN}" style="display:block;width:100%;padding:0;background:transparent;border:0;box-sizing:border-box">
-    <div style="display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box">
+    <div id="ct-cards-list" style="display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box">
       ${rows.map(_ctContratoCardHtml).join("")}
     </div>
   </td></tr>`;
+  requestAnimationFrame(_ctSyncIdentityWidth);
   return;
 
   tbody.innerHTML=rows.map(r=>{
@@ -2473,6 +2497,21 @@ function renderTabelaContratos(){
   }).join("");
 }
 
+function _ctSyncIdentityWidth(){
+  const list=document.getElementById('ct-cards-list');
+  if(!list) return;
+  const ids=list.querySelectorAll('.ct-contract-identity');
+  if(!ids.length) return;
+  ids.forEach(el=>{el.style.width='auto';el.style.minWidth='';});
+  let max=0;
+  ids.forEach(el=>{const w=el.getBoundingClientRect().width;if(w>max) max=w;});
+  const px=Math.ceil(max)+'px';
+  ids.forEach(el=>{el.style.width=px;});
+}
+window.addEventListener('resize',()=>{
+  if(document.getElementById('ct-cards-list')) requestAnimationFrame(_ctSyncIdentityWidth);
+});
+
 // Linhas expansíveis: clicar no ▶ mostra os itens do contrato inline (mesmo padrão de Licitações/cpToggle)
 function _ctContratoCardHtml(r){
   const id=String(r.id).replace(/'/g,"\\'");
@@ -2483,6 +2522,7 @@ function _ctContratoCardHtml(r){
   const valorReajustado=_ctValorReajustado(r);
   const valorAtual=_ctValorAtual(r);
   const aditivoUsado=_ctAditivoUsado(r);
+  const temStatus=!!r.vencimento;
   const temVinculacao=!!(r.email_empresa||r.prefixo_chamado);
   const podeManter=podeEditar('contratos');
   const btnEncerrarCt=r.status!=="ENCERRADO"&&podeManter
@@ -2505,12 +2545,16 @@ function _ctContratoCardHtml(r){
     ['Valor atual',valorAtual?_ctMoney(valorAtual):'-'],
     ['Aditivo',aditivoUsado==null?'-':`${aditivoUsado}%`]
   ].map(([label,value])=>`<div class="ct-contract-meta"><span>${label}</span><strong title="${_sanEsc(String(value))}">${_sanEsc(String(value))}</strong></div>`).join('');
+  const pendenciasHtml=_ctPendenciasResumo(r,false);
   return `<article class="ct-contract-card${expandido?' is-expanded':''}" onclick="if(event.target.closest('button,input,select,a,label'))return;ctToggleExpand('${id}')">
-    <div class="ct-contract-summary">
+    <div class="ct-contract-summary${temStatus?' has-status':''}">
       <div class="ct-contract-identity">
-        <span class="ct-contract-kicker">Processo</span>
-        <strong>${_sanEsc(r.cpl||'Não informado')}</strong>
-        <span class="ct-contract-number">Contrato ${_sanEsc(r.numero_contrato||'não informado')}</span>
+        <span class="ct-contract-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+        <div class="ct-contract-identity-info">
+          <span class="ct-contract-kicker">Processo</span>
+          <strong>${_sanEsc(r.cpl||'Não informado')}</strong>
+          <span class="ct-contract-number">Contrato ${_sanEsc(r.numero_contrato||'não informado')}</span>
+        </div>
       </div>
       <div class="ct-contract-object">
         <span class="ct-contract-kicker">Objeto</span>
@@ -2520,9 +2564,9 @@ function _ctContratoCardHtml(r){
         ${badgeStatusContrato(r.status,dias!==null&&dias<0)}
         <span style="color:${cor}">${_sanEsc(r.vencimento||'Sem vencimento')}</span>
         <small style="color:${cor}">${dias===null?'Sem vencimento informado':dias<0?'Vencido':dias===0?'Vence hoje':`${dias} dias restantes`}</small>
+        ${pendenciasHtml?`<div class="ct-contract-alerts">${pendenciasHtml}</div>`:''}
       </div>
     </div>
-    <div class="ct-contract-disclosure"><span>${expandido?'Ocultar informações':'Ver informações do contrato'}</span><div class="ct-contract-alerts">${_ctPendenciasResumo(r,false)}</div><span aria-hidden="true">${expandido?'⌃':'⌄'}</span></div>
     ${expandido?`<div class="ct-contract-details">
       <div class="ct-contract-meta-grid">${meta}</div>
       <div class="ct-contract-actions">
