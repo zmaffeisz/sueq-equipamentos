@@ -1,5 +1,7 @@
 # Changelog
 
+- **AF duplicada por envio concorrente**: a emissão de AF agora bloqueia o botão enquanto a gravação está em andamento. O banco também serializa emissões para o mesmo item, rejeita AF ativa repetida e impede que a soma autorizada ultrapasse a quantidade contratada, inclusive em duas abas ou requisições simultâneas.
+
 - **Seção herdada ao gerar contrato**: ao gerar um contrato a partir de uma licitação, a seção já definida no processo é carregada automaticamente e fica bloqueada no modal, evitando uma segunda seleção e divergências entre licitação e contrato.
 
 - **Modo Planilha com valores de licitação**: a planilha agora exibe e permite filtrar/ordenar o valor unitário e o valor total da licitação, além dos valores planejados e executados; a exportação Excel também foi atualizada.

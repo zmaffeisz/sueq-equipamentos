@@ -650,7 +650,20 @@ async function abrirModalAF(itemId, execId){
 function _ctRecarregarAposEntrega(){
   if(typeof loadContratos==='function') loadContratos().catch(e=>console.error('reload contratos:',e));
 }
+let _salvarAFEmAndamento=false;
 async function salvarAF(){
+  if(_salvarAFEmAndamento) return;
+  const btn=document.getElementById('af-salvar');
+  _salvarAFEmAndamento=true;
+  if(btn){ btn.disabled=true; btn.textContent='Emitindo...'; }
+  try{
+    await _salvarAFInterno();
+  }finally{
+    _salvarAFEmAndamento=false;
+    if(btn){ btn.disabled=false; btn.textContent='Emitir AF'; }
+  }
+}
+async function _salvarAFInterno(){
   if(bloquearSeVisualiz('itens')) return;
   const itemId=document.getElementById('af-item-id').value;
   const execId=document.getElementById('af-exec-id').value;
